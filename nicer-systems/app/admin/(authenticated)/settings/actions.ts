@@ -14,6 +14,26 @@ const GRADIENT_PRESETS = [
 ];
 const BRUSH_STYLES = ["soft", "hard", "spray"];
 
+export async function saveCRMSettings(config: {
+  webhook_url: string;
+  is_active: boolean;
+  provider: string;
+  secret_header?: string;
+  secret_value?: string;
+}): Promise<{ error?: string; success?: boolean }> {
+  const user = await getSessionUser();
+  if (!user) return { error: "Unauthorized" };
+
+  try {
+    const { getAdminDb } = await import("@/lib/firebase/admin");
+    const db = getAdminDb();
+    await db.collection("site_settings").doc("crm").set(config, { merge: true });
+    return { success: true };
+  } catch {
+    return { error: "Failed to save CRM settings" };
+  }
+}
+
 export async function saveThemeSettings(settings: ThemeSettings) {
   const user = await getSessionUser();
   if (!user) {

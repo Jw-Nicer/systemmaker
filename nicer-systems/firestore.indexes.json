@@ -31,6 +31,22 @@
         { "fieldPath": "is_published", "order": "ASCENDING" },
         { "fieldPath": "sort_order", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "industry_pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_published", "order": "ASCENDING" },
+        { "fieldPath": "sort_order", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sequence_enrollments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "next_send_at", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

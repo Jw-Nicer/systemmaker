@@ -10,6 +10,9 @@ const sidebarLinks = [
   { href: "/admin/offers", label: "Offers" },
   { href: "/admin/leads", label: "Leads" },
   { href: "/admin/agent-templates", label: "Agent Templates" },
+  { href: "/admin/industry-pages", label: "Industry Pages" },
+  { href: "/admin/ab-tests", label: "A/B Tests" },
+  { href: "/admin/email-sequences", label: "Email Sequences" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

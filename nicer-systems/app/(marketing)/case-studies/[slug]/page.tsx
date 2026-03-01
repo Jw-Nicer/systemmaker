@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCaseStudyBySlug } from "@/lib/firestore/case-studies";
+import { getCaseStudyBySlug, getPublishedCaseStudies } from "@/lib/firestore/case-studies";
+import { RelatedCaseStudies } from "@/components/marketing/RelatedCaseStudies";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -8,11 +9,15 @@ interface Props {
 
 export default async function CaseStudyDetailPage({ params }: Props) {
   const { slug } = await params;
-  const cs = await getCaseStudyBySlug(slug);
+  const [cs, allCaseStudies] = await Promise.all([
+    getCaseStudyBySlug(slug),
+    getPublishedCaseStudies(),
+  ]);
 
   if (!cs) notFound();
 
   return (
+    <>
     <section className="py-24">
       <div className="max-w-4xl mx-auto px-6">
         {/* Breadcrumb */}
@@ -142,5 +147,8 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         </div>
       </div>
     </section>
+
+    <RelatedCaseStudies current={cs} allCaseStudies={allCaseStudies} />
+    </>
   );
 }

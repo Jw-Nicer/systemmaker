@@ -14,6 +14,8 @@ export interface Lead {
   urgency: string;
   status: string;
   source: string;
+  score: number;
+  score_label: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -50,6 +52,8 @@ export async function getAllLeads(): Promise<Lead[]> {
         urgency: data.urgency ?? "",
         status: data.status ?? "new",
         source: data.source ?? "contact",
+        score: data.score ?? 0,
+        score_label: data.score_label ?? "",
         utm_source: data.utm_source,
         utm_medium: data.utm_medium,
         utm_campaign: data.utm_campaign,
@@ -93,6 +97,8 @@ export async function exportLeadsCSV(): Promise<string> {
     "Tools",
     "Urgency",
     "Status",
+    "Score",
+    "Score Label",
     "Source",
     "Created",
   ];
@@ -106,6 +112,8 @@ export async function exportLeadsCSV(): Promise<string> {
       l.tools,
       l.urgency,
       l.status,
+      l.score,
+      l.score_label,
       l.source,
       l.created_at,
     ].join(",")

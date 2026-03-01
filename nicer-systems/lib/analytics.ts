@@ -12,6 +12,10 @@ export const EVENTS = {
   CTA_CLICK_PREVIEW_PLAN: "cta_click_preview_plan",
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
+  INDUSTRY_PAGE_VIEW: "industry_page_view",
+  AB_IMPRESSION: "ab_impression",
+  AB_CONVERSION: "ab_conversion",
+  RELATED_CASE_STUDY_CLICK: "related_case_study_click",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

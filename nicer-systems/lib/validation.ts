@@ -94,3 +94,55 @@ export const sendEmailSchema = z.object({
   email: z.string().email("Valid email is required"),
   name: z.string().min(1, "Name is required").max(100),
 });
+
+// --- Phase 3 schemas ---
+
+export const industryPageSchema = z.object({
+  slug: z.string().min(1, "Slug is required").max(200),
+  industry_name: z.string().min(1, "Industry name is required").max(100),
+  hero_headline: z.string().min(1, "Headline is required").max(300),
+  hero_subheadline: z.string().min(1, "Subheadline is required").max(500),
+  pain_points: z.array(z.string().min(1).max(300)).min(1, "At least one pain point"),
+  cta_primary_text: z.string().min(1).max(100),
+  cta_secondary_text: z.string().min(1).max(100),
+  meta_title: z.string().min(1).max(200),
+  meta_description: z.string().min(1).max(500),
+  is_published: z.boolean(),
+  sort_order: z.number().int().min(0),
+});
+
+export type IndustryPageInput = z.infer<typeof industryPageSchema>;
+
+export const abTestVariantSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1, "Variant name is required").max(100),
+  headline: z.string().max(300),
+  subheadline: z.string().max(500),
+  cta_text: z.string().max(100),
+  weight: z.number().int().min(0).max(100),
+});
+
+export const abTestSchema = z.object({
+  name: z.string().min(1, "Test name is required").max(200),
+  target_page: z.string().min(1, "Target page is required").max(200),
+  element: z.string().min(1, "Element is required").max(100),
+  variants: z.array(abTestVariantSchema).min(2, "At least two variants"),
+  is_active: z.boolean(),
+});
+
+export type ABTestInput = z.infer<typeof abTestSchema>;
+
+export const emailStepSchema = z.object({
+  delay_days: z.number().int().min(0).max(90),
+  subject: z.string().min(1, "Subject is required").max(200),
+  body_html: z.string().min(1, "Body is required").max(50000),
+});
+
+export const emailSequenceSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  trigger: z.enum(["lead_submit", "preview_plan_sent"]),
+  steps: z.array(emailStepSchema).min(1, "At least one step"),
+  is_active: z.boolean(),
+});
+
+export type EmailSequenceInput = z.infer<typeof emailSequenceSchema>;

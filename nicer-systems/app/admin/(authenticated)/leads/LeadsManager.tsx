@@ -16,6 +16,12 @@ const STATUS_COLORS: Record<string, string> = {
   unqualified: "bg-red-500/10 text-red-400",
 };
 
+const SCORE_COLORS: Record<string, string> = {
+  hot: "bg-red-500/10 text-red-400",
+  warm: "bg-yellow-500/10 text-yellow-400",
+  cold: "bg-blue-500/10 text-blue-400",
+};
+
 export default function LeadsManager({
   initialData,
 }: {
@@ -128,6 +134,7 @@ export default function LeadsManager({
               <th className="px-6 py-3 text-muted font-medium">Email</th>
               <th className="px-6 py-3 text-muted font-medium">Company</th>
               <th className="px-6 py-3 text-muted font-medium">Status</th>
+              <th className="px-6 py-3 text-muted font-medium">Score</th>
               <th className="px-6 py-3 text-muted font-medium">Source</th>
               <th className="px-6 py-3 text-muted font-medium">Date</th>
             </tr>
@@ -135,7 +142,7 @@ export default function LeadsManager({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                <td colSpan={7} className="px-6 py-12 text-center text-muted">
                   No leads found.
                 </td>
               </tr>
@@ -177,6 +184,15 @@ export default function LeadsManager({
                         ))}
                       </select>
                     </td>
+                    <td className="px-6 py-3">
+                      {(lead as Lead & { score_label?: string; score?: number }).score_label ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SCORE_COLORS[(lead as Lead & { score_label?: string }).score_label!] ?? "bg-muted/10 text-muted"}`}>
+                          {(lead as Lead & { score?: number }).score ?? 0}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3 text-muted text-xs">
                       {lead.source}
                     </td>
@@ -187,7 +203,7 @@ export default function LeadsManager({
                   {expandedId === lead.id && (
                     <tr key={`${lead.id}-detail`}>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-6 py-4 bg-surface-light/30 border-b border-border"
                       >
                         <div className="grid sm:grid-cols-2 gap-4 text-sm">

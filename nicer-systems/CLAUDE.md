@@ -28,7 +28,8 @@ app/
     layout.tsx           # Header + footer + nav
     contact/page.tsx     # Contact form (lead capture → Firestore)
     case-studies/page.tsx            # Case study listing
-    case-studies/[slug]/page.tsx     # Case study detail (dynamic)
+    case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
+    industries/[slug]/page.tsx      # Industry-specific landing pages (dynamic)
     privacy/page.tsx
     terms/page.tsx
   admin/
@@ -42,7 +43,10 @@ app/
       offers/page.tsx          # Offers CRUD
       leads/page.tsx           # Leads dashboard (read + status filter + CSV export)
       agent-templates/page.tsx # Agent template editor + test runner
-      settings/page.tsx        # Theme customizer
+      industry-pages/page.tsx  # Industry pages CRUD
+      ab-tests/page.tsx        # A/B testing manager + results
+      email-sequences/page.tsx # Email sequence editor
+      settings/page.tsx        # Theme customizer + CRM config
   api/
     auth/session/route.ts      # POST: create session cookie from Firebase ID token
     auth/signout/route.ts      # POST: clear session cookie, redirect to login
@@ -50,6 +54,9 @@ app/
     leads/route.ts             # POST: create lead in Firestore
     agent/run/route.ts         # POST: run agent chain via Gemini
     agent/send-email/route.ts  # POST: send email via Resend
+    ab/impression/route.ts     # POST: record A/B test impression
+    ab/conversion/route.ts     # POST: record A/B test conversion
+    sequences/process/route.ts # POST: process due email sequence enrollments (cron)
 
 components/
   marketing/             # Landing page sections (see below)
@@ -63,18 +70,26 @@ lib/
   firestore/faqs.ts          # getPublishedFAQs() — server-side
   firestore/offers.ts        # getPublishedOffers() — server-side
   firestore/site-settings.ts # getSiteSettings() — server-side
+  firestore/industry-pages.ts  # getPublishedIndustryPages(), getIndustryPageBySlug()
+  firestore/ab-tests.ts        # getActiveTests(), getActiveTestForPage()
+  firestore/email-sequences.ts # getActiveSequenceByTrigger(), getDueEnrollments(), enrollLead()
   actions/case-studies.ts    # Server actions: CRUD for case studies
   actions/testimonials.ts    # Server actions: CRUD for testimonials
   actions/faqs.ts            # Server actions: CRUD for FAQs
   actions/offers.ts          # Server actions: CRUD for offers
   actions/leads.ts           # Server actions: read, status update, CSV export
   actions/agent-templates.ts # Server actions: CRUD + test run
+  actions/industry-pages.ts  # Server actions: CRUD for industry pages
+  actions/ab-tests.ts        # Server actions: CRUD + impression/conversion tracking
+  actions/email-sequences.ts # Server actions: CRUD for email sequences
   agents/runner.ts       # Agent chain runner (Gemini API)
   agents/prompts.ts      # Prompt builder from templates + context
   agents/email-template.ts # Email template for agent outputs
   analytics.ts           # EVENTS constants + track() + initAnalytics()
   theme.ts               # themeToCSSVariables()
-  validation.ts          # Zod schemas (leadSchema, caseStudySchema, etc.)
+  validation.ts          # Zod schemas (leadSchema, caseStudySchema, industryPageSchema, abTestSchema, emailSequenceSchema, etc.)
+  lead-scoring.ts        # computeLeadScore() + scoreLabel()
+  crm-sync.ts            # syncLeadToCRM() + getCRMConfig()
 
 hooks/
   useReducedMotion.ts    # prefers-reduced-motion hook
@@ -86,6 +101,9 @@ types/
   testimonial.ts         # Testimonial interface
   agent-template.ts      # AgentTemplate interface
   preview-plan.ts        # PreviewPlan interface (agent output structures)
+  industry-page.ts       # IndustryPage interface
+  ab-test.ts             # ABTest + ABTestVariant interfaces
+  email-sequence.ts      # EmailSequence + EmailStep + SequenceEnrollment interfaces
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
@@ -115,6 +133,10 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `ScrollReveal.tsx` | client | Reusable framer-motion scroll wrapper |
 | `TrackedLink.tsx` | client | Link + analytics event on click |
 | `LandingViewTracker.tsx` | client | Fires `landing_view` on mount |
+| `IndustryHero.tsx` | client | Industry page hero with animated headline |
+| `IndustryProof.tsx` | server | Filtered case studies for industry |
+| `ABTestHero.tsx` | client | useABVariant() hook + trackABConversion() |
+| `RelatedCaseStudies.tsx` | server | Related case studies by industry + tool overlap |
 
 ## Conventions
 - **Server/Client split**: Firestore reads in server components, interactivity in client components
@@ -136,6 +158,12 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_* |
 | `events` | create only | auth | event tracking |
 | `agent_templates` | none | auth | key, markdown (agent prompt specs) |
+| `industry_pages` | is_published=true | auth | slug, industry_name, hero_headline, pain_points[], cta_* |
+| `ab_tests` | none | auth | name, target_page, element, variants[], is_active |
+| `ab_impressions` | create only | auth | test_id, variant_id |
+| `ab_conversions` | create only | auth | test_id, variant_id, event |
+| `email_sequences` | none | auth | name, trigger, steps[], is_active |
+| `sequence_enrollments` | none | auth | lead_id, sequence_id, current_step, next_send_at, status |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -161,12 +189,21 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - **URL**: https://nicer-systems.web.app
 - **Plan**: Blaze (pay-as-you-go)
 
-## What's Next (Phase 3)
-- [ ] Multi-niche landing variants (industry pages)
-- [ ] A/B testing framework (hero copy/CTA)
-- [ ] Automated email sequences (nurture)
-- [ ] CRM sync (ClickUp/HubSpot/Close) + lead scoring
-- [ ] Case study "related" recommendations
+## What's Built (Phase 3 — complete)
+- [x] Multi-niche industry pages (`/industries/[slug]`) with admin CRUD
+- [x] A/B testing framework (variant assignment, impressions, conversions, admin results)
+- [x] Automated email sequences (nurture drips, cron-based processing)
+- [x] CRM sync (webhook to HubSpot/Close/ClickUp/Zapier) + lead scoring (0–100)
+- [x] Case study "related" recommendations (industry + tool overlap scoring)
+- [x] Lead scoring integrated into leads API + admin dashboard
+- [x] Admin sidebar updated with Industry Pages, A/B Tests, Email Sequences
+- [x] CRM webhook config in Admin settings
+
+## What's Next (Phase 4)
+- [ ] Guided audit wizard (productized agent demo)
+- [ ] Output: dashboard blueprint + SOP + automation map
+- [ ] Account-based follow-up + consult scheduling
+- [ ] Internal tooling for generating proposals from intake
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
