@@ -49,5 +49,17 @@ service cloud.firestore {
     match /agent_templates/{docId} {
       allow read, write: if request.auth != null;
     }
+
+    // Experiments — public read if running (for client bucketing), admin full access
+    match /experiments/{docId} {
+      allow read: if resource.data.status == "running";
+      allow read, write: if request.auth != null;
+    }
+
+    // Landing variants — public read if published, admin full access
+    match /variants/{docId} {
+      allow read: if resource.data.is_published == true;
+      allow read, write: if request.auth != null;
+    }
   }
 }

@@ -32,6 +32,14 @@
         { "fieldPath": "sort_order", "order": "ASCENDING" }
       ]
     }
+    ,{
+      "collectionGroup": "variants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_published", "order": "ASCENDING" },
+        { "fieldPath": "sort_order", "order": "ASCENDING" }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

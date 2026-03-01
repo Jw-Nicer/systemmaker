@@ -37,6 +37,34 @@ export async function getCaseStudyBySlug(
   }
 }
 
+export async function getRelatedCaseStudies(
+  current: CaseStudy,
+  limit = 3
+): Promise<CaseStudy[]> {
+  try {
+    const all = await getPublishedCaseStudies();
+    const others = all.filter((cs) => cs.id !== current.id);
+
+    // Score by: same industry (2 pts) + each shared tool (1 pt)
+    const scored = others.map((cs) => {
+      let score = 0;
+      if (cs.industry === current.industry) score += 2;
+      for (const tool of cs.tools) {
+        if (current.tools.includes(tool)) score += 1;
+      }
+      return { cs, score };
+    });
+
+    return scored
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((s) => s.cs);
+  } catch {
+    return [];
+  }
+}
+
 export async function getIndustries(
   caseStudies: CaseStudy[]
 ): Promise<string[]> {

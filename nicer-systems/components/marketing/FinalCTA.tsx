@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export function FinalCTA() {
+interface FinalCTAProps {
+  ctaText?: string;
+}
+
+export function FinalCTA({ ctaText }: FinalCTAProps = {}) {
   return (
     <section className="py-24">
       <div className="max-w-3xl mx-auto px-6 text-center">
@@ -15,7 +19,7 @@ export function FinalCTA() {
           href="/contact"
           className="inline-block px-8 py-4 rounded-lg bg-primary text-background font-semibold text-lg hover:opacity-90 transition-opacity"
         >
-          Book a Scoping Call
+          {ctaText || "Book a Scoping Call"}
         </Link>
       </div>
     </section>

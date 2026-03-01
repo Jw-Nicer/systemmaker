@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCaseStudyBySlug } from "@/lib/firestore/case-studies";
+import { getCaseStudyBySlug, getRelatedCaseStudies } from "@/lib/firestore/case-studies";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -11,6 +11,8 @@ export default async function CaseStudyDetailPage({ params }: Props) {
   const cs = await getCaseStudyBySlug(slug);
 
   if (!cs) notFound();
+
+  const related = await getRelatedCaseStudies(cs);
 
   return (
     <section className="py-24">
@@ -120,6 +122,32 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                 >
                   {tool}
                 </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Related Case Studies */}
+        {related.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl font-semibold mb-4">Related Case Studies</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {related.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/case-studies/${r.slug}`}
+                  className="rounded-xl border border-border bg-surface p-5 hover:border-primary/40 transition-colors"
+                >
+                  {r.thumbnail_url && (
+                    <img
+                      src={r.thumbnail_url}
+                      alt={r.title}
+                      className="w-full h-32 object-cover rounded-lg mb-3"
+                    />
+                  )}
+                  <span className="text-xs text-primary font-medium">{r.industry}</span>
+                  <h3 className="font-semibold mt-1 line-clamp-2">{r.title}</h3>
+                </Link>
               ))}
             </div>
           </div>

@@ -19,8 +19,21 @@ const BrushRevealCanvas = dynamic(
   }
 );
 
-export function BrushRevealHero() {
+interface BrushRevealHeroProps {
+  headline?: string;
+  subheadline?: string;
+  ctaText?: string;
+}
+
+export function BrushRevealHero({ headline, subheadline, ctaText }: BrushRevealHeroProps = {}) {
   const reduced = useReducedMotion();
+
+  const headlineText = headline || "Tell us the problem.\nWe'll build the system.";
+  const subText = subheadline || "Ops visibility systems for admin-heavy businesses. Dashboards, alerts, and weekly Ops Pulse — installed in 30 days.";
+  const primaryCta = ctaText || "Book a Scoping Call";
+
+  // Split headline on newline for two-line rendering
+  const lines = headlineText.split("\n");
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -39,9 +52,13 @@ export function BrushRevealHero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          Tell us the problem.
-          <br />
-          <span className="text-primary">We&apos;ll build the system.</span>
+          {lines[0]}
+          {lines[1] && (
+            <>
+              <br />
+              <span className="text-primary">{lines[1]}</span>
+            </>
+          )}
         </motion.h1>
 
         <motion.p
@@ -50,8 +67,7 @@ export function BrushRevealHero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Ops visibility systems for admin-heavy businesses. Dashboards, alerts,
-          and weekly Ops Pulse — installed in 30 days.
+          {subText}
         </motion.p>
 
         <motion.div
@@ -65,7 +81,7 @@ export function BrushRevealHero() {
             eventName={EVENTS.CTA_CLICK_BOOK}
             className="px-8 py-4 rounded-lg bg-primary text-background font-semibold text-lg hover:opacity-90 transition-opacity"
           >
-            Book a Scoping Call
+            {primaryCta}
           </TrackedLink>
           <TrackedLink
             href="/contact"

@@ -1,8 +1,21 @@
 import { getPublishedCaseStudies, getIndustries } from "@/lib/firestore/case-studies";
 import { ProofOfWorkClient } from "./ProofOfWorkClient";
 
-export async function ProofOfWork() {
+interface ProofOfWorkProps {
+  featuredIndustries?: string[];
+}
+
+export async function ProofOfWork({ featuredIndustries }: ProofOfWorkProps = {}) {
   let caseStudies = await getPublishedCaseStudies();
+
+  // Filter to featured industries if provided (variant pages)
+  if (featuredIndustries && featuredIndustries.length > 0) {
+    const filtered = caseStudies.filter((cs) =>
+      featuredIndustries.some((fi) => cs.industry.toLowerCase() === fi.toLowerCase())
+    );
+    if (filtered.length > 0) caseStudies = filtered;
+  }
+
   let industries = await getIndustries(caseStudies);
 
   // Fallback if no published case studies yet

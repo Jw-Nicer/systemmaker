@@ -273,10 +273,14 @@ function ContactForm() {
               </li>
             </ol>
 
-            <div className="mt-8 p-4 rounded-lg border border-border bg-surface-light">
-              <p className="text-sm text-muted">
-                Prefer to book directly? Calendly embed coming in Phase 1.
-              </p>
+            <div className="mt-8 p-4 rounded-lg border border-primary/30 bg-primary/5">
+              <p className="text-sm font-medium mb-2">Prefer to book directly?</p>
+              <a
+                href="mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"
+                className="inline-block px-4 py-2 rounded-lg bg-primary text-background text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Schedule a Call
+              </a>
             </div>
           </div>
         </div>

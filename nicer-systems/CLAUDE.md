@@ -28,19 +28,25 @@ app/
     layout.tsx           # Header + footer + nav
     contact/page.tsx     # Contact form (lead capture → Firestore)
     case-studies/page.tsx            # Case study listing
-    case-studies/[slug]/page.tsx     # Case study detail (dynamic)
+    case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
+    [industry]/page.tsx  # Industry variant landing pages (dynamic, SSG)
     privacy/page.tsx
     terms/page.tsx
+  not-found.tsx          # Custom 404 page
+  error.tsx              # Global error boundary with retry
   admin/
     login/page.tsx       # Login page (outside auth guard)
     (authenticated)/     # Route group — all pages here require auth
       layout.tsx         # Sidebar + auth check via getSessionUser()
-      page.tsx           # Dashboard
+      error.tsx          # Admin error boundary
+      page.tsx           # Dashboard (real Firestore metrics + recent leads)
       case-studies/page.tsx    # Case studies CRUD
       testimonials/page.tsx    # Testimonials CRUD
       faqs/page.tsx            # FAQs CRUD
       offers/page.tsx          # Offers CRUD
       leads/page.tsx           # Leads dashboard (read + status filter + CSV export)
+      variants/page.tsx        # Landing variant CRUD (industry pages)
+      experiments/page.tsx     # A/B testing management
       agent-templates/page.tsx # Agent template editor + test runner
       settings/page.tsx        # Theme customizer
   api/
@@ -69,6 +75,10 @@ lib/
   actions/offers.ts          # Server actions: CRUD for offers
   actions/leads.ts           # Server actions: read, status update, CSV export
   actions/agent-templates.ts # Server actions: CRUD + test run
+  actions/variants.ts        # Server actions: CRUD for landing variants
+  actions/experiments.ts     # Server actions: A/B experiment management
+  firestore/variants.ts      # getPublishedVariants(), getVariantBySlug()
+  firestore/experiments.ts   # getRunningExperiments(), getExperimentByTarget()
   agents/runner.ts       # Agent chain runner (Gemini API)
   agents/prompts.ts      # Prompt builder from templates + context
   agents/email-template.ts # Email template for agent outputs
@@ -78,6 +88,7 @@ lib/
 
 hooks/
   useReducedMotion.ts    # prefers-reduced-motion hook
+  useExperiment.ts       # A/B experiment variant bucketing + tracking
 
 types/
   case-study.ts          # CaseStudy interface
@@ -86,6 +97,8 @@ types/
   testimonial.ts         # Testimonial interface
   agent-template.ts      # AgentTemplate interface
   preview-plan.ts        # PreviewPlan interface (agent output structures)
+  variant.ts             # LandingVariant interface
+  experiment.ts          # Experiment + ExperimentVariant interfaces
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
@@ -136,6 +149,8 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_* |
 | `events` | create only | auth | event tracking |
 | `agent_templates` | none | auth | key, markdown (agent prompt specs) |
+| `variants` | is_published=true | auth | slug, industry, headline, subheadline, cta_text, featured_industries[] |
+| `experiments` | status=running | auth | name, target, variants[], status, winner |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -161,12 +176,14 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - **URL**: https://nicer-systems.web.app
 - **Plan**: Blaze (pay-as-you-go)
 
-## What's Next (Phase 3)
-- [ ] Multi-niche landing variants (industry pages)
-- [ ] A/B testing framework (hero copy/CTA)
+## What's Built (Phase 3 — in progress)
+- [x] Case study related recommendations (on detail pages)
+- [x] Multi-niche landing variants (admin CRUD + /[industry] dynamic routes)
+- [x] A/B testing framework (experiments admin + useExperiment hook + bucketing)
+- [x] Custom error pages (404, error boundary, admin error boundary)
+- [x] Admin dashboard with real Firestore metrics + recent leads
 - [ ] Automated email sequences (nurture)
 - [ ] CRM sync (ClickUp/HubSpot/Close) + lead scoring
-- [ ] Case study "related" recommendations
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
