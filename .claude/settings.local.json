@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "WebSearch",
+      "Bash(npx tsx:*)",
+      "mcp__firebase__firebase_get_project",
+      "mcp__firebase__firebase_list_projects",
+      "mcp__firebase__firebase_get_environment",
+      "mcp__firebase__firebase_create_app",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(curl:*)",
+      "Bash(xargs grep:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

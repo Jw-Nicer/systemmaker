@@ -1,0 +1,267 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { leadSchema, type LeadInput } from "@/lib/validation";
+import { track, EVENTS } from "@/lib/analytics";
+
+type FormErrors = Partial<Record<keyof LeadInput, string>>;
+
+export default function ContactPage() {
+  const searchParams = useSearchParams();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    bottleneck: "",
+    tools: "",
+    urgency: "" as "" | LeadInput["urgency"],
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [serverError, setServerError] = useState("");
+
+  // Capture UTM params once on mount
+  const [utmParams, setUtmParams] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const utm: Record<string, string> = {};
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content"] as const) {
+      const val = searchParams.get(key);
+      if (val) utm[key] = val;
+    }
+    utm.landing_path = window.location.pathname;
+    setUtmParams(utm);
+  }, [searchParams]);
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear field error on change
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setServerError("");
+
+    // Build payload
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      email: formData.email,
+      company: formData.company,
+      ...utmParams,
+    };
+    if (formData.bottleneck) payload.bottleneck = formData.bottleneck;
+    if (formData.tools) payload.tools = formData.tools;
+    if (formData.urgency) payload.urgency = formData.urgency;
+
+    // Client-side validation
+    const result = leadSchema.safeParse(payload);
+    if (!result.success) {
+      const fieldErrors: FormErrors = {};
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as keyof LeadInput;
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setStatus("submitting");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result.data),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Something went wrong");
+      }
+
+      setStatus("success");
+      track(EVENTS.LEAD_SUBMIT);
+    } catch (err) {
+      setStatus("error");
+      setServerError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <section className="py-24">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
+            <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-bold mb-4">Message Received</h1>
+          <p className="text-muted text-lg">
+            We&apos;ll review your details and reach out within 24 hours with a scoped plan.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-24">
+      <div className="max-w-3xl mx-auto px-6">
+        <h1 className="text-4xl font-bold mb-4">Let&apos;s Talk</h1>
+        <p className="text-muted mb-12">
+          Book a 45-minute scoping call, or send us your details and we&apos;ll
+          reach out within 24 hours.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-12">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm mb-1">Name *</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                placeholder="Your name"
+              />
+              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm mb-1">Email *</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                placeholder="you@company.com"
+              />
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            {/* Company */}
+            <div>
+              <label htmlFor="company" className="block text-sm mb-1">Company *</label>
+              <input
+                id="company"
+                name="company"
+                type="text"
+                value={formData.company}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                placeholder="Your company"
+              />
+              {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
+            </div>
+
+            {/* Bottleneck */}
+            <div>
+              <label htmlFor="bottleneck" className="block text-sm mb-1">
+                What&apos;s your biggest operational bottleneck?
+              </label>
+              <textarea
+                id="bottleneck"
+                name="bottleneck"
+                rows={4}
+                value={formData.bottleneck}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none resize-none"
+                placeholder="Describe the pain point..."
+              />
+            </div>
+
+            {/* Tools */}
+            <div>
+              <label htmlFor="tools" className="block text-sm mb-1">
+                Current tools / software
+              </label>
+              <input
+                id="tools"
+                name="tools"
+                type="text"
+                value={formData.tools}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                placeholder="e.g. Salesforce, Slack, Excel"
+              />
+            </div>
+
+            {/* Urgency */}
+            <div>
+              <label htmlFor="urgency" className="block text-sm mb-1">Urgency</label>
+              <select
+                id="urgency"
+                name="urgency"
+                value={formData.urgency}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+              >
+                <option value="">Select urgency</option>
+                <option value="low">Low — exploring options</option>
+                <option value="medium">Medium — planning this quarter</option>
+                <option value="high">High — need it soon</option>
+                <option value="urgent">Urgent — this is blocking us</option>
+              </select>
+            </div>
+
+            {/* Server error */}
+            {status === "error" && (
+              <div className="p-3 rounded-lg bg-red-900/30 border border-red-500/40 text-red-300 text-sm">
+                {serverError || "Something went wrong. Please try again."}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={status === "submitting"}
+              className="w-full px-6 py-3 rounded-lg bg-primary text-background font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status === "submitting" ? "Sending..." : "Send Message"}
+            </button>
+          </form>
+
+          {/* Booking / What happens next */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">What happens next</h2>
+            <ol className="space-y-3 text-sm text-muted">
+              <li className="flex gap-3">
+                <span className="text-primary font-bold">1.</span>
+                We confirm one workflow to focus on
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary font-bold">2.</span>
+                We confirm the output you need (e.g., &quot;ticket resolved&quot;)
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary font-bold">3.</span>
+                We confirm the owner + tool stack
+              </li>
+              <li className="flex gap-3">
+                <span className="text-primary font-bold">4.</span>
+                You get a scoped plan within 24 hours
+              </li>
+            </ol>
+
+            <div className="mt-8 p-4 rounded-lg border border-border bg-surface-light">
+              <p className="text-sm text-muted">
+                Prefer to book directly? Calendly embed coming in Phase 1.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

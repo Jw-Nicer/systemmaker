@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# env files
+.env*
+
+# build artifacts
+.next/
+out/
+build/
+coverage/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+firebase-debug.log
+npm-debug.log*
+.vercel
+
+# zip files (keep specs accessible but don't track archives)
+*.zip
