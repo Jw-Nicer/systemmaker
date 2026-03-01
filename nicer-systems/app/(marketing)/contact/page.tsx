@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { leadSchema, type LeadInput } from "@/lib/validation";
 import { track, EVENTS } from "@/lib/analytics";
@@ -8,6 +8,25 @@ import { track, EVENTS } from "@/lib/analytics";
 type FormErrors = Partial<Record<keyof LeadInput, string>>;
 
 export default function ContactPage() {
+  return (
+    <Suspense fallback={<ContactFormSkeleton />}>
+      <ContactForm />
+    </Suspense>
+  );
+}
+
+function ContactFormSkeleton() {
+  return (
+    <section className="py-24">
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="h-10 w-48 bg-surface rounded animate-pulse mb-4" />
+        <div className="h-5 w-96 bg-surface rounded animate-pulse mb-12" />
+      </div>
+    </section>
+  );
+}
+
+function ContactForm() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     name: "",

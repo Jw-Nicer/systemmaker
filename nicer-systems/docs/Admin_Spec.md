@@ -2,7 +2,7 @@
 **Doc Date:** 2026-02-27
 
 ## Roles
-MVP: Single role: Admin (authenticated user list in Supabase)
+MVP: Single role: Admin (authenticated via Firebase Auth, email/password)
 Later: Editor, Analyst, Admin
 
 ## Core workflows

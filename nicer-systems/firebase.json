@@ -1,4 +1,10 @@
 {
+  "hosting": {
+    "source": ".",
+    "frameworksBackend": {
+      "region": "us-central1"
+    }
+  },
   "firestore": {
     "database": "(default)",
     "location": "nam5",

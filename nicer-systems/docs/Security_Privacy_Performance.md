@@ -2,8 +2,8 @@
 **Doc Date:** 2026-02-27
 
 ## Security
-- Admin auth required (Supabase)
-- RLS enabled on all tables
+- Admin auth required (Firebase Auth + session cookies)
+- Firestore security rules enforce read/write permissions per collection
 - Server-side checks for admin routes
 - Input validation (zod) on all forms
 - Rate limit lead submissions (edge middleware or API)

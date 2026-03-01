@@ -26,8 +26,9 @@ app/
   (marketing)/           # Public marketing pages (SSR)
     page.tsx             # Landing page — assembles all section components
     layout.tsx           # Header + footer + nav
-    contact/page.tsx     # Contact form
-    case-studies/page.tsx
+    contact/page.tsx     # Contact form (lead capture → Firestore)
+    case-studies/page.tsx            # Case study listing
+    case-studies/[slug]/page.tsx     # Case study detail (dynamic)
     privacy/page.tsx
     terms/page.tsx
   admin/
@@ -35,13 +36,20 @@ app/
     (authenticated)/     # Route group — all pages here require auth
       layout.tsx         # Sidebar + auth check via getSessionUser()
       page.tsx           # Dashboard
-      case-studies/page.tsx
-      settings/page.tsx
+      case-studies/page.tsx    # Case studies CRUD
+      testimonials/page.tsx    # Testimonials CRUD
+      faqs/page.tsx            # FAQs CRUD
+      offers/page.tsx          # Offers CRUD
+      leads/page.tsx           # Leads dashboard (read + status filter + CSV export)
+      agent-templates/page.tsx # Agent template editor + test runner
+      settings/page.tsx        # Theme customizer
   api/
-    auth/session/route.ts   # POST: create session cookie from Firebase ID token
-    auth/signout/route.ts   # POST: clear session cookie, redirect to login
-    events/route.ts         # POST: log analytics events
-    leads/route.ts          # POST: create lead in Firestore
+    auth/session/route.ts      # POST: create session cookie from Firebase ID token
+    auth/signout/route.ts      # POST: clear session cookie, redirect to login
+    events/route.ts            # POST: log analytics events
+    leads/route.ts             # POST: create lead in Firestore
+    agent/run/route.ts         # POST: run agent chain via Gemini
+    agent/send-email/route.ts  # POST: send email via Resend
 
 components/
   marketing/             # Landing page sections (see below)
@@ -52,10 +60,21 @@ lib/
   firebase/auth.ts       # getSessionUser(), setSessionCookie(), clearSessionCookie()
   firebase/client.ts     # Client-side Firebase app init
   firestore/case-studies.ts  # getPublishedCaseStudies() — server-side
-  firestore/faqs.ts      # getPublishedFAQs() — server-side
+  firestore/faqs.ts          # getPublishedFAQs() — server-side
+  firestore/offers.ts        # getPublishedOffers() — server-side
+  firestore/site-settings.ts # getSiteSettings() — server-side
+  actions/case-studies.ts    # Server actions: CRUD for case studies
+  actions/testimonials.ts    # Server actions: CRUD for testimonials
+  actions/faqs.ts            # Server actions: CRUD for FAQs
+  actions/offers.ts          # Server actions: CRUD for offers
+  actions/leads.ts           # Server actions: read, status update, CSV export
+  actions/agent-templates.ts # Server actions: CRUD + test run
+  agents/runner.ts       # Agent chain runner (Gemini API)
+  agents/prompts.ts      # Prompt builder from templates + context
+  agents/email-template.ts # Email template for agent outputs
   analytics.ts           # EVENTS constants + track() + initAnalytics()
   theme.ts               # themeToCSSVariables()
-  validation.ts          # Zod schemas (leadSchema, etc.)
+  validation.ts          # Zod schemas (leadSchema, caseStudySchema, etc.)
 
 hooks/
   useReducedMotion.ts    # prefers-reduced-motion hook
@@ -63,11 +82,16 @@ hooks/
 types/
   case-study.ts          # CaseStudy interface
   faq.ts                 # FAQ interface
+  offer.ts               # Offer interface
+  testimonial.ts         # Testimonial interface
+  agent-template.ts      # AgentTemplate interface
+  preview-plan.ts        # PreviewPlan interface (agent output structures)
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
 scripts/
-  seed-firestore.ts      # Seeds site_settings/default
+  seed-firestore.ts          # Seeds site_settings/default
+  seed-agent-templates.ts    # Seeds agent templates into Firestore
 ```
 
 ## Landing Page Components (`components/marketing/`)
@@ -78,11 +102,13 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `BrushRevealHero.tsx` | client | Hero with canvas interaction + CTAs |
 | `BrushRevealCanvas.tsx` | client | HTML5 Canvas brush masking (lazy-loaded) |
 | `WorkflowGraph.tsx` | client | SVG ambient node/edge background |
-| `SeeItWork.tsx` | client | Mini Agent teaser (Phase 2 placeholder) |
+| `SeeItWork.tsx` | client | Mini Agent teaser section |
+| `AgentDemoForm.tsx` | client | Interactive agent intake form |
+| `AgentDemoResults.tsx` | client | Agent output results display |
 | `ProofOfWork.tsx` | server | Fetches case studies from Firestore |
 | `ProofOfWorkClient.tsx` | client | Filter chips + card grid |
 | `HowItWorks.tsx` | client | 4-step timeline with scroll animation |
-| `PricingSection.tsx` | server | 3 hardcoded pricing tiers |
+| `PricingSection.tsx` | server | Fetches offers from Firestore (3 tiers) |
 | `FAQSection.tsx` | server | Fetches FAQs from Firestore |
 | `FAQAccordion.tsx` | client | Accordion with AnimatePresence |
 | `FinalCTA.tsx` | server | Bottom CTA block |
@@ -109,23 +135,38 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `faqs` | is_published=true | auth | question, answer, sort_order |
 | `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_* |
 | `events` | create only | auth | event tracking |
+| `agent_templates` | none | auth | key, markdown (agent prompt specs) |
 
-## What's Built (Phase 1 — in progress)
+## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
 - [x] Admin CMS scaffold (login, dashboard, case studies, settings pages)
 - [x] Full auth flow (login, session cookies, signout, middleware guard)
 - [x] Marketing landing page (all 7 sections with animations)
 - [x] Analytics event wiring
-- [ ] Admin CRUD for case studies, testimonials, FAQs, offers
-- [ ] Theme customizer UI in Admin settings
-- [ ] Contact page form wiring (lead capture → Firestore)
-- [ ] Case study detail pages
+- [x] Admin CRUD for case studies, testimonials, FAQs, offers
+- [x] Theme customizer UI in Admin settings
+- [x] Contact page form wiring (lead capture → Firestore)
+- [x] Case study detail pages
 
-## What's Next (Phase 2)
-- [ ] Mini Agent interactive demo (SeeItWork section)
-- [ ] Preview Plan generator + email delivery
-- [ ] Admin leads dashboard
-- [ ] Admin template editor for agent prompts
+## What's Built (Phase 2 — complete)
+- [x] Mini Agent interactive demo (SeeItWork section + AgentDemoForm)
+- [x] Agent chain runner (Gemini API integration)
+- [x] Preview Plan generator + email delivery (Resend)
+- [x] Admin leads dashboard (status filter + CSV export)
+- [x] Admin template editor for agent prompts (markdown editor + test runner)
+
+## Deployment
+- **Hosting**: Firebase Hosting + Cloud Functions (SSR)
+- **Region**: us-central1
+- **URL**: https://nicer-systems.web.app
+- **Plan**: Blaze (pay-as-you-go)
+
+## What's Next (Phase 3)
+- [ ] Multi-niche landing variants (industry pages)
+- [ ] A/B testing framework (hero copy/CTA)
+- [ ] Automated email sequences (nurture)
+- [ ] CRM sync (ClickUp/HubSpot/Close) + lead scoring
+- [ ] Case study "related" recommendations
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
@@ -136,9 +177,12 @@ Clear, confident, practical, business-friendly. No hype. Minimal jargon. Transla
 
 ## Dev Commands
 ```bash
-npm run dev          # Start Next.js dev server (port 3000)
-npx tsc --watch --noEmit  # TypeScript watch mode
+npm run dev              # Start Next.js dev server (port 3000)
+npx tsc --watch --noEmit # TypeScript watch mode
+npm run deploy           # Full Firebase deploy (hosting + functions)
+npm run deploy:hosting   # Deploy hosting + SSR Cloud Function only
+npm run deploy:rules     # Deploy Firestore security rules
+npm run deploy:indexes   # Deploy Firestore indexes
+npm run seed:templates   # Seed agent templates into Firestore
 npx tsx scripts/seed-firestore.ts  # Seed default site_settings
-npx firebase-tools deploy --only firestore:rules  # Deploy security rules
-npx firebase-tools deploy --only firestore:indexes  # Deploy indexes
 ```

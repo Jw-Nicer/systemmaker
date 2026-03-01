@@ -1,89 +1,93 @@
-# Data Model (Supabase/Postgres)
-**Doc Date:** 2026-02-27
+# Data Model (Firebase Firestore)
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-01
 
-## Tables
-### site_settings (single row)
-- id (uuid)
-- theme_primary (text)  // hex
-- theme_secondary (text)
-- gradient_preset (text)
-- glow_intensity (int)  // 0–100
-- motion_intensity (int) // 0–3
-- brush_style (text) // soft|hard|spray
-- cta_primary_url (text)
-- cta_secondary_url (text)
+## Collections
+
+### site_settings (doc ID: `default`)
+- theme_primary (string) // hex
+- theme_secondary (string)
+- gradient_preset (string)
+- glow_intensity (number) // 0–100
+- motion_intensity (number) // 0–3
+- brush_style (string) // soft|hard|spray
+- cta_primary_url (string)
+- cta_secondary_url (string)
 - updated_at (timestamp)
 
 ### case_studies
-- id (uuid)
-- slug (text, unique)
-- title (text)
-- industry (text)
-- workflow_type (text)
-- tool_stack (text[])
-- summary_problem (text)
-- summary_solution (text)
-- metrics (jsonb) // [{label, before, after, unit}]
-- media (jsonb) // [{type:image|video, url, caption}]
-- tags (text[])
-- is_published (bool)
-- published_at (timestamp)
-- created_at, updated_at
+- id (auto-generated doc ID)
+- slug (string, unique)
+- title (string)
+- client_name (string)
+- industry (string)
+- tools (string[])
+- challenge (string)
+- solution (string)
+- metrics (array) // [{label, before, after}]
+- thumbnail_url (string)
+- is_published (boolean)
+- sort_order (number)
+- created_at, updated_at (timestamp)
 
 ### testimonials
-- id
-- name (text)
-- role (text)
-- company (text)
-- quote (text)
-- avatar_url (text)
-- is_published (bool)
-- created_at, updated_at
+- id (auto-generated doc ID)
+- name (string)
+- role (string)
+- company (string)
+- quote (string)
+- avatar (string) // URL
+- is_published (boolean)
+- sort_order (number)
+- created_at, updated_at (timestamp)
 
 ### offers
-- id
-- name (text)
-- price_range (text)
-- bullets (text[])
-- highlight (bool)
-- is_published (bool)
+- id (auto-generated doc ID)
+- name (string)
+- price (string)
+- features (string[])
+- highlight (boolean)
+- is_published (boolean)
+- sort_order (number)
 
 ### faqs
-- id
-- question (text)
-- answer (text)
-- order_index (int)
-- is_published (bool)
+- id (auto-generated doc ID)
+- question (string)
+- answer (string)
+- sort_order (number)
+- is_published (boolean)
 
 ### leads
-- id
-- name (text)
-- email (text)
-- company (text)
-- bottleneck (text)
-- tools (text)
-- urgency (text)
-- utm_source (text)
-- utm_medium (text)
-- utm_campaign (text)
-- utm_content (text)
-- landing_path (text)
+- id (auto-generated doc ID)
+- name (string)
+- email (string)
+- company (string)
+- bottleneck (string)
+- tools (string)
+- urgency (string) // low|medium|high|urgent
+- source (string) // contact_form|agent_demo
+- utm_source (string)
+- utm_medium (string)
+- utm_campaign (string)
+- utm_content (string)
+- landing_path (string)
+- status (string) // new|qualified|booked|closed|unqualified
 - created_at (timestamp)
-- status (text) // new|qualified|booked|closed|unqualified
 
-### events (optional if PostHog is external)
-- id
-- lead_id (uuid, nullable)
-- event_name (text)
-- payload (jsonb)
-- created_at
+### events
+- id (auto-generated doc ID)
+- event_name (string)
+- payload (map)
+- created_at (timestamp)
 
-### agent_templates (Phase 2)
-- id
-- key (text, unique) // workflow_mapper, dashboard_designer, etc.
-- markdown (text)
-- updated_at
+### agent_templates
+- id (auto-generated doc ID)
+- key (string, unique) // intake_agent, workflow_mapper, etc.
+- name (string)
+- description (string)
+- markdown (string) // prompt template content
+- updated_at (timestamp)
 
-## Storage buckets
-- public-media (case studies media, avatars)
-- private (optional for drafts)
+## Storage (Firebase Storage)
+- Case study media (thumbnails, images)
+- Testimonial avatars
+- Public read, authenticated write (see `storage.rules`)
