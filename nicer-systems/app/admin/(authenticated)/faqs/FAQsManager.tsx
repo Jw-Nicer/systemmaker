@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { FAQ } from "@/types/faq";
 import {
   createFAQ,
@@ -29,6 +30,7 @@ export default function FAQsManager({
 }: {
   initialData: FAQ[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<FAQ[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,7 +86,10 @@ export default function FAQsManager({
       return;
     }
 
-    window.location.reload();
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+    router.refresh();
   }
 
   async function handleTogglePublished(item: FAQ) {
@@ -118,6 +123,7 @@ export default function FAQsManager({
     if (dragItem.current === null || dragOverItem.current === null) return;
     if (dragItem.current === dragOverItem.current) return;
 
+    const previous = [...items];
     const reordered = [...items];
     const [removed] = reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, removed);
@@ -126,7 +132,12 @@ export default function FAQsManager({
     dragItem.current = null;
     dragOverItem.current = null;
 
-    await reorderFAQs(reordered.map((i) => i.id));
+    try {
+      await reorderFAQs(reordered.map((i) => i.id));
+    } catch {
+      setItems(previous);
+      setError("Failed to reorder. Changes reverted.");
+    }
   }
 
   return (

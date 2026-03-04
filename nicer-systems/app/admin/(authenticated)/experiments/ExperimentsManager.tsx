@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Experiment, ExperimentVariant } from "@/types/experiment";
 import {
   createExperiment,
@@ -26,6 +27,7 @@ export default function ExperimentsManager({
 }: {
   initialData: Experiment[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<Experiment[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -50,13 +52,28 @@ export default function ExperimentsManager({
     setSaving(true);
     setError("");
 
+    const totalWeight = variants.reduce((sum, v) => sum + v.weight, 0);
+    if (totalWeight !== 100) {
+      setError(`Variant weights must sum to 100 (currently ${totalWeight})`);
+      setSaving(false);
+      return;
+    }
+
     try {
       await createExperiment({ name, target, variants });
-      window.location.reload();
+      setShowForm(false);
+      setName("");
+      setTarget("hero_headline");
+      setVariants([
+        { key: "control", label: "Control", value: "", weight: 50 },
+        { key: "variant_a", label: "Variant A", value: "", weight: 50 },
+      ]);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create experiment");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleStart(id: string) {
@@ -71,19 +88,27 @@ export default function ExperimentsManager({
   }
 
   async function handleComplete(id: string, winner: string) {
-    await completeExperiment(id, winner);
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, status: "completed" as const, winner } : i
-      )
-    );
-    setWinnerSelect(null);
+    try {
+      await completeExperiment(id, winner);
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === id ? { ...i, status: "completed" as const, winner } : i
+        )
+      );
+      setWinnerSelect(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to complete experiment");
+    }
   }
 
   async function handleDelete(id: string) {
-    await deleteExperiment(id);
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setDeleteConfirm(null);
+    try {
+      await deleteExperiment(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      setDeleteConfirm(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete experiment");
+    }
   }
 
   return (

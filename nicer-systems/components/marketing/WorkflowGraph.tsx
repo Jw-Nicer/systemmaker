@@ -69,6 +69,7 @@ export function WorkflowGraph() {
   const graph = useMemo(() => generateGraph(42), []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

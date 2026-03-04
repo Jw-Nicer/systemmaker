@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
 import { agentRunSchema } from "@/lib/validation";
-import { runAgentChain, AGENT_STEPS } from "@/lib/agents/runner";
+import { runAgentChain } from "@/lib/agents/runner";
 import { getAdminDb } from "@/lib/firebase/admin";
+import {
+  enforceRateLimit,
+  hasFilledHoneypot,
+} from "@/lib/security/request-guards";
 
 export async function POST(request: Request) {
+  let lastStep: string | null = null;
   try {
+    const limited = enforceRateLimit(request, {
+      keyPrefix: "agent_run",
+      windowMs: 10 * 60_000,
+      maxRequests: 4,
+    });
+    if (limited) return limited;
+
     const body = await request.json();
+    if (hasFilledHoneypot(body)) {
+      return NextResponse.json({ error: "Validation failed" }, { status: 400 });
+    }
+
     const parsed = agentRunSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -24,6 +40,7 @@ export async function POST(request: Request) {
       name: "",
       email: "",
       company: "",
+      industry,
       bottleneck,
       tools: current_tools,
       urgency: urgency ?? "",
@@ -37,6 +54,7 @@ export async function POST(request: Request) {
     const plan = await runAgentChain(
       { industry, bottleneck, current_tools, urgency, volume },
       (step) => {
+        lastStep = step;
         completedSteps.push(step);
       }
     );
@@ -45,14 +63,17 @@ export async function POST(request: Request) {
       {
         preview_plan: plan,
         lead_id: leadRef.id,
-        steps_completed: AGENT_STEPS.map((s) => s.key),
+        steps_completed: completedSteps,
       },
       { status: 200 }
     );
   } catch (err) {
     console.error("Agent run error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Agent chain failed" },
+      {
+        error: "Agent chain failed",
+        failed_step: lastStep,
+      },
       { status: 500 }
     );
   }

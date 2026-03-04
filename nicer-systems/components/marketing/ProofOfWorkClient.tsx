@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { track, EVENTS } from "@/lib/analytics";
 import { ScrollReveal } from "./ScrollReveal";
 import type { CaseStudy } from "@/types/case-study";
@@ -73,9 +74,12 @@ export function ProofOfWorkClient({
                 {/* Thumbnail */}
                 <div className="h-40 rounded-t-xl bg-surface-light flex items-center justify-center overflow-hidden">
                   {cs.thumbnail_url ? (
-                    <img
+                    <Image
                       src={cs.thumbnail_url}
                       alt={cs.title}
+                      width={800}
+                      height={320}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="w-full h-full object-cover"
                     />
                   ) : (

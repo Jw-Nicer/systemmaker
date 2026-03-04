@@ -18,6 +18,7 @@ export function useExperiment(experiment: Experiment | null): string | null {
     const stored = localStorage.getItem(storageKey);
 
     if (stored && experiment.variants.some((v) => v.key === stored)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAssignedVariant(stored);
       return;
     }

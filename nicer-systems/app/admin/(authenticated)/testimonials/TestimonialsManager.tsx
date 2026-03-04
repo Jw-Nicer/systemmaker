@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { Testimonial } from "@/types/testimonial";
 import {
   createTestimonial,
@@ -35,6 +36,7 @@ export default function TestimonialsManager({
 }: {
   initialData: Testimonial[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<Testimonial[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -93,7 +95,10 @@ export default function TestimonialsManager({
       return;
     }
 
-    window.location.reload();
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+    router.refresh();
   }
 
   async function handleTogglePublished(item: Testimonial) {
@@ -130,6 +135,7 @@ export default function TestimonialsManager({
     if (dragItem.current === null || dragOverItem.current === null) return;
     if (dragItem.current === dragOverItem.current) return;
 
+    const previous = [...items];
     const reordered = [...items];
     const [removed] = reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, removed);
@@ -138,7 +144,12 @@ export default function TestimonialsManager({
     dragItem.current = null;
     dragOverItem.current = null;
 
-    await reorderTestimonials(reordered.map((i) => i.id));
+    try {
+      await reorderTestimonials(reordered.map((i) => i.id));
+    } catch {
+      setItems(previous);
+      setError("Failed to reorder. Changes reverted.");
+    }
   }
 
   return (

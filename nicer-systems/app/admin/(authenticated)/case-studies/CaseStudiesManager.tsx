@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { CaseStudy } from "@/types/case-study";
 import {
   createCaseStudy,
@@ -50,6 +51,7 @@ export default function CaseStudiesManager({
 }: {
   initialData: CaseStudy[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<CaseStudy[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -149,8 +151,10 @@ export default function CaseStudiesManager({
       return;
     }
 
-    // Refresh — re-fetch by reloading
-    window.location.reload();
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+    router.refresh();
   }
 
   async function handleTogglePublished(item: CaseStudy) {
@@ -184,6 +188,7 @@ export default function CaseStudiesManager({
     if (dragItem.current === null || dragOverItem.current === null) return;
     if (dragItem.current === dragOverItem.current) return;
 
+    const previous = [...items];
     const reordered = [...items];
     const [removed] = reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, removed);
@@ -192,7 +197,12 @@ export default function CaseStudiesManager({
     dragItem.current = null;
     dragOverItem.current = null;
 
-    await reorderCaseStudies(reordered.map((i) => i.id));
+    try {
+      await reorderCaseStudies(reordered.map((i) => i.id));
+    } catch {
+      setItems(previous);
+      setError("Failed to reorder. Changes reverted.");
+    }
   }
 
   return (

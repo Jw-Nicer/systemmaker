@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { getFollowUps } from "@/lib/actions/leads";
 
 async function getDashboardMetrics() {
   try {
@@ -13,7 +14,8 @@ async function getDashboardMetrics() {
       db.collection("leads").orderBy("created_at", "desc").limit(5).get(),
     ]);
 
-    const recentLeads = leads.docs.map((doc) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recentLeads = leads.docs.map((doc: any) => ({
       id: doc.id,
       name: doc.data().name || "—",
       email: doc.data().email || "—",
@@ -56,7 +58,18 @@ const statusColors: Record<string, string> = {
 };
 
 export default async function AdminDashboard() {
-  const metrics = await getDashboardMetrics();
+  const [metrics, followUps] = await Promise.all([
+    getDashboardMetrics(),
+    getFollowUps(),
+  ]);
+
+  const now = new Date();
+  const overdueFollowUps = followUps.filter(
+    (l) => l.follow_up_at && new Date(l.follow_up_at) < now
+  );
+  const upcomingFollowUps = followUps.filter(
+    (l) => l.follow_up_at && new Date(l.follow_up_at) >= now
+  );
 
   return (
     <div>
@@ -99,6 +112,58 @@ export default async function AdminDashboard() {
           Agent Templates
         </Link>
       </div>
+
+      {/* Follow-ups */}
+      {followUps.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-semibold mb-4">
+            Follow-ups
+            {overdueFollowUps.length > 0 && (
+              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-300 font-medium">
+                {overdueFollowUps.length} overdue
+              </span>
+            )}
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[...overdueFollowUps, ...upcomingFollowUps].slice(0, 6).map((lead) => {
+              const isOverdue = lead.follow_up_at && new Date(lead.follow_up_at) < now;
+              return (
+                <Link
+                  key={lead.id}
+                  href={`/admin/leads/${lead.id}`}
+                  className={`rounded-xl border p-4 transition-colors ${
+                    isOverdue
+                      ? "border-red-500/40 bg-red-500/5 hover:border-red-500/60"
+                      : "border-border bg-surface hover:border-primary/40"
+                  }`}
+                >
+                  <p className="font-medium text-sm">{lead.name || "Unnamed"}</p>
+                  <p className="text-xs text-muted">{lead.company || lead.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        isOverdue ? "bg-red-500/20 text-red-300" : "bg-blue-500/20 text-blue-300"
+                      }`}
+                    >
+                      {isOverdue ? "Overdue" : "Upcoming"}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {lead.follow_up_at &&
+                        new Date(lead.follow_up_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                    </span>
+                  </div>
+                  {lead.follow_up_note && (
+                    <p className="text-xs text-muted mt-1 truncate">{lead.follow_up_note}</p>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="text-lg font-semibold mb-4">Recent Leads</h2>

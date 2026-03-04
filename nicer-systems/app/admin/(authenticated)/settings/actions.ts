@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/firebase/auth";
 import { updateSiteSettings } from "@/lib/firestore/site-settings";
 import type { ThemeSettings } from "@/lib/theme";
@@ -50,6 +51,7 @@ export async function saveThemeSettings(settings: ThemeSettings) {
 
   try {
     await updateSiteSettings(settings);
+    revalidatePath("/");
     return { success: true };
   } catch {
     return { error: "Failed to save settings" };

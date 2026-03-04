@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { Offer } from "@/types/offer";
 import {
   createOffer,
@@ -37,6 +38,7 @@ export default function OffersManager({
 }: {
   initialData: Offer[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<Offer[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -104,7 +106,10 @@ export default function OffersManager({
       return;
     }
 
-    window.location.reload();
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+    router.refresh();
   }
 
   async function handleTogglePublished(item: Offer) {
@@ -138,6 +143,7 @@ export default function OffersManager({
     if (dragItem.current === null || dragOverItem.current === null) return;
     if (dragItem.current === dragOverItem.current) return;
 
+    const previous = [...items];
     const reordered = [...items];
     const [removed] = reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, removed);
@@ -146,7 +152,12 @@ export default function OffersManager({
     dragItem.current = null;
     dragOverItem.current = null;
 
-    await reorderOffers(reordered.map((i) => i.id));
+    try {
+      await reorderOffers(reordered.map((i) => i.id));
+    } catch {
+      setItems(previous);
+      setError("Failed to reorder. Changes reverted.");
+    }
   }
 
   return (

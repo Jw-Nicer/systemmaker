@@ -1,10 +1,9 @@
 "use server";
 
-import { getAdminDb } from "@/lib/firebase/admin";
+import { getAdminDb, FieldValue } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/firebase/auth";
 import type { Experiment, ExperimentVariant } from "@/types/experiment";
 import { revalidatePath } from "next/cache";
-import { FieldValue } from "firebase-admin/firestore";
 
 async function requireAuth() {
   const user = await getSessionUser();

@@ -50,7 +50,11 @@ export function SeeItWork() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.error || "Agent chain failed");
+        const message =
+          body?.failed_step
+            ? `${body?.error || "Agent chain failed"} (failed at: ${body.failed_step})`
+            : body?.error || "Agent chain failed";
+        throw new Error(message);
       }
 
       const data = await res.json();

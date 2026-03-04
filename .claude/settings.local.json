@@ -13,7 +13,14 @@
       "Bash(git commit:*)",
       "Bash(curl:*)",
       "Bash(xargs grep:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx firebase:*)",
+      "Bash(powershell:*)",
+      "Bash(npm run:*)",
+      "Bash(gcloud services:*)",
+      "Bash(gcloud logging:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)"
     ]
   }
 }

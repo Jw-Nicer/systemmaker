@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { eventSchema } from "@/lib/validation";
+import { enforceRateLimit } from "@/lib/security/request-guards";
 
 export async function POST(request: Request) {
   try {
+    const limited = enforceRateLimit(request, {
+      keyPrefix: "events",
+      windowMs: 60_000,
+      maxRequests: 60,
+    });
+    if (limited) return limited;
+
     const body = await request.json();
     const parsed = eventSchema.safeParse(body);
 

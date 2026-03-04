@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getCaseStudyBySlug, getRelatedCaseStudies } from "@/lib/firestore/case-studies";
 
 interface Props {
@@ -50,9 +51,12 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Thumbnail */}
         {cs.thumbnail_url && (
           <div className="rounded-xl overflow-hidden border border-border mb-12">
-            <img
+            <Image
               src={cs.thumbnail_url}
               alt={cs.title}
+              width={1200}
+              height={400}
+              sizes="(max-width: 1024px) 100vw, 1024px"
               className="w-full h-64 object-cover"
             />
           </div>
@@ -139,9 +143,12 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                   className="rounded-xl border border-border bg-surface p-5 hover:border-primary/40 transition-colors"
                 >
                   {r.thumbnail_url && (
-                    <img
+                    <Image
                       src={r.thumbnail_url}
                       alt={r.title}
+                      width={480}
+                      height={256}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="w-full h-32 object-cover rounded-lg mb-3"
                     />
                   )}

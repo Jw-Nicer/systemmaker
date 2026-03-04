@@ -176,14 +176,20 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - **URL**: https://nicer-systems.web.app
 - **Plan**: Blaze (pay-as-you-go)
 
-## What's Built (Phase 3 — in progress)
+## What's Built (Phase 3 — complete)
 - [x] Case study related recommendations (on detail pages)
 - [x] Multi-niche landing variants (admin CRUD + /[industry] dynamic routes)
 - [x] A/B testing framework (experiments admin + useExperiment hook + bucketing)
 - [x] Custom error pages (404, error boundary, admin error boundary)
 - [x] Admin dashboard with real Firestore metrics + recent leads
-- [ ] Automated email sequences (nurture)
-- [ ] CRM sync (ClickUp/HubSpot/Close) + lead scoring
+- [x] Automated email sequences (5-email nurture via Resend scheduledAt)
+- [x] Lead scoring (pure function, 0-75 points, stored on lead docs)
+- [x] Admin email notifications on new leads (via Resend)
+- [x] Activity timeline on leads (notes, status changes, email logs — subcollection)
+- [x] Follow-up reminders (date + note per lead, dashboard widget with overdue/upcoming)
+- [x] Lead detail page (/admin/leads/[id]) with timeline, notes, follow-up management
+- [x] Admin dashboard fixes (security hardening, CRUD bug fixes, sidebar nav, login redirect, theme revalidation)
+- [ ] CRM sync (ClickUp/HubSpot/Close) — deferred
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.

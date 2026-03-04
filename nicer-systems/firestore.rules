@@ -33,15 +33,28 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Leads — public can create, admin can read/update
+    // Leads — public can create (restricted fields), admin can read/update
     match /leads/{docId} {
-      allow create: if true;
+      allow create: if true
+        && request.resource.data.keys().hasOnly([
+          'name', 'email', 'company', 'bottleneck', 'tools', 'urgency',
+          'status', 'source', 'industry', 'score', 'created_at',
+          'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing_path'
+        ]);
       allow read, update, delete: if request.auth != null;
+
+      // Activity timeline — admin only
+      match /activity/{activityId} {
+        allow read, write: if request.auth != null;
+      }
     }
 
-    // Events — public can create, admin can read
+    // Events — public can create (restricted fields), admin can read
     match /events/{docId} {
-      allow create: if true;
+      allow create: if true
+        && request.resource.data.keys().hasOnly([
+          'event_name', 'payload', 'lead_id', 'created_at'
+        ]);
       allow read: if request.auth != null;
     }
 

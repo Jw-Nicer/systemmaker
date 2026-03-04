@@ -1,19 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/firebase/auth";
-
-const sidebarLinks = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/case-studies", label: "Case Studies" },
-  { href: "/admin/testimonials", label: "Testimonials" },
-  { href: "/admin/faqs", label: "FAQs" },
-  { href: "/admin/offers", label: "Offers" },
-  { href: "/admin/leads", label: "Leads" },
-  { href: "/admin/variants", label: "Landing Variants" },
-  { href: "/admin/experiments", label: "A/B Tests" },
-  { href: "/admin/agent-templates", label: "Agent Templates" },
-  { href: "/admin/settings", label: "Settings" },
-];
+import SidebarNav from "./SidebarNav";
 
 export default async function AdminLayout({
   children,
@@ -35,17 +23,7 @@ export default async function AdminLayout({
             Nicer Admin
           </Link>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="block px-4 py-2.5 rounded-lg text-sm text-muted hover:text-foreground hover:bg-surface-light transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <SidebarNav />
         <div className="p-4 border-t border-border">
           <p className="text-xs text-muted truncate">{user.email}</p>
           <form action="/api/auth/signout" method="post">

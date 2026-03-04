@@ -2,7 +2,9 @@
   "hosting": {
     "source": ".",
     "frameworksBackend": {
-      "region": "us-central1"
+      "region": "us-central1",
+      "timeoutSeconds": 300,
+      "memory": "512MiB"
     }
   },
   "firestore": {

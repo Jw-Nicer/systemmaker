@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { LandingVariant } from "@/types/variant";
 import {
   createVariant,
@@ -36,6 +37,7 @@ export default function VariantsManager({
 }: {
   initialData: LandingVariant[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<LandingVariant[]>(initialData);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -104,15 +106,15 @@ export default function VariantsManager({
         );
       } else {
         await createVariant(payload);
-        // Refresh page to get new item with ID
-        window.location.reload();
+        router.refresh();
       }
       setShowForm(false);
       setEditingId(null);
     } catch {
       setError("Failed to save variant");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleToggle(id: string, published: boolean) {

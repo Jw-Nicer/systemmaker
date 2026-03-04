@@ -25,14 +25,15 @@
 
 ## Agent endpoints
 - POST /api/agent/run
-  - body: {templateKey, context} (agent template key + user input context)
+  - body: {industry, bottleneck, current_tools, urgency?, volume?}
   - runs agent chain via Gemini API
-  - returns: {result} (agent output)
+  - returns: {preview_plan, lead_id, steps_completed}
+  - error returns: {error, failed_step?}
 
 - POST /api/agent/send-email
-  - body: {to, subject, html} (email details)
-  - sends email via Resend API
-  - returns: 200
+  - body: {name, email, preview_plan, lead_id?}
+  - sends preview-plan email via Resend API
+  - returns: {success: true}
 
 ## Admin endpoints (server actions)
 Admin CRUD is implemented via Next.js server actions in `lib/actions/`, not REST API routes.

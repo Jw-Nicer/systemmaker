@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
+import Link from "next/link";
 import {
   updateLeadStatus,
   exportLeadsCSV,
@@ -24,29 +25,39 @@ export default function LeadsManager({
   const [leads, setLeads] = useState<Lead[]>(initialData);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "score">("date");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
-  const filtered = leads.filter((l) => {
-    if (filter !== "all" && l.status !== filter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        l.name.toLowerCase().includes(q) ||
-        l.email.toLowerCase().includes(q) ||
-        l.company.toLowerCase().includes(q) ||
-        l.bottleneck.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filtered = leads
+    .filter((l) => {
+      if (filter !== "all" && l.status !== filter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          l.name.toLowerCase().includes(q) ||
+          l.email.toLowerCase().includes(q) ||
+          l.company.toLowerCase().includes(q) ||
+          l.bottleneck.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "score") return (b.score ?? 0) - (a.score ?? 0);
+      return 0; // already sorted by date from server
+    });
 
   async function handleStatusChange(id: string, newStatus: string) {
+    setStatusError(null);
     const result = await updateLeadStatus(id, newStatus);
     if (result.success) {
       setLeads((prev) =>
         prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l))
       );
+    } else {
+      setStatusError(result.error ?? "Failed to update lead status");
     }
   }
 
@@ -117,7 +128,21 @@ export default function LeadsManager({
           placeholder="Search leads..."
           className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm flex-1 max-w-xs"
         />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "date" | "score")}
+          className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm"
+        >
+          <option value="date">Sort: Newest</option>
+          <option value="score">Sort: Score</option>
+        </select>
       </div>
+
+      {statusError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-500/40 text-red-300 text-sm">
+          {statusError}
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -127,6 +152,7 @@ export default function LeadsManager({
               <th className="px-6 py-3 text-muted font-medium">Name</th>
               <th className="px-6 py-3 text-muted font-medium">Email</th>
               <th className="px-6 py-3 text-muted font-medium">Company</th>
+              <th className="px-6 py-3 text-muted font-medium">Score</th>
               <th className="px-6 py-3 text-muted font-medium">Status</th>
               <th className="px-6 py-3 text-muted font-medium">Source</th>
               <th className="px-6 py-3 text-muted font-medium">Date</th>
@@ -135,15 +161,14 @@ export default function LeadsManager({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                <td colSpan={7} className="px-6 py-12 text-center text-muted">
                   No leads found.
                 </td>
               </tr>
             ) : (
               filtered.map((lead) => (
-                <>
+                <Fragment key={lead.id}>
                   <tr
-                    key={lead.id}
                     onClick={() =>
                       setExpandedId(
                         expandedId === lead.id ? null : lead.id
@@ -152,13 +177,45 @@ export default function LeadsManager({
                     className="border-b border-border last:border-b-0 hover:bg-surface-light/50 cursor-pointer"
                   >
                     <td className="px-6 py-3 font-medium">
-                      {lead.name || "—"}
+                      <div className="flex items-center gap-2">
+                        {lead.follow_up_at && new Date(lead.follow_up_at) < new Date() && (
+                          <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Overdue follow-up" />
+                        )}
+                        {lead.follow_up_at && new Date(lead.follow_up_at) >= new Date() && (
+                          <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" title="Follow-up scheduled" />
+                        )}
+                        <span>{lead.name || "—"}</span>
+                        <Link
+                          href={`/admin/leads/${lead.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-primary hover:underline ml-1"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </td>
                     <td className="px-6 py-3 text-muted">
                       {lead.email || "—"}
                     </td>
                     <td className="px-6 py-3 text-muted">
                       {lead.company || "—"}
+                    </td>
+                    <td className="px-6 py-3">
+                      {lead.score != null ? (
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            lead.score >= 50
+                              ? "bg-green-500/10 text-green-400"
+                              : lead.score >= 25
+                                ? "bg-yellow-500/10 text-yellow-400"
+                                : "bg-red-500/10 text-red-400"
+                          }`}
+                        >
+                          {lead.score}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-3">
                       <select
@@ -187,10 +244,10 @@ export default function LeadsManager({
                   {expandedId === lead.id && (
                     <tr key={`${lead.id}-detail`}>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-6 py-4 bg-surface-light/30 border-b border-border"
                       >
-                        <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                        <div className="grid sm:grid-cols-3 gap-4 text-sm">
                           <div>
                             <p className="text-xs text-muted uppercase mb-1">
                               Bottleneck
@@ -215,11 +272,35 @@ export default function LeadsManager({
                             </p>
                             <p>{lead.utm_source || "—"}</p>
                           </div>
+                          <div>
+                            <p className="text-xs text-muted uppercase mb-1">
+                              Nurture
+                            </p>
+                            <p>
+                              {lead.nurture_enrolled ? (
+                                <span className="text-green-400">Enrolled</span>
+                              ) : (
+                                <span className="text-muted">Not enrolled</span>
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted uppercase mb-1">
+                              Preview Plan
+                            </p>
+                            <p>
+                              {lead.preview_plan_sent_at ? (
+                                <span className="text-green-400">Sent</span>
+                              ) : (
+                                <span className="text-muted">—</span>
+                              )}
+                            </p>
+                          </div>
                         </div>
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))
             )}
           </tbody>
