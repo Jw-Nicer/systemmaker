@@ -27,6 +27,11 @@ function getModel() {
   return process.env.GOOGLE_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
 }
 
+/** Fast model for simple structured tasks (extraction). */
+function getFastModel() {
+  return "gemini-2.0-flash";
+}
+
 /** Trim history to last N messages to keep context manageable. */
 function trimHistory(messages: ChatMessage[]): ChatMessage[] {
   if (messages.length <= MAX_CONTEXT_MESSAGES) return messages;
@@ -218,7 +223,7 @@ export async function extractIntakeData(
 ): Promise<ExtractedIntake> {
   const client = getGeminiClient();
   const model = client.getGenerativeModel({
-    model: getModel(),
+    model: getFastModel(),
     generationConfig: { responseMimeType: "application/json" },
   });
 
@@ -288,7 +293,9 @@ export async function* generateConversationalResponse(
   planSummary?: string
 ): AsyncGenerator<string, void, unknown> {
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: getModel() });
+  // Use fast model for simple intake questions, full model for follow-up reasoning
+  const modelName = phase === "follow_up" ? getModel() : getFastModel();
+  const model = client.getGenerativeModel({ model: modelName });
 
   let prompt: string;
 

@@ -1,5 +1,3 @@
-import posthog from "posthog-js";
-
 export const EVENTS = {
   LANDING_VIEW: "landing_view",
   BRUSH_REVEAL_START: "brush_reveal_start",
@@ -45,7 +43,9 @@ export function track(eventName: EventName, payload?: Record<string, unknown>) {
   }
 
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    posthog.capture(eventName, payload);
+    import("posthog-js").then(({ default: posthog }) => {
+      posthog.capture(eventName, payload);
+    });
   }
 }
 
@@ -55,10 +55,12 @@ export function initAnalytics() {
     process.env.NEXT_PUBLIC_POSTHOG_KEY &&
     process.env.NODE_ENV === "production"
   ) {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-      person_profiles: "identified_only",
-      capture_pageview: false,
+    import("posthog-js").then(({ default: posthog }) => {
+      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+        person_profiles: "identified_only",
+        capture_pageview: false,
+      });
     });
   }
 }

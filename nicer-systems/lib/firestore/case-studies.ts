@@ -1,21 +1,25 @@
 import { getAdminDb } from "@/lib/firebase/admin";
+import { unstable_cache } from "next/cache";
 import type { CaseStudy } from "@/types/case-study";
 
-export async function getPublishedCaseStudies(): Promise<CaseStudy[]> {
-  try {
-    const db = getAdminDb();
-    const snap = await db
-      .collection("case_studies")
-      .where("is_published", "==", true)
-      .orderBy("sort_order", "asc")
-      .get();
+export const getPublishedCaseStudies = unstable_cache(
+  async (): Promise<CaseStudy[]> => {
+    try {
+      const db = getAdminDb();
+      const snap = await db
+        .collection("case_studies")
+        .where("is_published", "==", true)
+        .orderBy("sort_order", "asc")
+        .get();
 
-    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as CaseStudy);
-  } catch {
-    // Index may not exist yet or collection is empty
-    return [];
-  }
-}
+      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as CaseStudy);
+    } catch {
+      return [];
+    }
+  },
+  ["published-case-studies"],
+  { revalidate: 60, tags: ["case-studies"] }
+);
 
 export async function getCaseStudyBySlug(
   slug: string
@@ -37,37 +41,30 @@ export async function getCaseStudyBySlug(
   }
 }
 
-export async function getRelatedCaseStudies(
+export function getRelatedCaseStudies(
   current: CaseStudy,
+  allStudies: CaseStudy[],
   limit = 3
-): Promise<CaseStudy[]> {
-  try {
-    const all = await getPublishedCaseStudies();
-    const others = all.filter((cs) => cs.id !== current.id);
+): CaseStudy[] {
+  const others = allStudies.filter((cs) => cs.id !== current.id);
 
-    // Score by: same industry (2 pts) + each shared tool (1 pt)
-    const scored = others.map((cs) => {
-      let score = 0;
-      if (cs.industry === current.industry) score += 2;
-      for (const tool of cs.tools) {
-        if (current.tools.includes(tool)) score += 1;
-      }
-      return { cs, score };
-    });
+  const scored = others.map((cs) => {
+    let score = 0;
+    if (cs.industry === current.industry) score += 2;
+    for (const tool of cs.tools) {
+      if (current.tools.includes(tool)) score += 1;
+    }
+    return { cs, score };
+  });
 
-    return scored
-      .filter((s) => s.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map((s) => s.cs);
-  } catch {
-    return [];
-  }
+  return scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((s) => s.cs);
 }
 
-export async function getIndustries(
-  caseStudies: CaseStudy[]
-): Promise<string[]> {
+export function getIndustries(caseStudies: CaseStudy[]): string[] {
   const industries = new Set(caseStudies.map((cs) => cs.industry));
   return Array.from(industries).sort();
 }

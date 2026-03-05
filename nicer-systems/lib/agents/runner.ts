@@ -16,6 +16,21 @@ const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 const MAX_RETRIES_PER_MODEL = 2;
 const BASE_RETRY_DELAY_MS = 300;
 
+// Singleton Gemini client — avoids re-instantiation per call
+let _geminiClient: GoogleGenerativeAI | null = null;
+function getGeminiClient(): GoogleGenerativeAI {
+  if (!_geminiClient) {
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GOOGLE_GEMINI_API_KEY is not set");
+    _geminiClient = new GoogleGenerativeAI(apiKey);
+  }
+  return _geminiClient;
+}
+
+// TTL cache for agent templates (5 minutes)
+let _templateCache: { data: Map<string, string>; expires: number } | null = null;
+const TEMPLATE_CACHE_TTL = 5 * 60_000;
+
 function getModelCandidates(): string[] {
   const configuredModel = process.env.GOOGLE_GEMINI_MODEL?.trim();
   if (configuredModel) return [configuredModel];
@@ -162,10 +177,7 @@ const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
 };
 
 async function callGemini(prompt: string): Promise<string> {
-  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GOOGLE_GEMINI_API_KEY is not set");
-
-  const client = new GoogleGenerativeAI(apiKey);
+  const client = getGeminiClient();
   const models = getModelCandidates();
   let lastError: Error | null = null;
 
@@ -216,6 +228,11 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 async function getAllTemplates(): Promise<Map<string, string>> {
+  // Return cached templates if still valid
+  if (_templateCache && Date.now() < _templateCache.expires) {
+    return _templateCache.data;
+  }
+
   const db = getAdminDb();
   const snap = await db.collection("agent_templates").get();
   const map = new Map<string, string>();
@@ -224,6 +241,8 @@ async function getAllTemplates(): Promise<Map<string, string>> {
     const data = doc.data() as AgentTemplate;
     map.set(data.key, data.markdown);
   });
+
+  _templateCache = { data: map, expires: Date.now() + TEMPLATE_CACHE_TTL };
   return map;
 }
 

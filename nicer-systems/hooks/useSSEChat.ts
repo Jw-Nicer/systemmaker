@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { track, EVENTS } from "@/lib/analytics";
 import type {
   ChatMessage,
@@ -171,31 +171,35 @@ export function useSSEChat() {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const abortRef = useRef<AbortController | null>(null);
   const hasTrackedStart = useRef(false);
+  // Use ref for state to keep sendMessage stable (avoids re-renders of ChatInput)
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; });
 
   const sendMessage = useCallback(
     async (message: string) => {
-      if (state.isStreaming || !message.trim()) return;
+      const current = stateRef.current;
+      if (current.isStreaming || !message.trim()) return;
 
       // Track first message
       if (!hasTrackedStart.current) {
         track(EVENTS.AGENT_CHAT_START);
         hasTrackedStart.current = true;
       }
-      track(EVENTS.AGENT_CHAT_MESSAGE, { phase: state.phase });
+      track(EVENTS.AGENT_CHAT_MESSAGE, { phase: current.phase });
 
       dispatch({ type: "SEND_MESSAGE", message: message.trim() });
 
       // Prepare request body
       const body: Record<string, unknown> = {
         message: message.trim(),
-        history: state.messages.slice(-20), // Keep last 20 for context window
-        phase: state.phase,
-        extracted: state.extracted,
+        history: current.messages.slice(-20), // Keep last 20 for context window
+        phase: current.phase,
+        extracted: current.extracted,
       };
 
       // Include plan data for follow_up phase context
-      if (state.phase === "follow_up" && state.plan) {
-        body.plan = state.plan;
+      if (current.phase === "follow_up" && current.plan) {
+        body.plan = current.plan;
       }
 
       // Abort any existing stream
@@ -334,7 +338,7 @@ export function useSSEChat() {
         }
 
         // If stream ended without explicit done event
-        if (state.isStreaming) {
+        if (stateRef.current.isStreaming) {
           dispatch({ type: "STREAM_DONE" });
         }
       } catch (err) {
@@ -346,7 +350,7 @@ export function useSSEChat() {
         });
       }
     },
-    [state.isStreaming, state.phase, state.messages, state.extracted]
+    [] // eslint-disable-line react-hooks/exhaustive-deps -- uses stateRef for stability
   );
 
   const setPlan = useCallback((plan: PreviewPlan) => {

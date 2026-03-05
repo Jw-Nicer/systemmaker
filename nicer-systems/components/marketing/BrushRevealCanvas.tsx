@@ -447,16 +447,18 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
     revealC.height = ch;
     revealCanvasRef.current = revealC;
 
-    // Generate textured overlay
+    // Generate textured overlay (willReadFrequently for efficient getImageData in checkReveal)
     const overlayC = generateTexturedOverlay(cw, ch, primary);
     overlayCanvasRef.current = overlayC;
+    // Pre-acquire overlay context with willReadFrequently hint
+    overlayC.getContext("2d", { willReadFrequently: true });
 
     // --- Animation loop ---
     const mainCtx = canvas.getContext("2d")!;
+    const revealCtx = revealC.getContext("2d")!;
 
     function compositeFrame(time: number) {
       const t = time * 0.001;
-      const revealCtx = revealCanvasRef.current!.getContext("2d")!;
 
       // Render animated reveal layer
       renderRevealLayer(
@@ -531,7 +533,7 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
         revealCheckTimer.current = setTimeout(() => {
           checkReveal();
           revealCheckTimer.current = null;
-        }, 500);
+        }, 1500);
       }
     }
 

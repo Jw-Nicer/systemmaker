@@ -139,10 +139,12 @@ export async function POST(request: Request) {
   const { message, history, phase: clientPhase, extracted, plan: clientPlan } = parsed.data;
 
   const stream = createSSEStream(async (write, close) => {
-    // Step 1: Extract any new intake data from user message
+    // Step 1: Extract intake data and detect phase
+    // Run extraction in parallel with an optimistic phase check
     let updatedExtracted: ExtractedIntake = { ...extracted };
 
     if (clientPhase === "gathering" || clientPhase === "confirming") {
+      // Extraction uses gemini-2.0-flash (fast) — runs quickly
       updatedExtracted = await extractIntakeData(
         history as ChatMessage[],
         message,
@@ -178,36 +180,33 @@ export async function POST(request: Request) {
         volume: updatedExtracted.volume,
       };
 
-      // Create lead record
-      let leadId: string | undefined;
-      try {
-        const db = getAdminDb();
-        const leadRef = await db.collection("leads").add({
-          name: "",
+      // Create lead record (non-blocking — don't delay plan generation)
+      const db = getAdminDb();
+      const leadWritePromise = db.collection("leads").add({
+        name: "",
+        email: "",
+        company: "",
+        industry: input.industry,
+        bottleneck: input.bottleneck,
+        tools: input.current_tools,
+        urgency: input.urgency ?? "",
+        status: "new",
+        source: "agent_chat",
+        score: computeLeadScore({
           email: "",
           company: "",
-          industry: input.industry,
           bottleneck: input.bottleneck,
-          tools: input.current_tools,
-          urgency: input.urgency ?? "",
-          status: "new",
-          source: "agent_chat",
-          score: computeLeadScore({
-            email: "",
-            company: "",
-            bottleneck: input.bottleneck,
-            urgency: input.urgency,
-            completed_agent_demo: true,
-            preview_plan_sent: false,
-          }),
-          created_at: new Date(),
-        });
-        leadId = leadRef.id;
-      } catch (err) {
+          urgency: input.urgency,
+          completed_agent_demo: true,
+          preview_plan_sent: false,
+        }),
+        created_at: new Date(),
+      }).catch((err) => {
         console.error("Failed to create lead:", err);
-      }
+        return null;
+      });
 
-      // Run the streaming agent chain
+      // Run the streaming agent chain (starts immediately, doesn't wait for lead write)
       const plan = await runAgentChainStreaming(
         input,
         (step: AgentStep, label: string, data: unknown) => {
@@ -219,10 +218,13 @@ export async function POST(request: Request) {
         }
       );
 
-      // Save plan to Firestore (for shareable URLs — Phase 4B)
+      // Resolve lead write (should be done by now since agent chain took ~30s)
+      const leadRef = await leadWritePromise;
+      const leadId = leadRef?.id;
+
+      // Save plan to Firestore (for shareable URLs)
       let planId: string | undefined;
       try {
-        const db = getAdminDb();
         const planRef = await db.collection("plans").add({
           preview_plan: JSON.parse(JSON.stringify(plan)),
           input_summary: {
@@ -241,12 +243,9 @@ export async function POST(request: Request) {
         });
         planId = planRef.id;
 
-        // Link plan to lead
+        // Link plan to lead (fire-and-forget)
         if (leadId) {
-          await db
-            .collection("leads")
-            .doc(leadId)
-            .update({ plan_id: planId });
+          db.collection("leads").doc(leadId).update({ plan_id: planId }).catch(() => {});
         }
       } catch (err) {
         console.error("Failed to save plan:", err);

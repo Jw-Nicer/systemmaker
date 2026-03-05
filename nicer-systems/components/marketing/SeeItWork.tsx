@@ -1,7 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { ScrollReveal } from "./ScrollReveal";
-import { AgentChat } from "./AgentChat";
+
+const AgentChat = dynamic(
+  () => import("./AgentChat").then((m) => ({ default: m.AgentChat })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[480px] sm:h-[520px] flex items-center justify-center text-sm text-muted">
+        Initializing agent...
+      </div>
+    ),
+  }
+);
 
 export function SeeItWork() {
   return (

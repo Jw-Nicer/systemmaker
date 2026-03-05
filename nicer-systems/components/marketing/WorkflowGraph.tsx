@@ -32,7 +32,7 @@ function generateGraph(seed: number) {
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 4; col++) {
       const key = seed + row * 100 + col;
-      if (seededRandom(key * 7.3) > 0.55) continue;
+      if (seededRandom(key * 7.3) > 0.45) continue; // fewer nodes for performance
 
       nodes.push({
         id: nodeIndex,
@@ -67,6 +67,23 @@ export function WorkflowGraph() {
   const [visible, setVisible] = useState(true);
   const [packetEdge, setPacketEdge] = useState(0);
   const graph = useMemo(() => generateGraph(42), []);
+
+  // Memoize animation props to avoid new object literals every render
+  const nodeAnimations = useMemo(() =>
+    graph.nodes.map((node) => ({
+      animate: {
+        cx: [node.x, node.x + node.amplitude * 0.3, node.x - node.amplitude * 0.2, node.x],
+        cy: [node.y, node.y - node.amplitude * 0.2, node.y + node.amplitude * 0.3, node.y],
+      },
+      transition: {
+        duration: node.duration,
+        repeat: Infinity,
+        ease: "easeInOut" as const,
+        delay: node.phase,
+      },
+    })),
+    [graph.nodes]
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -115,7 +132,7 @@ export function WorkflowGraph() {
           );
         })}
 
-        {graph.nodes.map((node) => (
+        {graph.nodes.map((node, i) => (
           <motion.circle
             key={`n-${node.id}`}
             cx={node.x}
@@ -123,34 +140,8 @@ export function WorkflowGraph() {
             r={node.size * 0.1}
             fill="var(--theme-primary)"
             fillOpacity={0.12}
-            animate={
-              !reduced && visible
-                ? {
-                    cx: [
-                      node.x,
-                      node.x + node.amplitude * 0.3,
-                      node.x - node.amplitude * 0.2,
-                      node.x,
-                    ],
-                    cy: [
-                      node.y,
-                      node.y - node.amplitude * 0.2,
-                      node.y + node.amplitude * 0.3,
-                      node.y,
-                    ],
-                  }
-                : undefined
-            }
-            transition={
-              !reduced && visible
-                ? {
-                    duration: node.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: node.phase,
-                  }
-                : undefined
-            }
+            animate={!reduced && visible ? nodeAnimations[i].animate : undefined}
+            transition={!reduced && visible ? nodeAnimations[i].transition : undefined}
           />
         ))}
 

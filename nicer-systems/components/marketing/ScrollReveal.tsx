@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -10,7 +11,13 @@ interface ScrollRevealProps {
   className?: string;
 }
 
-export function ScrollReveal({
+const offsets = {
+  up: { x: 0, y: 30 },
+  left: { x: -30, y: 0 },
+  right: { x: 30, y: 0 },
+};
+
+export const ScrollReveal = React.memo(function ScrollReveal({
   children,
   delay = 0,
   direction = "up",
@@ -21,12 +28,6 @@ export function ScrollReveal({
   if (reduced) {
     return <div className={className}>{children}</div>;
   }
-
-  const offsets = {
-    up: { x: 0, y: 30 },
-    left: { x: -30, y: 0 },
-    right: { x: 30, y: 0 },
-  };
 
   return (
     <motion.div
@@ -39,4 +40,4 @@ export function ScrollReveal({
       {children}
     </motion.div>
   );
-}
+});

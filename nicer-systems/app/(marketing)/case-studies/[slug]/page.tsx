@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getCaseStudyBySlug, getRelatedCaseStudies } from "@/lib/firestore/case-studies";
+import { getCaseStudyBySlug, getRelatedCaseStudies, getPublishedCaseStudies } from "@/lib/firestore/case-studies";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -9,11 +9,14 @@ interface Props {
 
 export default async function CaseStudyDetailPage({ params }: Props) {
   const { slug } = await params;
-  const cs = await getCaseStudyBySlug(slug);
+  const [cs, allStudies] = await Promise.all([
+    getCaseStudyBySlug(slug),
+    getPublishedCaseStudies(),
+  ]);
 
   if (!cs) notFound();
 
-  const related = await getRelatedCaseStudies(cs);
+  const related = getRelatedCaseStudies(cs, allStudies);
 
   return (
     <section className="py-24">
