@@ -393,6 +393,102 @@ export async function runAgentChain(
 }
 
 /**
+ * Streaming variant of runAgentChain — calls onSection with the step key,
+ * label, and parsed section data as each stage completes.
+ * Used by the SSE chat endpoint to stream plan sections to the client.
+ */
+export async function runAgentChainStreaming(
+  input: AgentRunInput,
+  onSection: (step: AgentStep, label: string, data: unknown) => void
+): Promise<PreviewPlan> {
+  const templates = await getAllTemplates();
+
+  function getTemplate(key: string): string {
+    const t = templates.get(key);
+    if (!t) throw new Error(`Agent template not found: ${key}`);
+    return t;
+  }
+
+  // Step 1: Intake
+  onSection("intake", "Analyzing your bottleneck...", null);
+  const intake = await runAgentWithTemplate<IntakeOutput>(
+    "intake_agent",
+    getTemplate("intake_agent"),
+    {
+      industry: input.industry,
+      bottleneck: input.bottleneck,
+      current_tools: input.current_tools,
+      urgency: input.urgency ?? "not specified",
+      volume: input.volume ?? "not specified",
+    }
+  );
+  onSection("intake", "Bottleneck analysis complete", intake);
+
+  // Step 2: Workflow Mapper
+  onSection("workflow", "Mapping workflow stages...", null);
+  const workflow = await runAgentWithTemplate<WorkflowMapperOutput>(
+    "workflow_mapper",
+    getTemplate("workflow_mapper"),
+    {
+      clarified_problem: intake.clarified_problem,
+      industry: input.industry,
+      current_tools: input.current_tools,
+      assumptions: intake.assumptions,
+      suggested_scope: intake.suggested_scope,
+    }
+  );
+  onSection("workflow", "Workflow mapping complete", workflow);
+
+  // Steps 3 & 4 in parallel
+  onSection("automation", "Designing automations...", null);
+  onSection("dashboard", "Building dashboard KPIs...", null);
+
+  const [automation, dashboard] = await Promise.all([
+    runAgentWithTemplate<AutomationDesignerOutput>(
+      "automation_designer",
+      getTemplate("automation_designer"),
+      {
+        stages: workflow.stages,
+        required_fields: workflow.required_fields,
+        current_tools: input.current_tools,
+        failure_modes: workflow.failure_modes,
+      }
+    ).then((result) => {
+      onSection("automation", "Automation design complete", result);
+      return result;
+    }),
+    runAgentWithTemplate<DashboardDesignerOutput>(
+      "dashboard_designer",
+      getTemplate("dashboard_designer"),
+      {
+        stages: workflow.stages,
+        timestamps: workflow.timestamps,
+        industry: input.industry,
+        required_fields: workflow.required_fields,
+      }
+    ).then((result) => {
+      onSection("dashboard", "Dashboard KPIs complete", result);
+      return result;
+    }),
+  ]);
+
+  // Step 5: Ops Pulse Writer
+  onSection("ops_pulse", "Writing ops pulse...", null);
+  const ops_pulse = await runAgentWithTemplate<OpsPulseOutput>(
+    "ops_pulse_writer",
+    getTemplate("ops_pulse_writer"),
+    {
+      kpis: dashboard.kpis,
+      dashboards: dashboard.dashboards,
+      failure_modes: workflow.failure_modes,
+    }
+  );
+  onSection("ops_pulse", "Ops pulse complete", ops_pulse);
+
+  return { intake, workflow, automation, dashboard, ops_pulse };
+}
+
+/**
  * Run a single agent template with sample input (for admin test-run).
  */
 export async function runSingleAgent(

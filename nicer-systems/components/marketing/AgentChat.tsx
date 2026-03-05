@@ -1,0 +1,129 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { ChatMessages } from "./ChatMessages";
+import { ChatInput } from "./ChatInput";
+import { track, EVENTS } from "@/lib/analytics";
+import { useSSEChat } from "@/hooks/useSSEChat";
+import type { PreviewPlan } from "@/types/preview-plan";
+import type { ChatMessage } from "@/types/chat";
+
+// ─── Component ──────────────────────────────────────────────
+interface AgentChatProps {
+  /** Optional callback when plan completes (for parent to wire share/save) */
+  onPlanComplete?: (plan: PreviewPlan, planId: string) => void;
+}
+
+export function AgentChat({ onPlanComplete }: AgentChatProps) {
+  const chat = useSSEChat();
+  const [emailForm, setEmailForm] = useState({
+    name: "",
+    email: "",
+    status: "idle" as "idle" | "sending" | "sent" | "error",
+  });
+
+  // Welcome message displayed locally (not sent to API)
+  const welcomeMessage: ChatMessage = {
+    id: "welcome",
+    role: "assistant",
+    content:
+      "Hi! I'm the Nicer Systems agent. Tell me about a repetitive process or bottleneck in your business, and I'll show you what an automated system could look like.\n\nWhat industry are you in?",
+    timestamp: Date.now(),
+  };
+
+  // Combine welcome message with chat messages
+  const allMessages = [welcomeMessage, ...chat.messages];
+
+  // Track plan completion
+  useEffect(() => {
+    if (chat.plan_id && chat.plan) {
+      onPlanComplete?.(chat.plan, chat.plan_id);
+      track(EVENTS.AGENT_DEMO_COMPLETE);
+    }
+  }, [chat.plan_id, chat.plan, onPlanComplete]);
+
+  async function handleEmailSubmit() {
+    setEmailForm((f) => ({ ...f, status: "sending" }));
+    try {
+      const res = await fetch("/api/agent/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: emailForm.name,
+          email: emailForm.email,
+          preview_plan: chat.plan,
+          lead_id: chat.plan_id,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEmailForm((f) => ({ ...f, status: "sent" }));
+      track(EVENTS.CTA_CLICK_PREVIEW_PLAN);
+    } catch {
+      setEmailForm((f) => ({ ...f, status: "error" }));
+    }
+  }
+
+  const inputDisabled = chat.isStreaming || chat.phase === "building";
+
+  // Map canonical messages to ChatMessages component format
+  const displayMessages = allMessages.map((msg) => ({
+    id: msg.id,
+    role: (msg.role === "assistant" ? "agent" : msg.role) as "user" | "agent",
+    content: msg.content,
+    timestamp: msg.timestamp,
+    planSection: msg.plan_section
+      ? {
+          title: msg.plan_section,
+          content: msg.content,
+          index: 0,
+        }
+      : undefined,
+    emailCapture: msg.email_capture,
+  }));
+
+  // Add email capture flag to the last assistant message in complete phase
+  const showEmailCapture =
+    chat.phase === "complete" && !emailForm.status.startsWith("sent");
+
+  return (
+    <div className="flex flex-col h-[480px] sm:h-[520px]">
+      <ChatMessages
+        messages={displayMessages}
+        isTyping={chat.isStreaming}
+        streamingContent={chat.streamingContent}
+        emailForm={
+          showEmailCapture
+            ? {
+                name: emailForm.name,
+                email: emailForm.email,
+                status: emailForm.status,
+                onNameChange: (name) =>
+                  setEmailForm((f) => ({ ...f, name })),
+                onEmailChange: (email) =>
+                  setEmailForm((f) => ({ ...f, email })),
+                onSubmit: handleEmailSubmit,
+              }
+            : undefined
+        }
+      />
+
+      {chat.error && (
+        <div className="px-4 py-2 bg-red-500/10 border-t border-red-500/20 text-red-400 text-xs">
+          {chat.error}
+        </div>
+      )}
+
+      <ChatInput
+        onSend={chat.sendMessage}
+        disabled={inputDisabled}
+        placeholder={
+          chat.phase === "building"
+            ? "Building your plan..."
+            : chat.phase === "complete" || chat.phase === "follow_up"
+              ? "Ask a follow-up question..."
+              : "Type your answer..."
+        }
+      />
+    </div>
+  );
+}

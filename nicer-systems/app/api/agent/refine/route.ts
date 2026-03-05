@@ -1,0 +1,104 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import {
+  enforceRateLimit,
+  hasFilledHoneypot,
+} from "@/lib/security/request-guards";
+import { getPlanById, savePlanRefinement } from "@/lib/firestore/plans";
+import { refinePlanSection } from "@/lib/agents/refinement";
+import type { PlanSectionType } from "@/types/chat";
+import type { PreviewPlan } from "@/types/preview-plan";
+
+const refineSchema = z.object({
+  plan_id: z.string().min(1).max(100),
+  section: z.enum(["intake", "workflow", "automation", "dashboard", "ops_pulse"]),
+  feedback: z.string().min(1).max(2000),
+});
+
+export async function POST(request: Request) {
+  try {
+    const limited = enforceRateLimit(request, {
+      keyPrefix: "agent_refine",
+      windowMs: 10 * 60_000,
+      maxRequests: 10,
+    });
+    if (limited) return limited;
+
+    const body = await request.json();
+    if (hasFilledHoneypot(body)) {
+      return NextResponse.json({ error: "Validation failed" }, { status: 400 });
+    }
+
+    const parsed = refineSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { plan_id, section, feedback } = parsed.data;
+
+    // Load the full plan
+    const storedPlan = await getPlanById(plan_id);
+    if (!storedPlan) {
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+    }
+
+    const fullPlan: PreviewPlan = storedPlan.preview_plan;
+
+    // Run refinement via Gemini
+    const { refined, summary } = await refinePlanSection(
+      section as PlanSectionType,
+      feedback,
+      fullPlan
+    );
+
+    // Save the refinement version
+    await savePlanRefinement(plan_id, {
+      version: storedPlan.version + 1,
+      section,
+      content: JSON.stringify(refined),
+      feedback,
+    });
+
+    // Return as SSE-compatible stream for the hook
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send the refined content as a message event
+        controller.enqueue(
+          encoder.encode(
+            `event: message\ndata: ${JSON.stringify({
+              content: JSON.stringify(refined),
+              is_chunk: false,
+            })}\n\n`
+          )
+        );
+
+        // Send done event
+        controller.enqueue(
+          encoder.encode(
+            `event: done\ndata: ${JSON.stringify({ summary })}\n\n`
+          )
+        );
+
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  } catch (err) {
+    console.error("Refine error:", err);
+    return NextResponse.json(
+      { error: "Refinement failed" },
+      { status: 500 }
+    );
+  }
+}

@@ -289,39 +289,80 @@ function generateTexturedOverlay(
   return c;
 }
 
-// --- Bristle brush stamp ---
+// --- Large irregular brush stamp ---
 
-function stampBristle(
+function stampBrush(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  pressure: number
+  pressure: number,
+  angle: number
 ) {
-  const bristleCount = 14 + Math.floor(Math.random() * 8);
-  const spreadRadius = 22 * pressure;
+  const baseRadius = 55 + Math.random() * 25; // large brush (55-80px)
+  const r = baseRadius * pressure;
 
   ctx.globalCompositeOperation = "destination-out";
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
 
+  // Main irregular blob shape using bezier curves
+  const lobes = 5 + Math.floor(Math.random() * 3); // 5-7 lobes
+  ctx.globalAlpha = pressure * 0.85;
+  ctx.beginPath();
+  for (let i = 0; i < lobes; i++) {
+    const a = (i / lobes) * Math.PI * 2;
+    const aNext = ((i + 1) / lobes) * Math.PI * 2;
+    const wobble = 0.6 + Math.random() * 0.5; // 0.6-1.1x radius
+    const wobbleNext = 0.6 + Math.random() * 0.5;
+    const px = Math.cos(a) * r * wobble;
+    const py = Math.sin(a) * r * wobble;
+    const pxN = Math.cos(aNext) * r * wobbleNext;
+    const pyN = Math.sin(aNext) * r * wobbleNext;
+    // Control point pushes outward for organic bulge
+    const aMid = (a + aNext) / 2;
+    const cpDist = r * (0.9 + Math.random() * 0.5);
+    const cpx = Math.cos(aMid) * cpDist;
+    const cpy = Math.sin(aMid) * cpDist;
+    if (i === 0) ctx.moveTo(px, py);
+    ctx.quadraticCurveTo(cpx, cpy, pxN, pyN);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Scattered edge bristles for rough organic edge
+  const bristleCount = 10 + Math.floor(Math.random() * 6);
   for (let i = 0; i < bristleCount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    // Squared random = clusters toward center
-    const dist = Math.random() * Math.random() * spreadRadius;
-    const bx = x + Math.cos(angle) * dist;
-    const by = y + Math.sin(angle) * dist;
-    const bristleRadius = 2 + Math.random() * 4;
-    const edgeFactor = 1 - dist / spreadRadius;
-    ctx.globalAlpha = Math.max(0.25, edgeFactor * pressure);
+    const bAngle = Math.random() * Math.PI * 2;
+    const bDist = r * (0.7 + Math.random() * 0.6); // around the rim
+    const bx = Math.cos(bAngle) * bDist;
+    const by = Math.sin(bAngle) * bDist;
+    const bRadius = 3 + Math.random() * 8;
+    ctx.globalAlpha = 0.3 + Math.random() * 0.4;
     ctx.beginPath();
-    ctx.arc(bx, by, bristleRadius, 0, Math.PI * 2);
+    ctx.arc(bx, by, bRadius, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Solid core for satisfying center clear
-  ctx.globalAlpha = pressure * 0.9;
-  ctx.beginPath();
-  ctx.arc(x, y, spreadRadius * 0.35, 0, Math.PI * 2);
-  ctx.fill();
+  // Smear trails — elongated marks that make it feel like wet paint
+  for (let i = 0; i < 3; i++) {
+    const smearAngle = (Math.random() - 0.5) * 1.2;
+    const smearLen = r * (0.5 + Math.random() * 0.6);
+    ctx.globalAlpha = 0.2 + Math.random() * 0.3;
+    ctx.beginPath();
+    ctx.ellipse(
+      Math.cos(smearAngle) * smearLen * 0.3,
+      Math.sin(smearAngle) * smearLen * 0.3,
+      smearLen,
+      4 + Math.random() * 8,
+      smearAngle,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
 
+  ctx.restore();
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
 }
@@ -347,10 +388,11 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
   const glowNodesRef = useRef<GlowNode[]>([]);
 
   // Interaction state
-  const isDrawing = useRef(false);
   const hasStarted = useRef(false);
   const hasCompleted = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const strokeAngle = useRef(0);
+  const revealCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [fallback, setFallback] = useState(false);
 
@@ -456,7 +498,7 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
       const prev = lastPoint.current;
 
       if (!prev) {
-        stampBristle(overlayCtx, cx, cy, 1.0);
+        stampBrush(overlayCtx, cx, cy, 1.0, strokeAngle.current);
         lastPoint.current = { x: cx, y: cy };
         return;
       }
@@ -464,18 +506,33 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
       const dx = cx - prev.x;
       const dy = cy - prev.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const stepSize = 6;
+
+      // Skip if barely moved (avoids over-painting while stationary)
+      if (dist < 4) return;
+
+      // Track stroke direction for brush rotation
+      strokeAngle.current = Math.atan2(dy, dx);
+
+      const stepSize = 18; // larger steps for big brush
       const steps = Math.max(1, Math.floor(dist / stepSize));
-      const pressure = Math.max(0.5, Math.min(1.0, 1.0 - dist / 300));
+      const pressure = Math.max(0.5, Math.min(1.0, 1.0 - dist / 400));
 
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
         const ix = prev.x + dx * t;
         const iy = prev.y + dy * t;
-        stampBristle(overlayCtx, ix, iy, pressure);
+        stampBrush(overlayCtx, ix, iy, pressure, strokeAngle.current);
       }
 
       lastPoint.current = { x: cx, y: cy };
+
+      // Debounced reveal check (not every frame — it uses getImageData)
+      if (!revealCheckTimer.current) {
+        revealCheckTimer.current = setTimeout(() => {
+          checkReveal();
+          revealCheckTimer.current = null;
+        }, 500);
+      }
     }
 
     function checkReveal() {
@@ -500,30 +557,21 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
       }
     }
 
-    function onPointerDown(e: PointerEvent) {
-      isDrawing.current = true;
+    // Auto-brush on hover — no click needed
+    function onPointerMove(e: PointerEvent) {
       if (!hasStarted.current) {
         hasStarted.current = true;
         track(EVENTS.BRUSH_REVEAL_START);
       }
-      lastPoint.current = null;
       drawStroke(e.clientX, e.clientY);
     }
 
-    function onPointerMove(e: PointerEvent) {
-      if (!isDrawing.current) return;
-      drawStroke(e.clientX, e.clientY);
-    }
-
-    function onPointerUp() {
-      isDrawing.current = false;
+    function onPointerLeave() {
       lastPoint.current = null;
-      checkReveal();
     }
 
-    canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointerleave", onPointerLeave);
 
     // --- Visibility optimization ---
     function onVisibilityChange() {
@@ -537,9 +585,9 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
 
     return () => {
       cancelAnimationFrame(animFrameRef.current);
-      canvas.removeEventListener("pointerdown", onPointerDown);
+      if (revealCheckTimer.current) clearTimeout(revealCheckTimer.current);
       canvas.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -557,7 +605,7 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
     <div ref={containerRef} className={`absolute inset-0 ${className ?? ""}`}>
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full cursor-crosshair"
+        className="absolute inset-0 w-full h-full cursor-none"
         style={{ touchAction: "none" }}
       />
     </div>

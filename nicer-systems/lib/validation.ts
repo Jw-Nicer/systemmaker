@@ -94,3 +94,48 @@ export const sendEmailSchema = z.object({
   email: z.string().email("Valid email is required"),
   name: z.string().min(1, "Name is required").max(100),
 });
+
+// --- Phase 4: Agent Chat ---
+
+export const chatMessageSchema = z.object({
+  message: z.string().min(1, "Message is required").max(2000),
+});
+
+export type ChatMessageInput = z.infer<typeof chatMessageSchema>;
+
+export const agentChatSchema = z.object({
+  message: z.string().min(1, "Message is required").max(2000),
+  conversation_id: z.string().max(100).optional(),
+  history: z
+    .array(
+      z.object({
+        id: z.string(),
+        role: z.enum(["user", "assistant", "system"]),
+        content: z.string().max(10000),
+        timestamp: z.number(),
+        plan_section: z
+          .enum(["intake", "workflow", "automation", "dashboard", "ops_pulse"])
+          .optional(),
+        email_capture: z.boolean().optional(),
+      })
+    )
+    .max(50),
+  phase: z.enum(["gathering", "confirming", "building", "complete", "follow_up"]),
+  extracted: z.object({
+    industry: z.string().max(100).optional(),
+    bottleneck: z.string().max(2000).optional(),
+    current_tools: z.string().max(500).optional(),
+    urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
+    volume: z.string().max(200).optional(),
+  }),
+});
+
+export type AgentChatInput = z.infer<typeof agentChatSchema>;
+
+export const planRefinementSchema = z.object({
+  plan_id: z.string().min(1, "Plan ID is required").max(100),
+  section: z.enum(["intake", "workflow", "automation", "dashboard", "ops_pulse"]),
+  feedback: z.string().min(1, "Feedback is required").max(2000),
+});
+
+export type PlanRefinementInput = z.infer<typeof planRefinementSchema>;
