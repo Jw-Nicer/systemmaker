@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { getPlanById } from "@/lib/firestore/plans";
+import { enforceRateLimit } from "@/lib/security/request-guards";
 
 export async function GET(request: Request) {
   try {
+    const limited = await enforceRateLimit(request, {
+      keyPrefix: "plans_get",
+      windowMs: 60_000,
+      maxRequests: 30,
+    });
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id) {
+    if (!id || id.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(id)) {
       return NextResponse.json(
-        { error: "Missing plan id parameter" },
+        { error: "Invalid plan id" },
         { status: 400 }
       );
     }

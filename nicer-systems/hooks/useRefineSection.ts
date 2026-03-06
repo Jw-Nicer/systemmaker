@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { track, EVENTS } from "@/lib/analytics";
-import type { PlanSectionType, SSEEvent, SSEMessageData, SSEErrorData } from "@/types/chat";
+import type { SSEEvent, SSEMessageData, SSEErrorData } from "@/types/chat";
+import type { RefineSectionKey } from "@/lib/plans/refinement";
 
 interface RefinementState {
   isRefining: boolean;
@@ -22,9 +23,16 @@ const initialState: RefinementState = {
   showDiff: false,
 };
 
-export function useRefineSection(planId: string, section: PlanSectionType) {
+export function useRefineSection(planId: string, section: RefineSectionKey) {
   const [state, setState] = useState<RefinementState>(initialState);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Cleanup: abort any in-flight stream when the component unmounts
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const refine = useCallback(
     async (feedback: string, currentContent: string) => {
@@ -70,12 +78,16 @@ export function useRefineSection(planId: string, section: PlanSectionType) {
         let buffer = "";
         let accumulated = "";
         let currentEvent = "message";
+        const MAX_BUFFER_SIZE = 64 * 1024; // 64KB
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
+          if (buffer.length > MAX_BUFFER_SIZE) {
+            buffer = buffer.slice(-MAX_BUFFER_SIZE);
+          }
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
 

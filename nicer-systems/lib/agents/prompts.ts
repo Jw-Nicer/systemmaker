@@ -1,4 +1,15 @@
 /**
+ * Sanitize user-provided context values to reduce prompt injection risk.
+ * Strips instruction-like markers that could override the system prompt.
+ */
+function sanitizeContextValue(value: string): string {
+  return value
+    .replace(/^(system|assistant|instructions?|ignore previous|forget everything)[\s:]/gim, "")
+    .replace(/---+/g, "—")
+    .slice(0, 5000);
+}
+
+/**
  * Build a system prompt from an agent template + structured context.
  */
 export function buildPrompt(
@@ -8,7 +19,9 @@ export function buildPrompt(
   const contextBlock = Object.entries(context)
     .map(([key, value]) => {
       const formatted =
-        typeof value === "string" ? value : JSON.stringify(value, null, 2);
+        typeof value === "string"
+          ? sanitizeContextValue(value)
+          : JSON.stringify(value, null, 2);
       return `### ${key}\n${formatted}`;
     })
     .join("\n\n");

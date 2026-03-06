@@ -1,15 +1,27 @@
-# Nicer Systems Website/Web App — Product Requirements & Build Plan
+# DEPRECATED — Do Not Use
 
-**Doc set date:** 2026-02-27  
-**Goal:** A conversion-first landing experience + web app admin + visible automation/agent demo + proof-of-work CMS + end-to-end funnel instrumentation.
+> **This directory is an archived snapshot from early planning (2026-02-27).**
+> It contains outdated references to Supabase, PixiJS, and Vercel that do not reflect the actual implementation.
 
-## What to read first
-1. `docs/PRD.md` — the master product requirements doc
-2. `docs/Phased_Implementation_Plan.md` — phases + deliverables + acceptance gates
-3. `docs/Architecture.md` — stack + modules + data flow
-4. `docs/Data_Model.md` — tables/collections + fields
-5. `docs/UI_UX_Spec.md` — page sections + interaction specs (incl. Brush Reveal)
+## Canonical documentation
 
-## Shared context files (for AI assistants)
-- `CLAUDE.md` — shared context + product intent + rules
-- `CODEX.md` — implementation conventions + repo structure + coding constraints
+All up-to-date documentation lives in `nicer-systems/`:
+
+- **`nicer-systems/CLAUDE.md`** — Shared context for AI assistants
+- **`nicer-systems/CODEX.md`** — Engineering implementation context
+- **`nicer-systems/README.md`** — Project overview and setup
+- **`nicer-systems/docs/`** — Product specs (PRD, Architecture, Data Model, API, etc.)
+- **`nicer-systems/agents/`** — Agent markdown specifications
+
+## Why this is outdated
+
+| This directory says | Actual implementation |
+|---------------------|---------------------|
+| Supabase (Postgres + RLS) | Firebase (Firestore + Security Rules) |
+| PixiJS for canvas | HTML5 Canvas API (no external lib) |
+| Vercel for hosting | Firebase Hosting + Cloud Functions |
+| Phase 3–4 not started | Phase 3–4 complete |
+| No AI provider specified | Google Gemini API |
+| No email provider | Resend |
+
+**Do not follow these specs for implementation decisions.**

@@ -4,6 +4,10 @@ import type {
   ChatMessage,
   ExtractedIntake,
 } from "@/types/chat";
+import {
+  assertSafeAgentText,
+  buildSafeConversationFallback,
+} from "./safety";
 
 const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
   "industry",
@@ -12,6 +16,7 @@ const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
 ];
 
 const MAX_CONTEXT_MESSAGES = 20;
+const EXTRACTION_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,10 +70,12 @@ export function detectPhase(
 
   // If confirming and user affirms, move to building
   if (currentPhase === "confirming") {
+    const negation = /\b(no|not|nope|wait|hold|stop|change|wrong|actually|incorrect|don't|dont)\b/i;
+    if (negation.test(lastUserMessage)) return "gathering";
     const affirm = /\b(yes|yeah|yep|sure|go|ready|build|do it|let's go|looks good|correct|right|proceed)\b/i;
     if (affirm.test(lastUserMessage)) return "building";
-    // User wants changes — back to gathering
-    return "gathering";
+    // Ambiguous — stay in confirming to ask again
+    return "confirming";
   }
 
   // Check if all required fields are filled
@@ -243,7 +250,12 @@ ${recentHistory}
 Visitor: ${userMessage}`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Extraction timed out")), EXTRACTION_TIMEOUT_MS)
+      ),
+    ]);
     const text = result.response.text()?.trim();
     if (!text) return existing;
 
@@ -319,11 +331,16 @@ export async function* generateConversationalResponse(
       return;
   }
 
-  const result = await model.generateContentStream(prompt);
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text()?.trim() ?? "";
+    if (!text) return;
 
-  for await (const chunk of result.stream) {
-    const text = chunk.text();
-    if (text) yield text;
+    assertSafeAgentText(text, `conversation:${phase}`);
+    yield text;
+  } catch (err) {
+    console.error("Conversation safety fallback triggered:", err);
+    yield buildSafeConversationFallback(phase);
   }
 }
 

@@ -10,6 +10,7 @@ import { FAQSection } from "@/components/marketing/FAQSection";
 import { FinalCTA } from "@/components/marketing/FinalCTA";
 import { WorkflowGraph } from "@/components/marketing/WorkflowGraph";
 import { LandingViewTracker } from "@/components/marketing/LandingViewTracker";
+import { GlowLine } from "@/components/ui/GlowLine";
 
 interface Props {
   params: Promise<{ industry: string }>;
@@ -56,10 +57,15 @@ export default async function IndustryLandingPage({ params }: Props) {
 
       <div className="relative">
         <WorkflowGraph />
+        <GlowLine />
         <SeeItWork />
+        <GlowLine />
         <ProofOfWork featuredIndustries={variant.featured_industries} />
+        <GlowLine />
         <HowItWorks />
+        <GlowLine />
         <PricingSection />
+        <GlowLine />
         <FAQSection />
       </div>
 

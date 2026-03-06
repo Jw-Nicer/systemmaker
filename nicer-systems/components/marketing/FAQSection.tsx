@@ -1,5 +1,6 @@
 import { getPublishedFAQs } from "@/lib/firestore/faqs";
 import { FAQAccordion } from "./FAQAccordion";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 
 const fallbackFAQs = [
   {
@@ -52,14 +53,13 @@ export async function FAQSection() {
   }
 
   return (
-    <section className="py-24 bg-surface">
+    <section className="py-24 bg-surface/30">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          Frequently Asked Questions
-        </h2>
-        <p className="text-muted text-center mb-12">
-          Everything you need to know before we start.
-        </p>
+        <SectionHeading
+          eyebrow="FAQ"
+          title="Frequently Asked Questions"
+          description="Everything you need to know before we start."
+        />
         <FAQAccordion faqs={faqs} />
       </div>
     </section>

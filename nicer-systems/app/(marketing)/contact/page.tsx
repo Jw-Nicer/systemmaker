@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { leadSchema, type LeadInput } from "@/lib/validation";
 import { track, EVENTS } from "@/lib/analytics";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { GlowLine } from "@/components/ui/GlowLine";
 
 type FormErrors = Partial<Record<keyof LeadInput, string>>;
 
@@ -40,7 +42,6 @@ function ContactForm() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [serverError, setServerError] = useState("");
 
-  // Capture UTM params once on mount
   const [utmParams, setUtmParams] = useState<Record<string, string>>({});
   useEffect(() => {
     const utm: Record<string, string> = {};
@@ -57,7 +58,6 @@ function ContactForm() {
   ) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear field error on change
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -67,7 +67,6 @@ function ContactForm() {
     e.preventDefault();
     setServerError("");
 
-    // Build payload
     const payload: Record<string, unknown> = {
       name: formData.name,
       email: formData.email,
@@ -78,7 +77,6 @@ function ContactForm() {
     if (formData.tools) payload.tools = formData.tools;
     if (formData.urgency) payload.urgency = formData.urgency;
 
-    // Client-side validation
     const result = leadSchema.safeParse(payload);
     if (!result.success) {
       const fieldErrors: FormErrors = {};
@@ -115,13 +113,13 @@ function ContactForm() {
     return (
       <section className="py-24">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6 shadow-[var(--glow-md)] animate-[pulse-glow_3s_ease-in-out_infinite]">
             <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-4xl font-bold mb-4">Message Received</h1>
-          <p className="text-muted text-lg">
+          <h1 className="text-4xl font-bold mb-4 text-glow">Message Received</h1>
+          <p className="text-muted text-lg leading-relaxed">
             We&apos;ll review your details and reach out within 24 hours with a scoped plan.
           </p>
         </div>
@@ -129,11 +127,13 @@ function ContactForm() {
     );
   }
 
+  const inputClasses = "w-full px-4 py-2.5 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted focus-glow transition-[border-color,box-shadow] duration-250";
+
   return (
     <section className="py-24">
       <div className="max-w-3xl mx-auto px-6">
-        <h1 className="text-4xl font-bold mb-4">Let&apos;s Talk</h1>
-        <p className="text-muted mb-12">
+        <h1 className="text-4xl font-bold mb-4 text-glow">Let&apos;s Talk</h1>
+        <p className="text-muted mb-12 leading-relaxed">
           Book a 45-minute scoping call, or send us your details and we&apos;ll
           reach out within 24 hours.
         </p>
@@ -142,14 +142,14 @@ function ContactForm() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-sm mb-1">Name *</label>
+              <label htmlFor="name" className="block text-sm mb-1.5 text-foreground">Name *</label>
               <input
                 id="name"
                 name="name"
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                className={inputClasses}
                 placeholder="Your name"
               />
               {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -157,14 +157,14 @@ function ContactForm() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm mb-1">Email *</label>
+              <label htmlFor="email" className="block text-sm mb-1.5 text-foreground">Email *</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                className={inputClasses}
                 placeholder="you@company.com"
               />
               {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
@@ -172,14 +172,14 @@ function ContactForm() {
 
             {/* Company */}
             <div>
-              <label htmlFor="company" className="block text-sm mb-1">Company *</label>
+              <label htmlFor="company" className="block text-sm mb-1.5 text-foreground">Company *</label>
               <input
                 id="company"
                 name="company"
                 type="text"
                 value={formData.company}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                className={inputClasses}
                 placeholder="Your company"
               />
               {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
@@ -187,7 +187,7 @@ function ContactForm() {
 
             {/* Bottleneck */}
             <div>
-              <label htmlFor="bottleneck" className="block text-sm mb-1">
+              <label htmlFor="bottleneck" className="block text-sm mb-1.5 text-foreground">
                 What&apos;s your biggest operational bottleneck?
               </label>
               <textarea
@@ -196,14 +196,14 @@ function ContactForm() {
                 rows={4}
                 value={formData.bottleneck}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none resize-none"
+                className={`${inputClasses} resize-none`}
                 placeholder="Describe the pain point..."
               />
             </div>
 
             {/* Tools */}
             <div>
-              <label htmlFor="tools" className="block text-sm mb-1">
+              <label htmlFor="tools" className="block text-sm mb-1.5 text-foreground">
                 Current tools / software
               </label>
               <input
@@ -212,20 +212,20 @@ function ContactForm() {
                 type="text"
                 value={formData.tools}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                className={inputClasses}
                 placeholder="e.g. Salesforce, Slack, Excel"
               />
             </div>
 
             {/* Urgency */}
             <div>
-              <label htmlFor="urgency" className="block text-sm mb-1">Urgency</label>
+              <label htmlFor="urgency" className="block text-sm mb-1.5 text-foreground">Urgency</label>
               <select
                 id="urgency"
                 name="urgency"
                 value={formData.urgency}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border focus:border-primary focus:outline-none"
+                className={inputClasses}
               >
                 <option value="">Select urgency</option>
                 <option value="low">Low — exploring options</option>
@@ -245,7 +245,7 @@ function ContactForm() {
             <button
               type="submit"
               disabled={status === "submitting"}
-              className="w-full px-6 py-3 rounded-lg bg-primary text-background font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-3 rounded-lg bg-primary text-background font-semibold hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-glow"
             >
               {status === "submitting" ? "Sending..." : "Send Message"}
             </button>
@@ -256,32 +256,34 @@ function ContactForm() {
             <h2 className="text-xl font-semibold mb-4">What happens next</h2>
             <ol className="space-y-3 text-sm text-muted">
               <li className="flex gap-3">
-                <span className="text-primary font-bold">1.</span>
+                <span className="text-primary font-bold text-glow">1.</span>
                 We confirm one workflow to focus on
               </li>
               <li className="flex gap-3">
-                <span className="text-primary font-bold">2.</span>
+                <span className="text-primary font-bold text-glow">2.</span>
                 We confirm the output you need (e.g., &quot;ticket resolved&quot;)
               </li>
               <li className="flex gap-3">
-                <span className="text-primary font-bold">3.</span>
+                <span className="text-primary font-bold text-glow">3.</span>
                 We confirm the owner + tool stack
               </li>
               <li className="flex gap-3">
-                <span className="text-primary font-bold">4.</span>
+                <span className="text-primary font-bold text-glow">4.</span>
                 You get a scoped plan within 24 hours
               </li>
             </ol>
 
-            <div className="mt-8 p-4 rounded-lg border border-primary/30 bg-primary/5">
+            <GlowLine className="my-8" />
+
+            <GlassCard className="p-4 gradient-border gradient-border-active">
               <p className="text-sm font-medium mb-2">Prefer to book directly?</p>
               <a
                 href="mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"
-                className="inline-block px-4 py-2 rounded-lg bg-primary text-background text-sm font-semibold hover:opacity-90 transition-opacity"
+                className="inline-block px-4 py-2 rounded-lg bg-primary text-background text-sm font-semibold hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all"
               >
                 Schedule a Call
               </a>
-            </div>
+            </GlassCard>
           </div>
         </div>
       </div>

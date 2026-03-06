@@ -10,7 +10,7 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const limited = enforceRateLimit(request, {
+    const limited = await enforceRateLimit(request, {
       keyPrefix: "leads",
       windowMs: 60_000,
       maxRequests: 6,

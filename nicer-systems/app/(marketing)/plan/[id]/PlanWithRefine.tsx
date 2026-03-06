@@ -4,6 +4,11 @@ import { useState } from "react";
 import { PlanDisplay } from "@/components/marketing/PlanDisplay";
 import { SectionRefiner } from "@/components/marketing/SectionRefiner";
 import type { PreviewPlan } from "@/types/preview-plan";
+import type { RefineSectionKey } from "@/lib/plans/refinement";
+import {
+  applyRefinedSection,
+  mapRefineSectionKeyToPlanSection,
+} from "@/lib/plans/refinement";
 
 interface PlanWithRefineProps {
   plan: PreviewPlan;
@@ -11,42 +16,24 @@ interface PlanWithRefineProps {
 }
 
 export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
-  const [refiningSection, setRefiningSection] = useState<string | null>(null);
+  const [refiningSection, setRefiningSection] = useState<RefineSectionKey | null>(null);
   const [currentPlan, setCurrentPlan] = useState(plan);
 
-  function handleRefined(sectionKey: string, newContent: string) {
-    // Update the local plan state with refined content
-    // Content comes back as a string — store it for display
-    setCurrentPlan((prev) => {
-      const updated = { ...prev };
-      // The section key maps to plan sections
-      switch (sectionKey) {
-        case "scope":
-          updated.intake = {
-            ...updated.intake,
-            clarified_problem: newContent,
-          };
-          break;
-        case "workflow":
-        case "kpis":
-        case "alerts":
-        case "actions":
-          // For complex sections, the refined content replaces the section summary
-          break;
-      }
-      return updated;
-    });
+  function handleRefined(sectionKey: RefineSectionKey, newContent: string) {
+    const parsed = JSON.parse(newContent) as unknown;
+    const planSection = mapRefineSectionKeyToPlanSection(sectionKey);
+    setCurrentPlan((prev) => applyRefinedSection(prev, planSection, parsed));
     setRefiningSection(null);
   }
 
   return (
     <div>
-      <PlanDisplay
-        plan={currentPlan}
-        planId={planId}
-        showRefine={true}
-        onRefineSection={(key) => setRefiningSection(key)}
-      />
+        <PlanDisplay
+          plan={currentPlan}
+          planId={planId}
+          showRefine={true}
+          onRefineSection={(key) => setRefiningSection(key as RefineSectionKey)}
+        />
 
       {refiningSection && (
         <div className="mt-4">
@@ -63,7 +50,7 @@ export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
   );
 }
 
-function getSectionContent(plan: PreviewPlan, sectionKey: string): string {
+function getSectionContent(plan: PreviewPlan, sectionKey: RefineSectionKey): string {
   switch (sectionKey) {
     case "scope":
       return [

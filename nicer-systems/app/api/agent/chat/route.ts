@@ -1,9 +1,9 @@
-import { z } from "zod";
 import { getAdminDb } from "@/lib/firebase/admin";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
+import { agentChatSchema } from "@/lib/validation";
 import { runAgentChainStreaming, type AgentStep } from "@/lib/agents/runner";
 import {
   detectPhase,
@@ -18,35 +18,6 @@ import type {
   ExtractedIntake,
   SSEEventType,
 } from "@/types/chat";
-
-// ---------------------------------------------------------------------------
-// Validation (inline — validation.ts is Terminal 1's domain)
-// ---------------------------------------------------------------------------
-
-const chatMessageSchema = z.object({
-  id: z.string().min(1).max(100),
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().max(10_000),
-  timestamp: z.number(),
-  plan_section: z.string().optional(),
-  email_capture: z.boolean().optional(),
-});
-
-const agentChatSchema = z.object({
-  message: z.string().min(1, "Message is required").max(2000),
-  conversation_id: z.string().max(100).optional(),
-  history: z.array(chatMessageSchema).max(100),
-  phase: z.enum(["gathering", "confirming", "building", "complete", "follow_up"]),
-  extracted: z.object({
-    industry: z.string().max(200).optional(),
-    bottleneck: z.string().max(2000).optional(),
-    current_tools: z.string().max(500).optional(),
-    urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
-    volume: z.string().max(200).optional(),
-  }),
-  /** Plan data passed by client for follow_up phase context */
-  plan: z.record(z.string(), z.unknown()).optional(),
-});
 
 // ---------------------------------------------------------------------------
 // SSE helpers
@@ -101,7 +72,7 @@ function createSSEStream(
 
 export async function POST(request: Request) {
   // Rate limit: 20 messages per 10 minutes per IP
-  const limited = enforceRateLimit(request, {
+  const limited = await enforceRateLimit(request, {
     keyPrefix: "agent_chat",
     windowMs: 10 * 60_000,
     maxRequests: 20,

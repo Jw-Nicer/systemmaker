@@ -22,8 +22,9 @@ type ChatAction =
   | { type: "SEND_MESSAGE"; message: string }
   | { type: "STREAM_CHUNK"; content: string }
   | { type: "STREAM_MESSAGE"; content: string }
+  | { type: "UPDATE_EXTRACTED"; extracted: ExtractedIntake }
   | { type: "PHASE_CHANGE"; from: ConversationPhase; to: ConversationPhase }
-  | { type: "PLAN_SECTION"; section: string; label: string; content: string }
+  | { type: "PLAN_SECTION"; section: string; label: string; content: string | null }
   | { type: "PLAN_COMPLETE"; plan_id: string; share_url: string }
   | { type: "SET_PLAN"; plan: PreviewPlan }
   | { type: "STREAM_DONE" }
@@ -36,6 +37,19 @@ interface ChatState extends ConversationState {
   error: string | null;
   streamingContent: string;
   share_url: string | null;
+  streamedPlan: Partial<PreviewPlan>;
+}
+
+export function isPreviewPlanComplete(
+  plan: Partial<PreviewPlan>
+): plan is PreviewPlan {
+  return Boolean(
+    plan.intake &&
+      plan.workflow &&
+      plan.automation &&
+      plan.dashboard &&
+      plan.ops_pulse
+  );
 }
 
 function createMessage(
@@ -60,9 +74,19 @@ const initialState: ChatState = {
   error: null,
   streamingContent: "",
   share_url: null,
+  streamedPlan: {},
 };
 
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
+export function createInitialChatState(): ChatState {
+  return {
+    ...initialState,
+    messages: [],
+    extracted: {},
+    streamedPlan: {},
+  };
+}
+
+export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case "SEND_MESSAGE": {
       const userMsg = createMessage("user", action.message);
@@ -91,6 +115,15 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
 
+    case "UPDATE_EXTRACTED":
+      return {
+        ...state,
+        extracted: {
+          ...state.extracted,
+          ...action.extracted,
+        },
+      };
+
     case "PHASE_CHANGE":
       return {
         ...state,
@@ -98,12 +131,33 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
 
     case "PLAN_SECTION": {
-      const sectionMsg = createMessage("assistant", action.content, {
+      let nextPlan = state.plan;
+      let nextStreamedPlan = state.streamedPlan;
+
+      if (action.content) {
+        try {
+          const parsed = JSON.parse(action.content) as unknown;
+          nextStreamedPlan = {
+            ...state.streamedPlan,
+            [action.section]: parsed,
+          } as Partial<PreviewPlan>;
+
+          if (isPreviewPlanComplete(nextStreamedPlan)) {
+            nextPlan = nextStreamedPlan;
+          }
+        } catch {
+          // Keep the message even if section parsing fails.
+        }
+      }
+
+      const sectionMsg = createMessage("assistant", action.content ?? "", {
         plan_section: action.section as ChatMessage["plan_section"],
       });
       return {
         ...state,
         messages: [...state.messages, sectionMsg],
+        streamedPlan: nextStreamedPlan,
+        plan: nextPlan,
       };
     }
 
@@ -112,12 +166,16 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         plan_id: action.plan_id,
         share_url: action.share_url,
+        plan: isPreviewPlanComplete(state.streamedPlan)
+          ? state.streamedPlan
+          : state.plan,
       };
 
     case "SET_PLAN":
       return {
         ...state,
         plan: action.plan,
+        streamedPlan: action.plan,
       };
 
     case "STREAM_DONE": {
@@ -175,6 +233,13 @@ export function useSSEChat() {
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; });
 
+  // Cleanup: abort any in-flight stream when the component unmounts
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const sendMessage = useCallback(
     async (message: string) => {
       const current = stateRef.current;
@@ -231,12 +296,16 @@ export function useSSEChat() {
         const decoder = new TextDecoder();
         let buffer = "";
         let currentEvent = "message";
+        const MAX_BUFFER_SIZE = 64 * 1024; // 64KB
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
+          if (buffer.length > MAX_BUFFER_SIZE) {
+            buffer = buffer.slice(-MAX_BUFFER_SIZE);
+          }
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
 
@@ -269,6 +338,14 @@ export function useSSEChat() {
               switch (sseEvent.type) {
                 case "message": {
                   const msgData = sseEvent.data as SSEMessageData;
+                  if (msgData.is_extraction_update && msgData.extracted) {
+                    dispatch({
+                      type: "UPDATE_EXTRACTED",
+                      extracted: msgData.extracted,
+                    });
+                    break;
+                  }
+
                   if (msgData.is_chunk) {
                     dispatch({
                       type: "STREAM_CHUNK",

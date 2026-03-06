@@ -32,7 +32,6 @@ export function ChatInput({
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
-    // Reset height after clearing
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -46,7 +45,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="flex items-end gap-2 border-t border-border bg-surface px-4 py-3">
+    <div className="flex items-end gap-2 border-t border-glass-border bg-surface/80 px-4 py-3">
       <textarea
         ref={textareaRef}
         value={value}
@@ -55,12 +54,14 @@ export function ChatInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className="flex-1 resize-none bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none disabled:opacity-50"
+        className="flex-1 resize-none bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus-glow disabled:opacity-50"
       />
       <button
         onClick={handleSubmit}
         disabled={disabled || !value.trim()}
-        className="shrink-0 px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-30"
+        className={`shrink-0 px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all disabled:opacity-30 ${
+          !disabled && value.trim() ? "animate-[pulse-glow_3s_ease-in-out_infinite]" : ""
+        }`}
         aria-label="Send message"
       >
         <svg

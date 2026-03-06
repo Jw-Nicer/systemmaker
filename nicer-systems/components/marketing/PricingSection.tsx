@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Badge } from "@/components/ui/Badge";
+import { GlassCard } from "@/components/ui/GlassCard";
 
 const tiers = [
   {
@@ -51,32 +54,31 @@ export function PricingSection() {
   return (
     <section className="py-24">
       <div className="max-w-6xl mx-auto px-6">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          Simple, Outcome-Based Pricing
-        </h2>
-        <p className="text-muted text-center mb-12 max-w-2xl mx-auto">
-          Every engagement starts with a scoping call. We confirm the workflow,
-          agree on deliverables, and ship.
-        </p>
+        <SectionHeading
+          eyebrow="Pricing"
+          title="Simple, Outcome-Based Pricing"
+          description="Every engagement starts with a scoping call. We confirm the workflow, agree on deliverables, and ship."
+        />
 
         <div className="grid md:grid-cols-3 gap-6">
           {tiers.map((tier) => (
-            <div
+            <GlassCard
               key={tier.name}
-              className={`rounded-xl border p-6 flex flex-col ${
+              hover
+              className={`p-6 flex flex-col relative ${
                 tier.highlighted
-                  ? "border-primary bg-surface shadow-lg shadow-primary/5 relative"
-                  : "border-border bg-surface"
+                  ? "gradient-border gradient-border-active shadow-[var(--glow-md)]"
+                  : ""
               }`}
             >
               {tier.highlighted && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-medium px-3 py-1 rounded-full bg-primary text-background">
-                  Most Popular
-                </span>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge variant="primary" glow>Most Popular</Badge>
+                </div>
               )}
 
               <h3 className="text-xl font-bold mb-1">{tier.name}</h3>
-              <p className="text-primary font-semibold text-lg mb-1">
+              <p className={`font-semibold text-lg mb-1 ${tier.highlighted ? "text-primary text-glow" : "text-primary"}`}>
                 {tier.price}
               </p>
               <p className="text-sm text-muted mb-6">{tier.description}</p>
@@ -88,7 +90,7 @@ export function PricingSection() {
                     className="flex items-start gap-2 text-sm text-muted"
                   >
                     <svg
-                      className="w-4 h-4 text-primary mt-0.5 shrink-0"
+                      className="w-4 h-4 text-primary mt-0.5 shrink-0 [filter:drop-shadow(0_0_4px_rgba(0,212,255,0.4))]"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -103,15 +105,15 @@ export function PricingSection() {
 
               <Link
                 href="/contact"
-                className={`block text-center py-3 rounded-lg font-medium text-sm transition-all ${
+                className={`block text-center py-3 rounded-lg font-medium text-sm transition-all focus-glow ${
                   tier.highlighted
-                    ? "bg-primary text-background hover:opacity-90"
-                    : "border border-border text-foreground hover:border-primary/50 hover:text-primary"
+                    ? "bg-primary text-background hover:shadow-[var(--glow-md)] active:scale-[0.97]"
+                    : "border border-border text-foreground hover:border-primary/50 hover:text-primary hover:shadow-[var(--glow-sm)] gradient-border"
                 }`}
               >
                 {tier.cta}
               </Link>
-            </div>
+            </GlassCard>
           ))}
         </div>
       </div>

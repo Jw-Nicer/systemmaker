@@ -9,6 +9,8 @@ You are working on **Nicer Systems**, an automation + lightweight internal apps 
 - **Animation**: framer-motion ^12.34.3
 - **Backend**: Firebase (Firestore, Auth, Storage)
 - **Analytics**: PostHog (via `lib/analytics.ts`)
+- **AI**: Google Gemini (@google/generative-ai ^0.24.1)
+- **Email**: Resend ^6.9.3 (lead delivery + nurture sequences)
 - **Validation**: Zod ^4.3.6
 - **Package manager**: npm
 
@@ -29,7 +31,9 @@ app/
     contact/page.tsx     # Contact form (lead capture → Firestore)
     case-studies/page.tsx            # Case study listing
     case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
+    case-studies/CaseStudiesListClient.tsx # Client-side case studies filter/grid
     [industry]/page.tsx  # Industry variant landing pages (dynamic, SSG)
+    plan/[id]/page.tsx   # Shareable preview plan (public link)
     privacy/page.tsx
     terms/page.tsx
   not-found.tsx          # Custom 404 page
@@ -45,6 +49,7 @@ app/
       faqs/page.tsx            # FAQs CRUD
       offers/page.tsx          # Offers CRUD
       leads/page.tsx           # Leads dashboard (read + status filter + CSV export)
+      leads/[id]/page.tsx      # Lead detail (timeline, notes, follow-up management)
       variants/page.tsx        # Landing variant CRUD (industry pages)
       experiments/page.tsx     # A/B testing management
       agent-templates/page.tsx # Agent template editor + test runner
@@ -55,11 +60,14 @@ app/
     events/route.ts            # POST: log analytics events
     leads/route.ts             # POST: create lead in Firestore
     agent/run/route.ts         # POST: run agent chain via Gemini
+    agent/chat/route.ts        # POST: SSE streaming agent chat (multi-phase conversation)
+    agent/refine/route.ts      # POST: refine a specific plan section with feedback
     agent/send-email/route.ts  # POST: send email via Resend
+    plans/route.ts             # GET: fetch stored plan by ID
 
 components/
   marketing/             # Landing page sections (see below)
-  ui/                    # Shared UI (PostHogProvider)
+  ui/                    # Shared UI primitives (Button, Input, Badge, GlassCard, GlitchText, GlowLine, SectionHeading, PostHogProvider)
 
 lib/
   firebase/admin.ts      # getAdminAuth(), getAdminDb() — server-only singletons
@@ -79,9 +87,18 @@ lib/
   actions/experiments.ts     # Server actions: A/B experiment management
   firestore/variants.ts      # getPublishedVariants(), getVariantBySlug()
   firestore/experiments.ts   # getRunningExperiments(), getExperimentByTarget()
+  firestore/plans.ts         # storePlan(), getPlanById() — agent preview plans
+  actions/lead-activity.ts   # Server actions: activity timeline (notes, status changes, emails)
   agents/runner.ts       # Agent chain runner (Gemini API)
+  agents/conversation.ts # Multi-phase SSE chat (gathering → confirming → building → complete → follow_up)
   agents/prompts.ts      # Prompt builder from templates + context
+  agents/refinement.ts   # Section-level plan refinement via Gemini
   agents/email-template.ts # Email template for agent outputs
+  email/nurture-sequence.ts  # 5-email automated nurture via Resend scheduledAt
+  email/nurture-templates.ts # Nurture email content templates
+  email/admin-notification.ts # Admin email alerts on new leads
+  leads/scoring.ts       # Lead scoring algorithm (0-75 points)
+  security/request-guards.ts # Rate limiting + request validation
   analytics.ts           # EVENTS constants + track() + initAnalytics()
   theme.ts               # themeToCSSVariables()
   validation.ts          # Zod schemas (leadSchema, caseStudySchema, etc.)
@@ -89,6 +106,8 @@ lib/
 hooks/
   useReducedMotion.ts    # prefers-reduced-motion hook
   useExperiment.ts       # A/B experiment variant bucketing + tracking
+  useSSEChat.ts          # SSE streaming chat hook (manages connection, messages, phases)
+  useRefineSection.ts    # Plan section refinement hook
 
 types/
   case-study.ts          # CaseStudy interface
@@ -99,6 +118,7 @@ types/
   preview-plan.ts        # PreviewPlan interface (agent output structures)
   variant.ts             # LandingVariant interface
   experiment.ts          # Experiment + ExperimentVariant interfaces
+  chat.ts                # ChatMessage, ChatPhase, SSE event types
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
@@ -126,6 +146,15 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `FAQAccordion.tsx` | client | Accordion with AnimatePresence |
 | `FinalCTA.tsx` | server | Bottom CTA block |
 | `ScrollReveal.tsx` | client | Reusable framer-motion scroll wrapper |
+| `AgentChat.tsx` | client | SSE streaming chat interface (multi-phase conversation) |
+| `ChatMessages.tsx` | client | Chat message list with typing indicators |
+| `ChatInput.tsx` | client | Chat text input with send button |
+| `ChatPlanCard.tsx` | client | Inline plan preview card in chat |
+| `PlanDisplay.tsx` | client | Full agent plan output display |
+| `PlanVersionDiff.tsx` | client | Side-by-side plan version comparison |
+| `SectionRefiner.tsx` | client | Section-level refinement UI with feedback input |
+| `ShareButtons.tsx` | client | Social share buttons for plans |
+| `TypingIndicator.tsx` | client | Animated typing dots for chat |
 | `TrackedLink.tsx` | client | Link + analytics event on click |
 | `LandingViewTracker.tsx` | client | Fires `landing_view` on mount |
 
@@ -146,11 +175,13 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `testimonials` | is_published=true | auth | name, role, company, quote, avatar |
 | `offers` | is_published=true | auth | (pricing tiers) |
 | `faqs` | is_published=true | auth | question, answer, sort_order |
-| `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_* |
+| `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_*, score, follow_up_at, nurture_enrolled |
+| `leads/{id}/activity` | none | auth | type (status_change/note_added/email_sent), timestamp, admin_email, details |
 | `events` | create only | auth | event tracking |
 | `agent_templates` | none | auth | key, markdown (agent prompt specs) |
 | `variants` | is_published=true | auth | slug, industry, headline, subheadline, cta_text, featured_industries[] |
 | `experiments` | status=running | auth | name, target, variants[], status, winner |
+| `plans` | is_public=true | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -190,6 +221,16 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [x] Lead detail page (/admin/leads/[id]) with timeline, notes, follow-up management
 - [x] Admin dashboard fixes (security hardening, CRUD bug fixes, sidebar nav, login redirect, theme revalidation)
 - [ ] CRM sync (ClickUp/HubSpot/Close) — deferred
+
+## What's Built (Phase 4 — complete)
+- [x] SSE streaming agent chat (multi-phase: gathering → confirming → building → complete → follow_up)
+- [x] Shareable preview plans (public URLs at /plan/[id] with view tracking)
+- [x] Plan section refinement (feedback-driven section updates via Gemini)
+- [x] Plan version history (version tracking with diff comparison)
+- [x] Chat UI components (AgentChat, ChatMessages, ChatInput, ChatPlanCard, TypingIndicator)
+- [x] Comprehensive performance optimization pass (animations, CSS, lazy loading)
+- [ ] Guided audit wizard — deferred
+- [ ] Proposal generator — deferred
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.

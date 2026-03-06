@@ -6,29 +6,24 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChatPlanCard } from "./ChatPlanCard";
 
-/** Inline types — will migrate to types/chat.ts when Terminal 1 creates it */
 export interface ChatMessage {
   id: string;
   role: "user" | "agent";
   content: string;
   timestamp: number;
-  /** Plan section embedded in this message */
   planSection?: {
     title: string;
     content: string;
     index: number;
     isStreaming?: boolean;
   };
-  /** Email capture form embedded in message */
   emailCapture?: boolean;
 }
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
   isTyping: boolean;
-  /** Currently streaming partial content */
   streamingContent?: string;
-  /** Email capture state */
   emailForm?: {
     name: string;
     email: string;
@@ -62,7 +57,7 @@ export function ChatMessages({ messages, isTyping, streamingContent, emailForm }
 
       {streamingContent && (
         <div className="flex justify-start">
-          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface-light border border-border px-4 py-2.5 text-sm leading-relaxed text-foreground">
+          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-glass-bg backdrop-blur-[var(--glass-blur)] border border-glass-border px-4 py-2.5 text-sm leading-relaxed text-foreground">
             <p className="whitespace-pre-wrap">{streamingContent}</p>
           </div>
         </div>
@@ -70,7 +65,7 @@ export function ChatMessages({ messages, isTyping, streamingContent, emailForm }
 
       {isTyping && !streamingContent && (
         <div className="flex justify-start">
-          <div className="rounded-2xl rounded-bl-md bg-surface-light border border-border max-w-[85%]">
+          <div className="rounded-2xl rounded-bl-md bg-glass-bg backdrop-blur-[var(--glass-blur)] border border-glass-border max-w-[85%]">
             <TypingIndicator />
           </div>
         </div>
@@ -97,8 +92,8 @@ function MessageBubble({
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? "rounded-br-md bg-primary text-background"
-            : "rounded-bl-md bg-surface-light border border-border text-foreground"
+            ? "rounded-br-md bg-primary text-background shadow-[var(--glow-sm)]"
+            : "rounded-bl-md bg-glass-bg backdrop-blur-[var(--glass-blur)] border border-glass-border text-foreground"
         }`}
       >
         {message.content && (
@@ -159,19 +154,19 @@ function EmailCaptureInline({
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder="Your name"
-        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:border-primary focus:outline-none"
+        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus-glow"
       />
       <input
         type="email"
         value={email}
         onChange={(e) => onEmailChange(e.target.value)}
         placeholder="you@company.com"
-        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:border-primary focus:outline-none"
+        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus-glow"
       />
       <button
         onClick={onSubmit}
         disabled={status === "sending" || !name.trim() || !email.trim()}
-        className="w-full px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        className="w-full px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:shadow-[var(--glow-sm)] active:scale-[0.97] transition-all disabled:opacity-50"
       >
         {status === "sending" ? "Sending..." : "Email me this plan"}
       </button>

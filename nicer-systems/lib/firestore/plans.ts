@@ -1,6 +1,30 @@
 import { getAdminDb, FieldValue } from "@/lib/firebase/admin";
 import type { StoredPlan } from "@/types/chat";
+import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
+import { applyRefinedSection } from "@/lib/plans/refinement";
+
+export function buildPlanRefinementUpdate(
+  currentPlan: PreviewPlan,
+  version: {
+    version: number;
+    section: PlanSectionType;
+    content: unknown;
+    feedback: string;
+  }
+) {
+  const nextPlan = applyRefinedSection(currentPlan, version.section, version.content);
+
+  return {
+    preview_plan: nextPlan,
+    version: version.version,
+    versionEntry: {
+      ...version,
+      content: JSON.stringify(version.content),
+      created_at: new Date().toISOString(),
+    },
+  };
+}
 
 export async function savePlan(params: {
   preview_plan: PreviewPlan;
@@ -55,26 +79,37 @@ export async function incrementPlanViews(id: string): Promise<void> {
   }
 }
 
+const MAX_PLAN_VERSIONS = 20;
+
 export async function savePlanRefinement(
   planId: string,
   version: {
     version: number;
-    section: string;
-    content: string;
+    section: PlanSectionType;
+    content: unknown;
     feedback: string;
-  }
+  },
+  currentPlan: PreviewPlan
 ): Promise<void> {
   try {
     const db = getAdminDb();
+    const update = buildPlanRefinementUpdate(currentPlan, version);
+
+    // Read existing versions to enforce limit
+    const doc = await db.collection("plans").doc(planId).get();
+    const existingVersions = (doc.data()?.versions ?? []) as unknown[];
+    let versions = [...existingVersions, update.versionEntry];
+    if (versions.length > MAX_PLAN_VERSIONS) {
+      versions = versions.slice(-MAX_PLAN_VERSIONS);
+    }
+
     await db
       .collection("plans")
       .doc(planId)
       .update({
-        version: version.version,
-        versions: FieldValue.arrayUnion({
-          ...version,
-          created_at: new Date().toISOString(),
-        }),
+        preview_plan: update.preview_plan,
+        version: update.version,
+        versions,
       });
   } catch (error) {
     console.error("Failed to save plan refinement:", error);

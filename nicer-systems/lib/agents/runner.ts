@@ -1,5 +1,6 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 import { buildPrompt } from "./prompts";
+import { assertSafeAgentObject } from "./safety";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import type { AgentTemplate } from "@/types/agent-template";
@@ -15,6 +16,7 @@ import type {
 const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 const MAX_RETRIES_PER_MODEL = 2;
 const BASE_RETRY_DELAY_MS = 300;
+const GEMINI_TIMEOUT_MS = 60_000;
 
 // Singleton Gemini client — avoids re-instantiation per call
 let _geminiClient: GoogleGenerativeAI | null = null;
@@ -190,7 +192,12 @@ async function callGemini(prompt: string): Promise<string> {
           generationConfig: { responseMimeType: "application/json" },
         });
 
-        const result = await geminiModel.generateContent(prompt);
+        const result = await Promise.race([
+          geminiModel.generateContent(prompt),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Gemini request timed out")), GEMINI_TIMEOUT_MS)
+          ),
+        ]);
         const text = result.response.text()?.trim();
         if (!text) {
           const finishReason = result.response.candidates?.[0]?.finishReason;
@@ -214,9 +221,8 @@ async function callGemini(prompt: string): Promise<string> {
           continue;
         }
 
-        if (!isModelAvailabilityError(message)) {
-          break;
-        }
+        // For non-transient, non-availability errors, try next model
+        break;
       }
     }
 
@@ -299,6 +305,7 @@ async function runAgentWithTemplate<T>(
     );
   }
 
+  assertSafeAgentObject(validated.data, templateKey);
   return validated.data as T;
 }
 

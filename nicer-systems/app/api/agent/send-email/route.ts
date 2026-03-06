@@ -14,7 +14,7 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const limited = enforceRateLimit(request, {
+    const limited = await enforceRateLimit(request, {
       keyPrefix: "send_email",
       windowMs: 60_000,
       maxRequests: 3,
@@ -26,11 +26,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
 
-    const { preview_plan, lead_id } = body as {
-      preview_plan: PreviewPlan;
-      lead_id?: string;
-    };
-
     const parsed = sendEmailSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -39,12 +34,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!preview_plan) {
-      return NextResponse.json(
-        { error: "Preview plan is required" },
-        { status: 400 }
-      );
-    }
+    const preview_plan = parsed.data.preview_plan as unknown as PreviewPlan;
+    const lead_id = parsed.data.lead_id;
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {

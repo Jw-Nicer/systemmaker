@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 **Product:** Nicer Systems Website + Web App Admin + Visible Agent Demo  
-**Doc Date:** 2026-02-27  
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
 **Owner:** Nicer Systems (Product/Marketing)
 
 ## 1. Problem
@@ -67,10 +67,25 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
 - Visitor “Mini Agent” demo producing a Preview Plan + email capture
 - Lead dashboard + exports
 
-### Later (Phase 3+)
+### Built (Phase 3 — complete)
 - Multi-niche landing variants + A/B testing
-- Automated email sequences + CRM sync
-- Client portal
+- Automated email sequences (5-email nurture via Resend)
+- Lead scoring (0–75 points) + activity timeline + follow-up reminders
+- Case study related recommendations
+- Custom error pages (404, error boundary)
+- CRM sync — deferred
+
+### Built (Phase 4 — complete)
+- SSE streaming agent chat (multi-phase conversation)
+- Shareable preview plans (public URLs at /plan/[id])
+- Plan section refinement with version history
+- Performance optimization pass
+
+### Deferred
+- Full client portal
+- CRM sync (ClickUp/HubSpot/Close)
+- Guided audit wizard
+- Proposal generator
 
 ## 7. Functional Requirements
 ### 7.1 Marketing Landing (Public)
@@ -144,7 +159,7 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
 ## 8. Non-Functional Requirements
 - Accessibility: keyboard navigation, ARIA, reduced motion support
 - Performance: LCP < 2.5s mobile target, defer canvas
-- Security: Admin auth + RLS + validation
+- Security: Admin auth + Firestore security rules + Zod validation
 - Reliability: error logging, content versioning (optional), backups
 - Maintainability: clear modules, docs, agent templates in markdown
 

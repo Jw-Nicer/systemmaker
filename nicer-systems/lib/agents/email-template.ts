@@ -1,5 +1,15 @@
 import type { PreviewPlan } from "@/types/preview-plan";
 
+/** Escape HTML special characters to prevent XSS in email content. */
+function esc(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function renderPreviewPlanHTML(
   plan: PreviewPlan,
   recipientName: string
@@ -9,9 +19,9 @@ export function renderPreviewPlanHTML(
       (s, i) => `
       <tr>
         <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${i + 1}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;">${s.name}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${s.owner_role}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:13px;">${s.exit_criteria}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;">${esc(s.name)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${esc(s.owner_role)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:13px;">${esc(s.exit_criteria)}</td>
       </tr>`
     )
     .join("");
@@ -20,9 +30,9 @@ export function renderPreviewPlanHTML(
     .map(
       (k) => `
       <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:8px;">
-        <strong style="color:#111827;">${k.name}</strong>
-        <p style="margin:4px 0 0;color:#6b7280;font-size:14px;">${k.definition}</p>
-        <p style="margin:4px 0 0;color:#9ca3af;font-size:13px;font-style:italic;">${k.why_it_matters}</p>
+        <strong style="color:#111827;">${esc(k.name)}</strong>
+        <p style="margin:4px 0 0;color:#6b7280;font-size:14px;">${esc(k.definition)}</p>
+        <p style="margin:4px 0 0;color:#9ca3af;font-size:13px;font-style:italic;">${esc(k.why_it_matters)}</p>
       </div>`
     )
     .join("");
@@ -31,7 +41,7 @@ export function renderPreviewPlanHTML(
     .map(
       (a) => `
       <li style="margin-bottom:8px;">
-        <strong>${a.when}</strong> → notify <em>${a.who}</em>: "${a.message}"
+        <strong>${esc(a.when)}</strong> → notify <em>${esc(a.who)}</em>: &ldquo;${esc(a.message)}&rdquo;
       </li>`
     )
     .join("");
@@ -41,10 +51,10 @@ export function renderPreviewPlanHTML(
       (a) => `
       <tr>
         <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">
-          <span style="background:${a.priority === "high" ? "#fef2f2" : "#f0fdf4"};color:${a.priority === "high" ? "#dc2626" : "#16a34a"};padding:2px 8px;border-radius:12px;font-size:12px;">${a.priority}</span>
+          <span style="background:${a.priority === "high" ? "#fef2f2" : "#f0fdf4"};color:${a.priority === "high" ? "#dc2626" : "#16a34a"};padding:2px 8px;border-radius:12px;font-size:12px;">${esc(a.priority)}</span>
         </td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${a.owner_role}</td>
-        <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">${a.action}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${esc(a.owner_role)}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;">${esc(a.action)}</td>
       </tr>`
     )
     .join("");
@@ -58,15 +68,15 @@ export function renderPreviewPlanHTML(
     <p style="color:#6b7280;margin:4px 0 0;">Your Preview Plan</p>
   </div>
 
-  <p>Hi ${recipientName},</p>
+  <p>Hi ${esc(recipientName)},</p>
   <p>Here's the draft preview plan based on your bottleneck description. This is a starting point — not a final recommendation.</p>
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
 
   <!-- Scope -->
   <h2 style="color:#00d4ff;font-size:18px;">Suggested Scope</h2>
-  <p><strong>${plan.intake.suggested_scope}</strong></p>
-  <p style="color:#6b7280;">${plan.intake.clarified_problem}</p>
+  <p><strong>${esc(plan.intake.suggested_scope)}</strong></p>
+  <p style="color:#6b7280;">${esc(plan.intake.clarified_problem)}</p>
 
   <!-- Workflow Map -->
   <h2 style="color:#00d4ff;font-size:18px;">Workflow Map</h2>

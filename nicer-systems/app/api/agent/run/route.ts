@@ -10,7 +10,7 @@ import {
 export async function POST(request: Request) {
   let lastStep: string | null = null;
   try {
-    const limited = enforceRateLimit(request, {
+    const limited = await enforceRateLimit(request, {
       keyPrefix: "agent_run",
       windowMs: 10 * 60_000,
       maxRequests: 4,
@@ -37,9 +37,6 @@ export async function POST(request: Request) {
     // Create a lead record for this demo interaction
     const db = getAdminDb();
     const leadRef = await db.collection("leads").add({
-      name: "",
-      email: "",
-      company: "",
       industry,
       bottleneck,
       tools: current_tools,

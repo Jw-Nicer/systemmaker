@@ -2,6 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { buildPlanSummary } from "./conversation";
+import { assertSafeAgentObject } from "./safety";
+
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 500;
+const TIMEOUT_MS = 60_000;
 
 function getGeminiClient() {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -11,6 +16,15 @@ function getGeminiClient() {
 
 function getModel() {
   return process.env.GOOGLE_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+}
+
+function isTransient(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return /429|500|502|503|504|rate limit|quota|timeout|timed out|unavailable|econnreset/.test(m);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 const SECTION_LABELS: Record<PlanSectionType, string> = {
@@ -76,24 +90,43 @@ export async function refinePlanSection(
   const currentData = getSectionData(fullPlan, section);
   const prompt = buildRefinementPrompt(section, currentData, feedback, fullPlan);
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text()?.trim();
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Refinement timed out")), TIMEOUT_MS)
+        ),
+      ]);
+      const text = result.response.text()?.trim();
 
-  if (!text) {
-    throw new Error("Empty response from Gemini");
-  }
+      if (!text) {
+        throw new Error("Empty response from Gemini");
+      }
 
-  const cleaned = text
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
+      const cleaned = text
+        .replace(/^```(?:json)?\s*\n?/i, "")
+        .replace(/\n?```\s*$/i, "")
+        .trim();
 
   const parsed = JSON.parse(cleaned);
+  assertSafeAgentObject(parsed, `refinement:${section}`);
 
   return {
-    refined: parsed,
-    summary: `Refined "${SECTION_LABELS[section]}" based on feedback: "${feedback.slice(0, 80)}"`,
-  };
+        refined: parsed,
+        summary: `Refined "${SECTION_LABELS[section]}" based on feedback: "${feedback.slice(0, 80)}"`,
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES && isTransient(lastError.message)) {
+        await sleep(RETRY_BASE_MS * 2 ** attempt);
+        continue;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("Refinement failed");
 }
 
 /**

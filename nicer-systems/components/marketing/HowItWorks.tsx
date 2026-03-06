@@ -1,6 +1,8 @@
 "use client";
 
 import { ScrollReveal } from "./ScrollReveal";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Badge } from "@/components/ui/Badge";
 
 const steps = [
   {
@@ -53,38 +55,41 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="py-24 bg-surface">
-      <div className="max-w-6xl mx-auto px-6">
+    <section className="py-24 bg-surface/30 noise-overlay relative overflow-hidden">
+      <div className="max-w-6xl mx-auto px-6 relative z-[1]">
         <ScrollReveal>
-          <h2 className="text-3xl font-bold text-center mb-16">How It Works</h2>
+          <SectionHeading
+            eyebrow="Process"
+            title="How It Works"
+          />
         </ScrollReveal>
 
         {/* Timeline */}
         <div className="relative">
-          {/* Connecting line (desktop) */}
-          <div className="hidden md:block absolute top-16 left-0 right-0 h-px bg-border" />
+          {/* Connecting line (desktop) — gradient glow */}
+          <div className="hidden md:block absolute top-16 left-0 right-0 h-px bg-[var(--gradient-glow-line)] opacity-40" />
 
           <div className="grid md:grid-cols-4 gap-8 md:gap-6">
             {steps.map((item, i) => (
               <ScrollReveal key={item.step} delay={i * 0.15}>
                 <div className="relative text-center group">
                   {/* Step number + icon */}
-                  <div className="relative mx-auto w-16 h-16 rounded-full border border-border bg-background flex items-center justify-center mb-4 group-hover:border-primary/50 transition-colors">
-                    <div className="text-primary/60">{item.icon}</div>
+                  <div className="relative mx-auto w-16 h-16 rounded-full border border-glass-border bg-glass-bg backdrop-blur-[var(--glass-blur)] flex items-center justify-center mb-4 group-hover:border-primary/50 group-hover:shadow-[var(--glow-md)] transition-all">
+                    <div className="text-primary/60 group-hover:text-primary group-hover:[filter:drop-shadow(0_0_8px_rgba(0,212,255,0.5))] transition-all">
+                      {item.icon}
+                    </div>
                   </div>
 
                   {/* Step label */}
-                  <div className="text-xs font-mono text-primary/40 mb-1">
+                  <div className="text-xs font-mono text-primary/40 mb-1 text-glow">
                     {item.step}
                   </div>
 
                   <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-muted text-sm mb-3">{item.desc}</p>
+                  <p className="text-muted text-sm mb-3 leading-relaxed">{item.desc}</p>
 
                   {/* Deliverable tag */}
-                  <span className="inline-block text-xs px-3 py-1 rounded-full bg-primary/5 text-primary/70 border border-primary/10">
-                    {item.deliverable}
-                  </span>
+                  <Badge variant="primary">{item.deliverable}</Badge>
                 </div>
               </ScrollReveal>
             ))}

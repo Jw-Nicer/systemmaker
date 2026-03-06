@@ -5,7 +5,7 @@ import { enforceRateLimit } from "@/lib/security/request-guards";
 
 export async function POST(request: Request) {
   try {
-    const limited = enforceRateLimit(request, {
+    const limited = await enforceRateLimit(request, {
       keyPrefix: "events",
       windowMs: 60_000,
       maxRequests: 60,

@@ -70,6 +70,8 @@ export interface SSEMessageData {
   content: string;
   /** Streaming chunk or full message */
   is_chunk?: boolean;
+  extracted?: ExtractedIntake;
+  is_extraction_update?: boolean;
 }
 
 export interface SSEPhaseChangeData {
@@ -80,7 +82,7 @@ export interface SSEPhaseChangeData {
 export interface SSEPlanSectionData {
   section: PlanSectionType;
   label: string;
-  content: string;
+  content: string | null;
 }
 
 export interface SSEPlanCompleteData {

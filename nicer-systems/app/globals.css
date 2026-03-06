@@ -11,6 +11,28 @@
   --surface-light: #1f2937;
   --border: #374151;
   --muted: #6b7280;
+
+  /* Glow system (RGB values for rgba composition) */
+  --glow-primary-rgb: 0 212 255;
+  --glow-secondary-rgb: 124 58 237;
+  --glow-sm: 0 0 8px rgba(0, 212, 255, 0.3);
+  --glow-md: 0 0 20px rgba(0, 212, 255, 0.25), 0 0 40px rgba(0, 212, 255, 0.1);
+  --glow-lg: 0 0 30px rgba(0, 212, 255, 0.3), 0 0 60px rgba(0, 212, 255, 0.15), 0 0 100px rgba(0, 212, 255, 0.05);
+  --glow-secondary-md: 0 0 20px rgba(124, 58, 237, 0.25), 0 0 40px rgba(124, 58, 237, 0.1);
+
+  /* Glass morphism system */
+  --glass-bg: rgba(17, 24, 39, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-blur: 16px;
+
+  /* Gradient presets */
+  --gradient-primary: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+  --gradient-surface: linear-gradient(180deg, rgba(17, 24, 39, 0.8) 0%, rgba(10, 14, 26, 0.95) 100%);
+  --gradient-glow-line: linear-gradient(90deg, transparent, var(--theme-primary), transparent);
+
+  /* Grid background */
+  --grid-color: rgba(0, 212, 255, 0.04);
+  --grid-size: 60px;
 }
 
 @theme inline {
@@ -22,6 +44,8 @@
   --color-surface-light: var(--surface-light);
   --color-border: var(--border);
   --color-muted: var(--muted);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -32,6 +56,112 @@ body {
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
 
+/* ========== Cyber Background Effects ========== */
+
+.cyber-grid {
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+}
+
+.scan-lines {
+  position: relative;
+}
+.scan-lines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.noise-overlay {
+  position: relative;
+}
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ========== Glow & Neon Effects ========== */
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.2);
+}
+
+.text-glow-secondary {
+  text-shadow: 0 0 10px rgba(124, 58, 237, 0.5), 0 0 30px rgba(124, 58, 237, 0.2);
+}
+
+.focus-glow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--theme-primary), var(--glow-sm);
+}
+
+/* ========== Gradient Border (hover reveal) ========== */
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-primary);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+.gradient-border-active::before {
+  opacity: 1;
+}
+
+/* ========== Keyframes ========== */
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: var(--glow-sm); }
+  50% { box-shadow: var(--glow-md); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes scan-down {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+/* ========== Accessibility ========== */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -39,5 +169,14 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========== Responsive Adjustments ========== */
+
+@media (max-width: 768px) {
+  :root {
+    --grid-size: 40px;
+    --glass-blur: 8px;
   }
 }

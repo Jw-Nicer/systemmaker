@@ -1,5 +1,5 @@
 # Phased Implementation Plan
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-01
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
 
 ## Phase 0 — Foundations ✅ COMPLETE
 **Outcome:** Repo, stack, environments, design tokens, analytics scaffolding.
@@ -65,31 +65,56 @@
 
 ---
 
-## Phase 3 — Funnel Optimization + Variants (NOT STARTED)
-**Outcome:** Scale marketing performance and personalization.
+## Phase 3 — Funnel Optimization + Variants ✅ COMPLETE
+**Outcome:** Scale marketing performance, personalization, and lead management.
 
 ### Deliverables
-- Multi-niche landing variants (industry pages)
-- A/B testing framework (hero copy/CTA)
-- Automated email sequences (nurture)
-- CRM sync (ClickUp/HubSpot/Close) + lead scoring
-- Case study "related" recommendations
+- ✅ Multi-niche landing variants (admin CRUD + `/[industry]` dynamic routes)
+- ✅ A/B testing framework (experiments admin + `useExperiment` hook + bucketing)
+- ✅ Automated email sequences (5-email nurture via Resend `scheduledAt`)
+- ✅ Lead scoring (pure function, 0–75 points, stored on lead docs)
+- ✅ Admin email notifications on new leads (via Resend)
+- ✅ Case study "related" recommendations (on detail pages)
+- ✅ Custom error pages (404, error boundary, admin error boundary)
+- ✅ Admin dashboard with real Firestore metrics + recent leads
+- ✅ Activity timeline on leads (notes, status changes, email logs — subcollection)
+- ✅ Follow-up reminders (date + note per lead, dashboard widget with overdue/upcoming)
+- ✅ Lead detail page (`/admin/leads/[id]`) with timeline, notes, follow-up management
+- ✅ Security hardening, CRUD bug fixes, sidebar nav, login redirect, theme revalidation
+- ❌ CRM sync (ClickUp/HubSpot/Close) — **deferred**
 
 ### Exit criteria
-- Can run at least 1 A/B test
-- Leads route into CRM with attribution intact
+- ✅ Can run at least 1 A/B test via experiments admin
+- ✅ Leads have scoring, activity timeline, and follow-up management
+- ✅ Industry-specific landing pages render from admin-managed variants
+- ✅ Nurture email sequence enrolls new leads automatically
 
 ---
 
-## Phase 4 — "Ops Visibility Preview" Web App (NOT STARTED)
-**Outcome:** Turn the demo into a productized audit tool.
+## Phase 4 — Agent Chat + Plan Sharing ✅ COMPLETE
+**Outcome:** Conversational agent experience with shareable, refinable output plans.
 
 ### Deliverables
-- Guided audit wizard
-- Output: dashboard blueprint + SOP + automation map
-- Account-based follow-up + consult scheduling
-- Internal tooling for generating proposals from intake
+- ✅ SSE streaming agent chat (multi-phase: gathering → confirming → building → complete → follow_up)
+- ✅ Chat UI components (AgentChat, ChatMessages, ChatInput, ChatPlanCard, TypingIndicator)
+- ✅ Shareable preview plans (public URLs at `/plan/[id]` with view tracking)
+- ✅ Plan section refinement (feedback-driven section updates via Gemini)
+- ✅ Plan version history (version tracking with diff comparison)
+- ✅ Comprehensive performance optimization pass (animations, CSS, lazy loading)
+- ❌ Guided audit wizard — **deferred**
+- ❌ Proposal generator — **deferred**
 
 ### Exit criteria
-- Audit output used in real sales calls
-- Consistent close-lift measured vs control
+- ✅ Agent chat completes multi-turn conversation with streaming responses
+- ✅ Generated plans can be shared via public URL
+- ✅ Individual plan sections can be refined with feedback
+- ✅ Performance optimized (reduced motion support, lazy loading, animation throttling)
+
+---
+
+## Deferred Items
+- CRM sync (ClickUp/HubSpot/Close integration)
+- Guided audit wizard (productized assessment tool)
+- Proposal generator (internal tooling from intake data)
+- Full client portal
+- Multi-tenant enterprise RBAC

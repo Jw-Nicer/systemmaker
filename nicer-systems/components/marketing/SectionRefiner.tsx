@@ -4,15 +4,15 @@ import { useState } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRefineSection } from "@/hooks/useRefineSection";
-import type { PlanSectionType } from "@/types/chat";
+import type { RefineSectionKey } from "@/lib/plans/refinement";
 
 interface SectionRefinerProps {
-  sectionKey: string;
+  sectionKey: RefineSectionKey;
   planId: string;
   /** The current content of the section being refined */
   originalContent: string;
   /** Called when refinement produces new content */
-  onRefined: (sectionKey: string, newContent: string) => void;
+  onRefined: (sectionKey: RefineSectionKey, newContent: string) => void;
   /** Called to close the refiner */
   onClose: () => void;
 }
@@ -46,7 +46,7 @@ export function SectionRefiner({
     refine,
     toggleDiff,
     clearRefinement,
-  } = useRefineSection(planId, sectionKey as PlanSectionType);
+  } = useRefineSection(planId, sectionKey);
 
   async function sendRefinement(feedback: string) {
     setMessages((prev) => [...prev, { role: "user", content: feedback }]);

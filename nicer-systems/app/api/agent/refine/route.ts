@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
+import { planRefinementSchema } from "@/lib/validation";
 import { getPlanById, savePlanRefinement } from "@/lib/firestore/plans";
 import { refinePlanSection } from "@/lib/agents/refinement";
 import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
-
-const refineSchema = z.object({
-  plan_id: z.string().min(1).max(100),
-  section: z.enum(["intake", "workflow", "automation", "dashboard", "ops_pulse"]),
-  feedback: z.string().min(1).max(2000),
-});
+import {
+  mapRefineSectionKeyToPlanSection,
+  type RefineSectionKey,
+} from "@/lib/plans/refinement";
 
 export async function POST(request: Request) {
   try {
-    const limited = enforceRateLimit(request, {
+    const limited = await enforceRateLimit(request, {
       keyPrefix: "agent_refine",
       windowMs: 10 * 60_000,
       maxRequests: 10,
@@ -29,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
 
-    const parsed = refineSchema.safeParse(body);
+    const parsed = planRefinementSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validation failed", details: parsed.error.flatten() },
@@ -38,6 +36,7 @@ export async function POST(request: Request) {
     }
 
     const { plan_id, section, feedback } = parsed.data;
+    const planSection = mapRefineSectionKeyToPlanSection(section as RefineSectionKey);
 
     // Load the full plan
     const storedPlan = await getPlanById(plan_id);
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
 
     // Run refinement via Gemini
     const { refined, summary } = await refinePlanSection(
-      section as PlanSectionType,
+      planSection as PlanSectionType,
       feedback,
       fullPlan
     );
@@ -57,10 +56,10 @@ export async function POST(request: Request) {
     // Save the refinement version
     await savePlanRefinement(plan_id, {
       version: storedPlan.version + 1,
-      section,
-      content: JSON.stringify(refined),
+      section: planSection,
+      content: refined,
       feedback,
-    });
+    }, fullPlan);
 
     // Return as SSE-compatible stream for the hook
     const encoder = new TextEncoder();

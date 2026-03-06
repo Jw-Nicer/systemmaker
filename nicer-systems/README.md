@@ -1,36 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nicer Systems
+
+A conversion-first marketing site and web app for **Nicer Systems**, an automation + lightweight internal apps agency for admin-heavy American businesses.
+
+## Tech Stack
+
+| Category | Technology |
+|----------|-----------|
+| Framework | Next.js 16.1.6 (App Router, Turbopack) |
+| Language | TypeScript (strict mode) |
+| Styling | Tailwind CSS v4 + CSS variables |
+| Animation | Framer Motion 12.x |
+| Backend | Firebase (Firestore, Auth, Storage) |
+| AI | Google Gemini (@google/generative-ai) |
+| Email | Resend (lead delivery + nurture sequences) |
+| Analytics | PostHog (client-side) |
+| Validation | Zod |
+| Hosting | Firebase Hosting + Cloud Functions (SSR) |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 20+
+- npm
+- Firebase CLI (`npm i -g firebase-tools`)
+- Firebase project with Auth, Firestore, and Storage enabled
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Setup
+
+1. Clone the repo and install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Copy `.env.example` to `.env.local` and fill in your credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Required environment variables:
+   - `NEXT_PUBLIC_FIREBASE_*` — Firebase client SDK config
+   - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` — Firebase Admin SDK
+   - `GOOGLE_GEMINI_API_KEY` — Google AI Studio API key
+   - `RESEND_API_KEY` — Resend email service
+   - `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` — PostHog analytics
+
+3. Seed initial data:
+   ```bash
+   npx tsx scripts/seed-firestore.ts     # Seed default site settings
+   npm run seed:templates                 # Seed agent templates
+   ```
+
+4. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+## Project Structure
+
+```
+app/
+  (marketing)/     Public marketing pages (SSR)
+  admin/           Admin CMS (auth-protected)
+  api/             API routes (auth, leads, agent, plans, events)
+components/
+  marketing/       Landing page sections + chat UI
+  ui/              Shared UI primitives
+lib/
+  firebase/        Admin SDK + Auth + Client init
+  firestore/       Server-side Firestore queries
+  actions/         Server actions for admin CRUD
+  agents/          AI agent runner, chat, refinement
+  email/           Nurture sequences + admin notifications
+  leads/           Lead scoring
+  security/        Rate limiting + request guards
+hooks/             Custom React hooks
+types/             TypeScript interfaces
+agents/            Agent markdown specifications
+docs/              Product specification documents
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Dev Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev              # Start Next.js dev server (port 3000)
+npx tsc --watch --noEmit # TypeScript type-checking in watch mode
+npm run lint             # Run ESLint
+npm run build            # Production build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+Deployed to **Firebase Hosting** with Cloud Functions for SSR.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run deploy           # Full Firebase deploy (hosting + functions)
+npm run deploy:hosting   # Deploy hosting + SSR only
+npm run deploy:rules     # Deploy Firestore security rules
+npm run deploy:indexes   # Deploy Firestore indexes
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **URL**: https://nicer-systems.web.app
+- **Region**: us-central1
+- **Plan**: Firebase Blaze (pay-as-you-go)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key Features
 
-## Deploy on Vercel
+- **Brush Reveal Hero** — Interactive canvas-based hero with brush masking effect
+- **AI Agent Demo** — Multi-phase SSE streaming chat that generates preview plans
+- **Plan Sharing** — Shareable public URLs for generated preview plans
+- **Admin CMS** — Full CRUD for case studies, testimonials, FAQs, offers, variants
+- **Leads CRM** — Lead scoring, activity timeline, follow-up reminders, CSV export
+- **A/B Testing** — Experiment framework with variant bucketing and tracking
+- **Email Automation** — 5-email nurture sequences via Resend
+- **Theme Customization** — Admin-editable CSS variables (colors, glow, motion intensity)
+- **Industry Variants** — Dynamic landing pages per industry vertical
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Detailed product specs are in the `docs/` directory:
+- `PRD.md` — Product requirements
+- `Architecture.md` — System architecture
+- `Data_Model.md` — Firestore schema
+- `API_Spec.md` — API endpoints
+- `Agents_Spec.md` — AI agent specifications
+- `Phased_Implementation_Plan.md` — Build phases and status
+
+AI assistant context files:
+- `CLAUDE.md` — Shared context for Claude
+- `CODEX.md` — Implementation context for Codex/AI coding
