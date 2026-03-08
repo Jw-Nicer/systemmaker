@@ -77,3 +77,16 @@ test("chatReducer tolerates pending plan section events with null content", () =
   assert.equal(updated.messages.length, 1);
   assert.equal(updated.messages[0]?.content, "");
 });
+
+test("chatReducer preserves email capture metadata on assistant messages", () => {
+  const initial = createInitialChatState();
+
+  const updated = chatReducer(initial, {
+    type: "STREAM_MESSAGE",
+    content: "Your Preview Plan is ready. Share your email and I will send it.",
+    email_capture: true,
+  });
+
+  assert.equal(updated.messages.length, 1);
+  assert.equal(updated.messages[0]?.email_capture, true);
+});
