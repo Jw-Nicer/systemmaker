@@ -45,6 +45,10 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
 
       if (!res.ok) throw new Error("Failed");
       setEmailStatus("sent");
+      track(EVENTS.PREVIEW_PLAN_EMAIL_CAPTURE, {
+        lead_id: leadId,
+        source: "agent_demo",
+      });
       track(EVENTS.CTA_CLICK_PREVIEW_PLAN);
     } catch {
       setEmailStatus("error");

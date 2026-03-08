@@ -19,11 +19,13 @@ export interface FunnelSummary {
   previewStarts: number;
   previewCompleted: number;
   leadsSubmitted: number;
+  previewPlanEmailCaptures: number;
   bookingClicks: number;
   sharedPlanViews: number;
   planShares: number;
   previewCompletionRate: number;
   leadConversionRate: number;
+  previewEmailCaptureRate: number;
   bookingClickRate: number;
 }
 

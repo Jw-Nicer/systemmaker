@@ -19,16 +19,18 @@ PostHog (client-side via `lib/analytics.ts`)
 - `agent_demo_start` — User begins agent demo form (AgentDemoForm)
 - `agent_demo_complete` — Agent demo produces output (AgentDemoResults)
 - `agent_chat_start` — User begins SSE chat conversation (AgentChat)
-- `agent_chat_complete` — Chat conversation reaches complete phase (AgentChat)
+- `agent_chat_plan_start` — Chat transitions into plan-building mode (useSSEChat)
+- `agent_chat_plan_complete` — Chat finishes building a plan (useSSEChat)
 - `proof_gallery_filter_used` — Filter chip clicked (ProofOfWorkClient)
 - `case_study_view` — Case study detail page viewed
 - `cta_click_book` — Book CTA clicked (TrackedLink)
 - `cta_click_preview_plan` — Preview Plan CTA clicked (TrackedLink)
 - `lead_submit` — Lead form submitted (API route)
 - `booking_click` — Scheduler link clicked (TrackedLink)
-- `plan_view` — Shared plan page viewed (/plan/[id])
-- `plan_shared` — Plan share button clicked (ShareButtons)
-- `plan_refined` — Plan section refined (SectionRefiner)
+- `preview_plan_email_capture` — User requests a preview plan by email
+- `plan_view_shared` — Shared plan page viewed (`/plan/[id]`)
+- `plan_shared_copy_link` / `plan_shared_email` / `plan_shared_linkedin` — Plan share action clicked
+- `plan_refine_start` / `plan_refine_complete` / `plan_refine_view_diff` — Plan section refinement lifecycle
 
 ## A/B Testing Events
 - Experiment variant bucketing tracked via `useExperiment` hook
@@ -39,6 +41,7 @@ PostHog (client-side via `lib/analytics.ts`)
 - Traffic by source
 - Conversion rate by source
 - Engagement metrics (brush + agent interactions)
+- Preview email capture rate after completed plans
 - Case study influence (view → submit)
 - A/B test results by variant
 

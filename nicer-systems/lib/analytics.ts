@@ -1,4 +1,5 @@
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
+import { hasAnalyticsConsent } from "@/lib/analytics-consent";
 
 export const EVENTS = {
   LANDING_VIEW: "landing_view",
@@ -40,6 +41,9 @@ export const EVENTS = {
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
 
+let posthogClientPromise: Promise<typeof import("posthog-js").default> | null = null;
+let posthogInitialized = false;
+
 function withAnalyticsContext(payload?: Record<string, unknown>) {
   const nextPayload = { ...(payload ?? {}) };
 
@@ -62,6 +66,10 @@ function withAnalyticsContext(payload?: Record<string, unknown>) {
 
 function persistEvent(eventName: string, payload?: Record<string, unknown>) {
   if (typeof window === "undefined" || process.env.NODE_ENV === "test") {
+    return;
+  }
+
+  if (!hasAnalyticsConsent()) {
     return;
   }
 
@@ -95,7 +103,34 @@ function persistEvent(eventName: string, payload?: Record<string, unknown>) {
   }).catch(() => {});
 }
 
+async function getPostHogClient() {
+  if (!posthogClientPromise) {
+    posthogClientPromise = import("posthog-js").then(({ default: posthog }) => posthog);
+  }
+
+  return posthogClientPromise;
+}
+
+async function ensurePostHogInitialized() {
+  const posthog = await getPostHogClient();
+
+  if (!posthogInitialized) {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      person_profiles: "identified_only",
+      capture_pageview: false,
+    });
+    posthogInitialized = true;
+  }
+
+  return posthog;
+}
+
 export function track(eventName: EventName, payload?: Record<string, unknown>) {
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+
   if (process.env.NODE_ENV === "development") {
     console.log(`[analytics] ${eventName}`, withAnalyticsContext(payload));
   }
@@ -103,24 +138,34 @@ export function track(eventName: EventName, payload?: Record<string, unknown>) {
   persistEvent(eventName, payload);
 
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    import("posthog-js").then(({ default: posthog }) => {
+    ensurePostHogInitialized().then((posthog) => {
       posthog.capture(eventName, withAnalyticsContext(payload));
     });
   }
 }
 
-export function initAnalytics() {
+export function syncAnalyticsPreference() {
   if (
     typeof window !== "undefined" &&
     process.env.NEXT_PUBLIC_POSTHOG_KEY &&
     process.env.NODE_ENV === "production"
   ) {
-    import("posthog-js").then(({ default: posthog }) => {
-      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-        person_profiles: "identified_only",
-        capture_pageview: false,
+    if (hasAnalyticsConsent()) {
+      ensurePostHogInitialized().then((posthog) => {
+        posthog.opt_in_capturing();
       });
-    });
+      return;
+    }
+
+    if (posthogInitialized || posthogClientPromise) {
+      getPostHogClient().then((posthog) => {
+        posthog.opt_out_capturing();
+        posthog.reset();
+      });
+    }
   }
+}
+
+export function initAnalytics() {
+  syncAnalyticsPreference();
 }

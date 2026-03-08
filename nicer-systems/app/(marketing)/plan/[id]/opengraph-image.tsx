@@ -44,12 +44,32 @@ export default async function OGImage({
         >
           <span
             style={{
-              fontSize: "24px",
-              fontWeight: 700,
-              color: "#60a5fa",
+              display: "flex",
+              alignItems: "baseline",
+              gap: "6px",
             }}
           >
-            Nicer Systems
+            <span
+              style={{
+                fontSize: "26px",
+                fontWeight: 400,
+                color: "#f4efe5",
+                letterSpacing: "-0.04em",
+              }}
+            >
+              nicer
+            </span>
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#cbd3c2",
+                letterSpacing: "0.3em",
+                textTransform: "uppercase",
+              }}
+            >
+              systems
+            </span>
           </span>
           <span
             style={{

@@ -25,6 +25,11 @@ const PREVIEW_COMPLETE_EVENTS = new Set<string>([
   EVENTS.AGENT_CHAT_PLAN_COMPLETE,
 ]);
 
+const PREVIEW_EMAIL_CAPTURE_EVENTS = new Set<string>([
+  EVENTS.PREVIEW_PLAN_EMAIL_CAPTURE,
+  EVENTS.AGENT_CHAT_EMAIL_CAPTURE,
+]);
+
 const BOOKING_CLICK_EVENTS = new Set<string>([
   EVENTS.BOOKING_CLICK,
   EVENTS.CTA_CLICK_BOOK,
@@ -43,11 +48,13 @@ export const EMPTY_DASHBOARD_ANALYTICS: DashboardAnalytics = {
     previewStarts: 0,
     previewCompleted: 0,
     leadsSubmitted: 0,
+    previewPlanEmailCaptures: 0,
     bookingClicks: 0,
     sharedPlanViews: 0,
     planShares: 0,
     previewCompletionRate: 0,
     leadConversionRate: 0,
+    previewEmailCaptureRate: 0,
     bookingClickRate: 0,
   },
   topLandingPaths: [],
@@ -185,11 +192,13 @@ export function buildDashboardAnalytics(
     previewStarts: countEvents(events, PREVIEW_START_EVENTS),
     previewCompleted: countEvents(events, PREVIEW_COMPLETE_EVENTS),
     leadsSubmitted: countEvents(events, EVENTS.LEAD_SUBMIT),
+    previewPlanEmailCaptures: countEvents(events, PREVIEW_EMAIL_CAPTURE_EVENTS),
     bookingClicks: countEvents(events, BOOKING_CLICK_EVENTS),
     sharedPlanViews: countEvents(events, EVENTS.PLAN_VIEW_SHARED),
     planShares: countEvents(events, PLAN_SHARE_EVENTS),
     previewCompletionRate: 0,
     leadConversionRate: 0,
+    previewEmailCaptureRate: 0,
     bookingClickRate: 0,
   };
 
@@ -200,6 +209,10 @@ export function buildDashboardAnalytics(
   funnel.leadConversionRate = toPercent(
     funnel.leadsSubmitted,
     funnel.landingViews
+  );
+  funnel.previewEmailCaptureRate = toPercent(
+    funnel.previewPlanEmailCaptures,
+    funnel.previewCompleted
   );
   funnel.bookingClickRate = toPercent(
     funnel.bookingClicks,

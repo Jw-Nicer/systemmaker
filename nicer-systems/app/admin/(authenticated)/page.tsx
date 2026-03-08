@@ -219,7 +219,18 @@ export default async function AdminDashboard() {
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#d9d1c3]">
                 Conversion Signals
               </p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-3xl font-semibold tracking-[-0.04em]">
+                    {metrics.analytics.funnel.previewPlanEmailCaptures}
+                  </p>
+                  <p className="mt-1 text-sm text-[#d8cfbe]">
+                    Plan email captures
+                  </p>
+                  <p className="mt-1 text-xs text-[#bcb39f]">
+                    {formatPercent(metrics.analytics.funnel.previewEmailCaptureRate)} of completed previews
+                  </p>
+                </div>
                 <div>
                   <p className="text-3xl font-semibold tracking-[-0.04em]">
                     {metrics.analytics.funnel.bookingClicks}

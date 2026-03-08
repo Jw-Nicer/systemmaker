@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
+import {
+  AnalyticsConsentBanner,
+  PrivacyPreferencesButton,
+} from "@/components/ui/AnalyticsConsentControls";
 import { MobileNav } from "@/components/marketing/MobileNav";
 
 const navLinks = [
@@ -116,12 +120,14 @@ export default function MarketingLayout({
                       {link.label}
                     </Link>
                   ))}
+                  {column.title === "Company" ? <PrivacyPreferencesButton /> : null}
                 </div>
               </div>
             ))}
           </div>
         </div>
       </footer>
+      <AnalyticsConsentBanner />
     </div>
   );
 }
