@@ -24,16 +24,14 @@ export function PrivacyPreferencesButton() {
 }
 
 export function AnalyticsConsentBanner() {
-  const [mounted, setMounted] = useState(false);
-  const [consent, setConsent] = useState<AnalyticsConsentStatus>("unset");
-  const [isOpen, setIsOpen] = useState(false);
+  const [consent, setConsent] = useState<AnalyticsConsentStatus>(() =>
+    getAnalyticsConsentStatus()
+  );
+  const [isOpen, setIsOpen] = useState(
+    () => getAnalyticsConsentStatus() === "unset"
+  );
 
   useEffect(() => {
-    const currentConsent = getAnalyticsConsentStatus();
-    setMounted(true);
-    setConsent(currentConsent);
-    setIsOpen(currentConsent === "unset");
-
     const handleOpen = () => setIsOpen(true);
     const handleConsentChange = () => {
       const next = getAnalyticsConsentStatus();
@@ -52,7 +50,7 @@ export function AnalyticsConsentBanner() {
     };
   }, []);
 
-  if (!mounted || !isOpen) {
+  if (!isOpen) {
     return null;
   }
 

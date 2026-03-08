@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { buildPlanRefinementUpdate } from "@/lib/firestore/plans";
 import { createPreviewPlan } from "@/tests/fixtures/preview-plan";

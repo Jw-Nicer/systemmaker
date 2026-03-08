@@ -48,16 +48,21 @@ test("buildDashboardAnalytics derives funnel counts and rankings", () => {
     },
     {
       id: "7",
+      event_name: EVENTS.PREVIEW_PLAN_EMAIL_CAPTURE,
+      created_at: "2026-03-01T05:30:00.000Z",
+    },
+    {
+      id: "8",
       event_name: EVENTS.BOOKING_CLICK,
       created_at: "2026-03-01T06:00:00.000Z",
     },
     {
-      id: "8",
+      id: "9",
       event_name: EVENTS.PLAN_SHARED_COPY_LINK,
       created_at: "2026-03-01T07:00:00.000Z",
     },
     {
-      id: "9",
+      id: "10",
       event_name: EVENTS.PLAN_VIEW_SHARED,
       created_at: "2026-03-01T08:00:00.000Z",
     },
@@ -84,11 +89,13 @@ test("buildDashboardAnalytics derives funnel counts and rankings", () => {
   assert.equal(analytics.funnel.previewStarts, 1);
   assert.equal(analytics.funnel.previewCompleted, 1);
   assert.equal(analytics.funnel.leadsSubmitted, 1);
+  assert.equal(analytics.funnel.previewPlanEmailCaptures, 1);
   assert.equal(analytics.funnel.bookingClicks, 1);
   assert.equal(analytics.funnel.planShares, 1);
   assert.equal(analytics.funnel.sharedPlanViews, 1);
   assert.equal(analytics.funnel.previewCompletionRate, 100);
   assert.equal(analytics.funnel.leadConversionRate, 33.3);
+  assert.equal(analytics.funnel.previewEmailCaptureRate, 100);
   assert.equal(analytics.funnel.bookingClickRate, 100);
   assert.equal(analytics.topLandingPaths[0]?.path, "/");
   assert.equal(analytics.topLandingPaths[0]?.views, 2);
