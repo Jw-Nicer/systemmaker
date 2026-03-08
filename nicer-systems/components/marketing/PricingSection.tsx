@@ -1,96 +1,94 @@
 import Link from "next/link";
-import { SectionHeading } from "@/components/ui/SectionHeading";
-import { Badge } from "@/components/ui/Badge";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { getPublishedOffers } from "@/lib/firestore/offers";
 
-const tiers = [
-  {
-    name: "Starter",
-    price: "One workflow",
-    description: "Mapped and automated in 30 days.",
-    features: [
-      "End-to-end process map",
-      "System of record setup",
-      "Basic live dashboard",
-      "Automated stuck-work alerts",
-      "30-day delivery guarantee",
-    ],
-    cta: "Book a Scoping Call",
-    highlighted: false,
-  },
-  {
-    name: "Growth",
-    price: "Full visibility",
-    description: "Complete ops visibility system.",
-    features: [
-      "Everything in Starter",
-      "Multi-workflow coverage",
-      "Advanced dashboards + KPIs",
-      "Weekly Ops Pulse report",
-      "Tool integrations (Zapier/Make)",
-      "Priority support",
-    ],
-    cta: "Book a Scoping Call",
-    highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom build",
-    description: "Tailored ops infrastructure.",
-    features: [
-      "Everything in Growth",
-      "Custom integrations",
-      "Dedicated account manager",
-      "SLA guarantees",
-      "Team training + handoff",
-      "Ongoing optimization",
-    ],
-    cta: "Contact Us",
-    highlighted: false,
-  },
-];
+export async function PricingSection({
+  eyebrow = "Pricing",
+  title = "Simple, outcome-based\npricing",
+  description = "Every engagement starts with a scoping call. We confirm the workflow, define the deliverables, and align the implementation plan to your actual operating stack.",
+  highlightedTier,
+}: {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  highlightedTier?: string;
+} = {}) {
+  const tiers = await getPublishedOffers();
 
-export function PricingSection() {
+  if (tiers.length === 0) {
+    return null;
+  }
+
   return (
-    <section className="py-24">
-      <div className="max-w-6xl mx-auto px-6">
-        <SectionHeading
-          eyebrow="Pricing"
-          title="Simple, Outcome-Based Pricing"
-          description="Every engagement starts with a scoping call. We confirm the workflow, agree on deliverables, and ship."
-        />
+    <section id="pricing" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mb-12 max-w-3xl sm:mb-16">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+            {eyebrow}
+          </p>
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+            {title.split("\n").map((line, index, arr) => (
+              <span key={`${line}-${index}`}>
+                {line}
+                {index < arr.length - 1 && <br />}
+              </span>
+            ))}
+          </h2>
+          <p className="mt-4 text-base leading-7 text-[#50584b]">
+            {description}
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {tiers.map((tier) => (
-            <GlassCard
+        <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
+          {tiers.map((tier) => {
+            const isHighlighted = highlightedTier
+              ? tier.name === highlightedTier
+              : tier.highlighted;
+
+            return (
+            <div
               key={tier.name}
-              hover
-              className={`p-6 flex flex-col relative ${
-                tier.highlighted
-                  ? "gradient-border gradient-border-active shadow-[var(--glow-md)]"
-                  : ""
+              className={`relative flex flex-col overflow-hidden p-5 transition-all duration-300 sm:p-6 ${
+                isHighlighted
+                  ? "rounded-[32px] border border-[#274332]/25 bg-[linear-gradient(180deg,#22402f,#162d21)] text-[#f2ebdc] shadow-[0_30px_100px_rgba(5,10,7,0.32)] md:-mt-2 md:mb-[-0.5rem]"
+                  : "bg-[#f8f4ea] text-[#1d2318] rounded-[32px] border border-white/60 shadow-[0_24px_70px_rgba(78,63,42,0.08)]"
               }`}
             >
-              {tier.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge variant="primary" glow>Most Popular</Badge>
+              {isHighlighted && (
+                <div className="absolute -top-px left-1/2 -translate-x-1/2">
+                  <span className="inline-block rounded-b-full bg-[#f8f4ea] px-4 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[#173220]">
+                    Most Popular
+                  </span>
                 </div>
               )}
 
-              <h3 className="text-xl font-bold mb-1">{tier.name}</h3>
-              <p className={`font-semibold text-lg mb-1 ${tier.highlighted ? "text-primary text-glow" : "text-primary"}`}>
+              <h3 className="text-xl font-bold mb-1 mt-2">{tier.name}</h3>
+              <p
+                className={`font-[var(--font-editorial)] text-2xl mb-1 ${
+                  isHighlighted ? "text-[#bcd8bb]" : "text-[#3f5a37]"
+                }`}
+              >
                 {tier.price}
               </p>
-              <p className="text-sm text-muted mb-6">{tier.description}</p>
+              <p
+                className={`text-sm mb-6 ${
+                  isHighlighted ? "text-[#c2d0c0]" : "text-[#50584b]"
+                }`}
+              >
+                {tier.description}
+              </p>
 
               <ul className="space-y-2.5 mb-8 flex-1">
                 {tier.features.map((feature) => (
                   <li
                     key={feature}
-                    className="flex items-start gap-2 text-sm text-muted"
+                    className={`flex items-start gap-2 text-sm ${
+                      isHighlighted ? "text-[#d2dbce]" : "text-[#50584b]"
+                    }`}
                   >
                     <svg
-                      className="w-4 h-4 text-primary mt-0.5 shrink-0 [filter:drop-shadow(0_0_4px_rgba(0,212,255,0.4))]"
+                      className={`w-4 h-4 mt-0.5 shrink-0 ${
+                        isHighlighted ? "text-[#b6c9b4]" : "text-[#46523a]"
+                      }`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -105,16 +103,16 @@ export function PricingSection() {
 
               <Link
                 href="/contact"
-                className={`block text-center py-3 rounded-lg font-medium text-sm transition-all focus-glow ${
-                  tier.highlighted
-                    ? "bg-primary text-background hover:shadow-[var(--glow-md)] active:scale-[0.97]"
-                    : "border border-border text-foreground hover:border-primary/50 hover:text-primary hover:shadow-[var(--glow-sm)] gradient-border"
+                className={`block text-center py-3 rounded-full font-medium text-sm transition-all ${
+                  isHighlighted
+                    ? "bg-[#f2eadb] text-[#132015] hover:bg-[#f8f4ea] hover:shadow-[0_8px_30px_rgba(242,234,219,0.2)]"
+                    : "bg-[#161b12] text-[#f5f0e5] hover:shadow-[0_8px_30px_rgba(22,27,18,0.2)]"
                 }`}
               >
                 {tier.cta}
               </Link>
-            </GlassCard>
-          ))}
+            </div>
+          )})}
         </div>
       </div>
     </section>

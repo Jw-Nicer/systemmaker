@@ -29,6 +29,10 @@ export function mapRefineSectionKeyToPlanSection(
       return "automation";
     case "actions":
       return "ops_pulse";
+    default: {
+      const _exhaustive: never = sectionKey;
+      throw new Error(`Unknown refine section key: ${_exhaustive}`);
+    }
   }
 }
 
@@ -48,5 +52,9 @@ export function applyRefinedSection(
       return { ...plan, automation: refined as AutomationDesignerOutput };
     case "ops_pulse":
       return { ...plan, ops_pulse: refined as OpsPulseOutput };
+    default: {
+      const _exhaustive: never = section;
+      throw new Error(`Unknown plan section: ${_exhaustive}`);
+    }
   }
 }

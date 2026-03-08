@@ -27,7 +27,7 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
     id: "welcome",
     role: "assistant",
     content:
-      "Hi! I'm the Nicer Systems agent. Tell me about a repetitive process or bottleneck in your business, and I'll show you what an automated system could look like.\n\nWhat industry are you in?",
+      "Hi! I'm the Nicer Systems preview-plan agent. Tell me about an operational bottleneck in your business, and I'll map a draft workflow, KPIs, alerts, and next actions.\n\nWhat industry are you in?",
     timestamp: Date.now(),
   };
 
@@ -38,7 +38,6 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
   useEffect(() => {
     if (chat.plan_id && chat.plan) {
       onPlanComplete?.(chat.plan, chat.plan_id);
-      track(EVENTS.AGENT_DEMO_COMPLETE);
     }
   }, [chat.plan_id, chat.plan, onPlanComplete]);
 
@@ -52,11 +51,16 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
           name: emailForm.name,
           email: emailForm.email,
           preview_plan: chat.plan,
-          lead_id: chat.plan_id,
+          lead_id: chat.lead_id,
         }),
       });
       if (!res.ok) throw new Error("Failed");
       setEmailForm((f) => ({ ...f, status: "sent" }));
+      track(EVENTS.PREVIEW_PLAN_EMAIL_CAPTURE, {
+        lead_id: chat.lead_id,
+        plan_id: chat.plan_id,
+        source: "agent_chat",
+      });
       track(EVENTS.CTA_CLICK_PREVIEW_PLAN);
     } catch {
       setEmailForm((f) => ({ ...f, status: "error" }));
@@ -73,7 +77,7 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
     timestamp: msg.timestamp,
     planSection: msg.plan_section
       ? {
-          title: msg.plan_section,
+          title: msg.plan_section_label || msg.plan_section,
           content: msg.content,
           index: 0,
         }
@@ -86,7 +90,7 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
     chat.phase === "complete" && !emailForm.status.startsWith("sent");
 
   return (
-    <div className="flex flex-col h-[480px] sm:h-[520px]">
+    <div className="flex h-[380px] min-h-0 flex-col sm:h-[460px]">
       <ChatMessages
         messages={displayMessages}
         isTyping={chat.isStreaming}

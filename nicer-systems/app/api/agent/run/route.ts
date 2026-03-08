@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { agentRunSchema } from "@/lib/validation";
 import { runAgentChain } from "@/lib/agents/runner";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { computeLeadScore } from "@/lib/leads/scoring";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
+import type { ExperimentAssignment } from "@/types/experiment";
 
 export async function POST(request: Request) {
   let lastStep: string | null = null;
@@ -26,25 +28,56 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
+        { error: "Invalid request data" },
         { status: 400 }
       );
     }
 
-    const { industry, bottleneck, current_tools, urgency, volume } =
+    const {
+      industry,
+      bottleneck,
+      current_tools,
+      urgency,
+      volume,
+      landing_path,
+      experiment_assignments,
+    } =
       parsed.data;
 
     // Create a lead record for this demo interaction
     const db = getAdminDb();
     const leadRef = await db.collection("leads").add({
-      industry,
-      bottleneck,
-      tools: current_tools,
-      urgency: urgency ?? "",
+      industry: (industry ?? "").slice(0, 200),
+      bottleneck: (bottleneck ?? "").slice(0, 2000),
+      tools: (current_tools ?? "").slice(0, 500),
+      urgency: (urgency ?? "").slice(0, 20),
       status: "new",
       source: "agent_demo",
+      landing_path: landing_path ?? null,
+      experiment_assignments:
+        (experiment_assignments as ExperimentAssignment[] | undefined) ?? [],
+      score: computeLeadScore({
+        email: "",
+        company: "",
+        bottleneck,
+        urgency,
+        completed_agent_demo: true,
+        preview_plan_sent: false,
+      }),
       created_at: new Date(),
     });
+
+    db.collection("events").add({
+      event_name: "lead_submit",
+      payload: {
+        source: "agent_demo",
+        landing_path: landing_path ?? null,
+        experiment_assignments:
+          (experiment_assignments as ExperimentAssignment[] | undefined) ?? [],
+      },
+      lead_id: leadRef.id,
+      created_at: new Date(),
+    }).catch(() => {});
 
     // Run the agent chain
     const completedSteps: string[] = [];
@@ -65,12 +98,9 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (err) {
-    console.error("Agent run error:", err);
+    console.error("Agent run error at step:", lastStep, err);
     return NextResponse.json(
-      {
-        error: "Agent chain failed",
-        failed_step: lastStep,
-      },
+      { error: "Something went wrong. Please try again." },
       { status: 500 }
     );
   }

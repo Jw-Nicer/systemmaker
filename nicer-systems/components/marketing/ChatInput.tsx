@@ -45,7 +45,7 @@ export function ChatInput({
   }
 
   return (
-    <div className="flex items-end gap-2 border-t border-glass-border bg-surface/80 px-4 py-3">
+    <div className="flex items-end gap-2 border-t border-[#c9cfbf] bg-[linear-gradient(180deg,#e9e2d3,#ddd4c2)] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.32)] sm:gap-3 sm:px-4">
       <textarea
         ref={textareaRef}
         value={value}
@@ -54,14 +54,12 @@ export function ChatInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className="flex-1 resize-none bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus-glow disabled:opacity-50"
+        className="flex-1 resize-none rounded-[var(--radius-md)] border border-[#c9d2bf] bg-[#f8f4ea] px-4 py-2.5 text-sm text-[#23301f] placeholder:text-[#6f7868] focus-organic disabled:opacity-50"
       />
       <button
         onClick={handleSubmit}
         disabled={disabled || !value.trim()}
-        className={`shrink-0 px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all disabled:opacity-30 ${
-          !disabled && value.trim() ? "animate-[pulse-glow_3s_ease-in-out_infinite]" : ""
-        }`}
+        className="shrink-0 rounded-full bg-[#55682a] px-4 py-2.5 text-sm font-medium text-[#f4efe5] shadow-[0_10px_24px_rgba(85,104,42,0.3)] transition-all hover:bg-[#4a5b24] active:scale-[0.97] disabled:opacity-30"
         aria-label="Send message"
       >
         <svg

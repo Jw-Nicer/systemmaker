@@ -1,8 +1,9 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 import { buildPrompt } from "./prompts";
 import { assertSafeAgentObject } from "./safety";
+import { templateOutputSchemas } from "./schemas";
+import type { AgentStep } from "./registry";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { z } from "zod";
 import type { AgentTemplate } from "@/types/agent-template";
 import type {
   PreviewPlan,
@@ -17,6 +18,7 @@ const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 const MAX_RETRIES_PER_MODEL = 2;
 const BASE_RETRY_DELAY_MS = 300;
 const GEMINI_TIMEOUT_MS = 60_000;
+const MAX_OUTPUT_BYTES = 512 * 1024; // 512KB max per Gemini response
 
 // Singleton Gemini client — avoids re-instantiation per call
 let _geminiClient: GoogleGenerativeAI | null = null;
@@ -32,6 +34,10 @@ function getGeminiClient(): GoogleGenerativeAI {
 // TTL cache for agent templates (5 minutes)
 let _templateCache: { data: Map<string, string>; expires: number } | null = null;
 const TEMPLATE_CACHE_TTL = 5 * 60_000;
+
+export function invalidateTemplateCache() {
+  _templateCache = null;
+}
 
 function getModelCandidates(): string[] {
   const configuredModel = process.env.GOOGLE_GEMINI_MODEL?.trim();
@@ -81,103 +87,6 @@ function getRetryDelayMs(attempt: number): number {
   return backoff + jitter;
 }
 
-const intakeOutputSchema = z.object({
-  clarified_problem: z.string().min(1),
-  assumptions: z.array(z.string()),
-  constraints: z.array(z.string()),
-  suggested_scope: z.string().min(1),
-});
-
-const workflowStageSchema = z.object({
-  name: z.string().min(1),
-  owner_role: z.string().min(1),
-  entry_criteria: z.string().min(1),
-  exit_criteria: z.string().min(1),
-});
-
-const workflowMapperOutputSchema = z.object({
-  stages: z.array(workflowStageSchema),
-  required_fields: z.array(z.string()),
-  timestamps: z.array(z.string()),
-  failure_modes: z.array(z.string()),
-});
-
-const automationDesignerOutputSchema = z.object({
-  automations: z.array(
-    z.object({
-      trigger: z.string().min(1),
-      steps: z.array(z.string()),
-      data_required: z.array(z.string()),
-      error_handling: z.string().min(1),
-    })
-  ),
-  alerts: z.array(
-    z.object({
-      when: z.string().min(1),
-      who: z.string().min(1),
-      message: z.string().min(1),
-      escalation: z.string().min(1),
-    })
-  ),
-  logging_plan: z.array(
-    z.object({
-      what_to_log: z.string().min(1),
-      where: z.string().min(1),
-      how_to_review: z.string().min(1),
-    })
-  ),
-});
-
-const dashboardDesignerOutputSchema = z.object({
-  dashboards: z.array(
-    z.object({
-      name: z.string().min(1),
-      purpose: z.string().min(1),
-      widgets: z.array(z.string()),
-    })
-  ),
-  kpis: z.array(
-    z.object({
-      name: z.string().min(1),
-      definition: z.string().min(1),
-      why_it_matters: z.string().min(1),
-    })
-  ),
-  views: z.array(
-    z.object({
-      name: z.string().min(1),
-      filter: z.string().min(1),
-      columns: z.array(z.string()),
-    })
-  ),
-});
-
-const opsPulseOutputSchema = z.object({
-  sections: z.array(
-    z.object({
-      title: z.string().min(1),
-      bullets: z.array(z.string()),
-    })
-  ),
-  scorecard: z.array(z.string()),
-  actions: z.array(
-    z.object({
-      priority: z.string().min(1),
-      owner_role: z.string().min(1),
-      action: z.string().min(1),
-    })
-  ),
-  questions: z.array(z.string()),
-});
-
-const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
-  intake_agent: intakeOutputSchema,
-  workflow_mapper: workflowMapperOutputSchema,
-  automation_designer: automationDesignerOutputSchema,
-  dashboard_designer: dashboardDesignerOutputSchema,
-  ops_pulse_writer: opsPulseOutputSchema,
-};
-
 async function callGemini(prompt: string): Promise<string> {
   const client = getGeminiClient();
   const models = getModelCandidates();
@@ -200,18 +109,22 @@ async function callGemini(prompt: string): Promise<string> {
         ]);
         const text = result.response.text()?.trim();
         if (!text) {
-          const finishReason = result.response.candidates?.[0]?.finishReason;
-          throw new Error(
-            `Gemini returned an empty response${finishReason ? ` (finish reason: ${finishReason})` : ""}`
-          );
+          throw new Error("Empty response from AI model");
+        }
+        if (new TextEncoder().encode(text).byteLength > MAX_OUTPUT_BYTES) {
+          throw new Error("AI response exceeded size limit");
         }
         return text;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Unknown Gemini API error";
+          err instanceof Error ? err.message : "Unknown error";
         lastError = new Error(
-          `Gemini API error (${model}, attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL + 1}): ${message}`
+          `AI generation failed (attempt ${attempt + 1})`
         );
+
+        if (isModelAvailabilityError(message)) {
+          break;
+        }
 
         const isTransient = isTransientGeminiError(message);
         const hasRetryLeft = attempt < MAX_RETRIES_PER_MODEL;
@@ -230,7 +143,7 @@ async function callGemini(prompt: string): Promise<string> {
     if (isLastModel) break;
   }
 
-  throw lastError ?? new Error("Gemini API error");
+  throw lastError ?? new Error("AI generation failed");
 }
 
 async function getAllTemplates(): Promise<Map<string, string>> {
@@ -287,9 +200,7 @@ async function runAgentWithTemplate<T>(
   }
 
   if (!parsed) {
-    throw new Error(
-      `Failed to parse ${templateKey} output as JSON: ${cleaned.slice(0, 200)}`
-    );
+    throw new Error(`Failed to parse ${templateKey} output as JSON`);
   }
 
   const schema = templateOutputSchemas[templateKey];
@@ -309,20 +220,8 @@ async function runAgentWithTemplate<T>(
   return validated.data as T;
 }
 
-export type AgentStep =
-  | "intake"
-  | "workflow"
-  | "automation"
-  | "dashboard"
-  | "ops_pulse";
-
-export const AGENT_STEPS: { key: AgentStep; label: string }[] = [
-  { key: "intake", label: "Analyzing bottleneck..." },
-  { key: "workflow", label: "Mapping workflow stages..." },
-  { key: "automation", label: "Designing automations..." },
-  { key: "dashboard", label: "Building dashboard KPIs..." },
-  { key: "ops_pulse", label: "Writing ops pulse..." },
-];
+// Re-export from registry for backward compatibility
+export { type AgentStep, AGENT_STEPS } from "./registry";
 
 export interface AgentRunInput {
   industry: string;

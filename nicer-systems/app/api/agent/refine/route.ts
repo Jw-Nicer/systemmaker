@@ -30,13 +30,22 @@ export async function POST(request: Request) {
     const parsed = planRefinementSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
+        { error: "Invalid request data" },
         { status: 400 }
       );
     }
 
     const { plan_id, section, feedback } = parsed.data;
-    const planSection = mapRefineSectionKeyToPlanSection(section as RefineSectionKey);
+
+    let planSection: PlanSectionType;
+    try {
+      planSection = mapRefineSectionKeyToPlanSection(section as RefineSectionKey);
+    } catch {
+      return NextResponse.json(
+        { error: `Invalid section: ${section}` },
+        { status: 400 }
+      );
+    }
 
     // Load the full plan
     const storedPlan = await getPlanById(plan_id);
@@ -48,7 +57,7 @@ export async function POST(request: Request) {
 
     // Run refinement via Gemini
     const { refined, summary } = await refinePlanSection(
-      planSection as PlanSectionType,
+      planSection,
       feedback,
       fullPlan
     );
@@ -94,7 +103,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
-    console.error("Refine error:", err);
+    console.error("Refine request failed", err);
     return NextResponse.json(
       { error: "Refinement failed" },
       { status: 500 }

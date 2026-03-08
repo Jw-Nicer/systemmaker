@@ -13,7 +13,7 @@ export function GlassCard({
 }: GlassCardProps) {
   return (
     <Tag
-      className={`rounded-xl border border-glass-border bg-glass-bg backdrop-blur-[var(--glass-blur)] ${hover ? "gradient-border hover:shadow-[var(--glow-sm)] transition-shadow" : ""} ${className}`}
+      className={`rounded-[var(--radius-lg)] border border-glass-border bg-glass-bg backdrop-blur-[var(--glass-blur)] ${hover ? "organic-border hover:shadow-[var(--shadow-soft-sm)] hover:-translate-y-0.5 transition-all duration-300" : ""} ${className}`}
     >
       {children}
     </Tag>

@@ -7,6 +7,8 @@ import { assertSafeAgentObject } from "./safety";
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
 const TIMEOUT_MS = 60_000;
+const MAX_OUTPUT_BYTES = 256 * 1024; // 256KB max refinement output
+const MAX_STREAMING_BYTES = 256 * 1024;
 
 function getGeminiClient() {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -39,6 +41,17 @@ function getSectionData(plan: PreviewPlan, section: PlanSectionType): unknown {
   return plan[section];
 }
 
+/** Sanitize feedback to prevent prompt injection */
+function sanitizeFeedback(feedback: string): string {
+  return feedback
+    .replace(/(system|assistant|instructions?|ignore previous|forget everything|disregard|override)[\s:]/gim, "")
+    .replace(/^#{1,6}\s/gm, "")
+    .replace(/^[-=*]{3,}$/gm, "—")
+    .replace(/---+/g, "—")
+    .replace(/```/g, "'''")
+    .slice(0, 2000);
+}
+
 function buildRefinementPrompt(
   section: PlanSectionType,
   currentData: unknown,
@@ -47,6 +60,7 @@ function buildRefinementPrompt(
 ): string {
   const planContext = buildPlanSummary(fullPlan);
   const label = SECTION_LABELS[section];
+  const safeFeedback = sanitizeFeedback(feedback);
 
   return `You are the Nicer Systems AI consultant. You help American businesses automate admin-heavy workflows.
 Your tone is clear, confident, practical, and business-friendly.
@@ -61,7 +75,7 @@ ${planContext}
 ${JSON.stringify(currentData, null, 2)}
 
 ## Visitor feedback
-"${feedback}"
+"${safeFeedback}"
 
 ## Instructions
 1. Take the visitor's feedback seriously — they know their business better than you.
@@ -102,7 +116,10 @@ export async function refinePlanSection(
       const text = result.response.text()?.trim();
 
       if (!text) {
-        throw new Error("Empty response from Gemini");
+        throw new Error("Empty response from AI model");
+      }
+      if (new TextEncoder().encode(text).byteLength > MAX_OUTPUT_BYTES) {
+        throw new Error("Refinement response exceeded size limit");
       }
 
       const cleaned = text
@@ -146,10 +163,13 @@ export async function* refinePlanSectionStreaming(
 
   const result = await model.generateContentStream(prompt);
   const chunks: string[] = [];
+  let totalBytes = 0;
 
   for await (const chunk of result.stream) {
     const text = chunk.text();
     if (text) {
+      totalBytes += new TextEncoder().encode(text).byteLength;
+      if (totalBytes > MAX_STREAMING_BYTES) break;
       chunks.push(text);
       yield text;
     }

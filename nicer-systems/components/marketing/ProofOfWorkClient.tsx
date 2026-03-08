@@ -3,68 +3,96 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { track, EVENTS } from "@/lib/analytics";
-import { ScrollReveal } from "./ScrollReveal";
-import { SectionHeading } from "@/components/ui/SectionHeading";
-import { Badge } from "@/components/ui/Badge";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { CaseStudy } from "@/types/case-study";
 
 interface ProofOfWorkClientProps {
   caseStudies: CaseStudy[];
   industries: string[];
+  eyebrow?: string;
+  title?: string;
+  description?: string;
 }
 
 export function ProofOfWorkClient({
   caseStudies,
   industries,
+  eyebrow = "Results",
+  title = "Case studies",
+  description = "Real results from real operations teams.",
 }: ProofOfWorkClientProps) {
   const [activeFilter, setActiveFilter] = useState("All");
+  const reducedMotion = useReducedMotion();
 
   const filtered =
     activeFilter === "All"
       ? caseStudies
       : caseStudies.filter((cs) => cs.industry === activeFilter);
 
+  const springTransition = reducedMotion
+    ? { duration: 0.3 }
+    : { type: "spring" as const, stiffness: 80, damping: 20 };
+
   return (
-    <section className="py-24">
-      <div className="max-w-6xl mx-auto px-6">
-        <ScrollReveal>
-          <SectionHeading
-            eyebrow="Results"
-            title="Proof of Work"
-            description="Real results from real operations teams."
-          />
-        </ScrollReveal>
+    <section className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={springTransition}
+        >
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+            {eyebrow}
+          </p>
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+            {title}
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+            {description}
+          </p>
+        </motion.div>
 
         {/* Filter chips */}
-        <ScrollReveal delay={0.1}>
-          <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {["All", ...industries].map((industry) => (
-              <button
-                key={industry}
-                onClick={() => {
-                  setActiveFilter(industry);
-                  if (industry !== "All") {
-                    track(EVENTS.PROOF_GALLERY_FILTER, { industry });
-                  }
-                }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeFilter === industry
-                    ? "bg-primary text-background shadow-[var(--glow-sm)]"
-                    : "bg-glass-bg backdrop-blur-sm border border-glass-border text-muted hover:text-foreground hover:border-primary/30"
-                }`}
-              >
-                {industry}
-              </button>
-            ))}
-          </div>
-        </ScrollReveal>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ ...springTransition, delay: 0.1 }}
+          className="mt-8 mb-10 flex flex-wrap gap-2 sm:mt-10 sm:mb-12"
+        >
+          {["All", ...industries].map((industry) => (
+            <button
+              key={industry}
+              onClick={() => {
+                setActiveFilter(industry);
+                if (industry !== "All") {
+                  track(EVENTS.PROOF_GALLERY_FILTER, { industry });
+                }
+              }}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                activeFilter === industry
+                  ? "bg-[#161b12] text-[#f5f0e5] shadow-[0_4px_16px_rgba(22,27,18,0.2)]"
+                  : "border border-[#3f4a37]/25 text-[#46523a] hover:border-[#3f4a37]/50 hover:text-[#1d2318]"
+              }`}
+            >
+              {industry}
+            </button>
+          ))}
+        </motion.div>
 
         {/* Cards grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((cs, i) => (
-            <ScrollReveal key={cs.id} delay={i * 0.1}>
+            <motion.div
+              key={cs.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ ...springTransition, delay: i * 0.08 }}
+            >
               <Link
                 href={`/case-studies/${cs.slug}`}
                 onClick={() =>
@@ -73,76 +101,88 @@ export function ProofOfWorkClient({
                     title: cs.title,
                   })
                 }
+                className="group block rounded-[28px] border border-[#ddd5c7] bg-[#f8f4ea]/96 shadow-[0_18px_50px_rgba(77,63,43,0.08)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(78,63,42,0.12)]"
               >
-                <GlassCard hover className="group overflow-hidden">
-                  {/* Thumbnail */}
-                  <div className="h-40 rounded-t-xl bg-surface-light/50 flex items-center justify-center overflow-hidden">
-                    {cs.thumbnail_url ? (
-                      <Image
-                        src={cs.thumbnail_url}
-                        alt={cs.title}
-                        width={800}
-                        height={320}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-primary/20 text-4xl font-bold text-glow">
-                        {cs.industry.charAt(0)}
-                      </div>
-                    )}
+                {/* Thumbnail */}
+                <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
+                  {cs.thumbnail_url ? (
+                    <Image
+                      src={cs.thumbnail_url}
+                      alt={cs.title}
+                      width={800}
+                      height={320}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-[#1d2318]/10 text-5xl font-[var(--font-editorial)]">
+                      {cs.industry.charAt(0)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-5">
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-[11px] uppercase tracking-[0.10em] text-[#46523a] font-medium">
+                        {cs.industry}
+                      </span>
+                    {cs.tools.slice(0, 2).map((tool) => (
+                      <span
+                        key={tool}
+                        className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-[11px] uppercase tracking-[0.10em] text-[#7e7b70]"
+                      >
+                        {tool}
+                      </span>
+                    ))}
                   </div>
 
-                  <div className="p-5">
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      <Badge variant="primary">{cs.industry}</Badge>
-                      {cs.tools.slice(0, 2).map((tool) => (
-                        <Badge key={tool} variant="muted">{tool}</Badge>
+                  <h3 className="font-medium text-[#1d2318] mb-2 group-hover:text-[#3f5a37] transition-colors duration-300">
+                    {cs.title}
+                  </h3>
+                  <p className="text-sm text-[#50584b] line-clamp-2 leading-relaxed">
+                    {cs.challenge}
+                  </p>
+
+                  {/* Metrics */}
+                  {cs.metrics.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#d7d0c0]">
+                      {cs.metrics.slice(0, 1).map((m) => (
+                        <div
+                          key={m.label}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span className="text-[#7e7b70]">{m.label}:</span>
+                          <span className="text-red-500/60 line-through">
+                            {m.before}
+                          </span>
+                          <span className="text-[#3f5a37] font-medium">
+                            {m.after}
+                          </span>
+                        </div>
                       ))}
                     </div>
-
-                    <h3 className="font-semibold mb-2 group-hover:text-primary group-hover:text-glow transition-all">
-                      {cs.title}
-                    </h3>
-                    <p className="text-sm text-muted line-clamp-2 leading-relaxed">
-                      {cs.challenge}
-                    </p>
-
-                    {/* Metrics */}
-                    {cs.metrics.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-glass-border">
-                        {cs.metrics.slice(0, 1).map((m) => (
-                          <div
-                            key={m.label}
-                            className="flex items-center gap-2 text-xs"
-                          >
-                            <span className="text-muted">{m.label}:</span>
-                            <span className="text-red-400 line-through">
-                              {m.before}
-                            </span>
-                            <span className="text-primary font-medium text-glow">
-                              {m.after}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </GlassCard>
+                  )}
+                </div>
               </Link>
-            </ScrollReveal>
+            </motion.div>
           ))}
         </div>
 
-        <ScrollReveal delay={0.3} className="text-center mt-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="text-center mt-10"
+        >
           <Link
             href="/case-studies"
-            className="inline-block text-primary hover:text-glow hover:underline transition-all"
+            className="inline-block text-sm text-[#46523a] hover:text-[#1d2318] transition-colors"
           >
             View all case studies &rarr;
           </Link>
-        </ScrollReveal>
+        </motion.div>
       </div>
     </section>
   );

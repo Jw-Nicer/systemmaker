@@ -2,10 +2,10 @@
 
 export function TypingIndicator() {
   return (
-    <div className="flex items-center gap-1.5 px-4 py-3" aria-label="Agent is typing">
-      <span className="typing-dot w-2 h-2 rounded-full bg-muted" style={{ animationDelay: "0ms" }} />
-      <span className="typing-dot w-2 h-2 rounded-full bg-muted" style={{ animationDelay: "150ms" }} />
-      <span className="typing-dot w-2 h-2 rounded-full bg-muted" style={{ animationDelay: "300ms" }} />
+    <div className="flex items-center gap-1.5 px-5 py-4" aria-label="Agent is typing">
+      <span className="typing-dot h-2 w-2 rounded-full bg-[#7d8c67]" style={{ animationDelay: "0ms" }} />
+      <span className="typing-dot h-2 w-2 rounded-full bg-[#7d8c67]" style={{ animationDelay: "150ms" }} />
+      <span className="typing-dot h-2 w-2 rounded-full bg-[#7d8c67]" style={{ animationDelay: "300ms" }} />
 
       <style jsx>{`
         .typing-dot {

@@ -17,6 +17,8 @@ const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
 
 const MAX_CONTEXT_MESSAGES = 20;
 const EXTRACTION_TIMEOUT_MS = 15_000;
+const MAX_FIELD_LENGTH = 2000;
+const MAX_RESPONSE_LENGTH = 10_000; // Max chars for a single conversational response
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,6 +52,105 @@ function formatHistory(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
+function cleanField(value: string, max = MAX_FIELD_LENGTH): string {
+  return value.replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function mergeExtractedIntake(
+  existing: ExtractedIntake,
+  incoming: Partial<ExtractedIntake>
+): ExtractedIntake {
+  return {
+    industry: incoming.industry ? cleanField(incoming.industry, 200) : existing.industry,
+    bottleneck: incoming.bottleneck ? cleanField(incoming.bottleneck, 2000) : existing.bottleneck,
+    current_tools: incoming.current_tools ? cleanField(incoming.current_tools, 500) : existing.current_tools,
+    urgency: incoming.urgency ?? existing.urgency,
+    volume: incoming.volume ? cleanField(incoming.volume, 200) : existing.volume,
+  };
+}
+
+function looksLikeQuestion(message: string): boolean {
+  return /\?/.test(message) || /^(what|how|why|when|where|which|can|could|would|should|do|does|is|are)\b/i.test(message.trim());
+}
+
+export function hasRevisionSignal(message: string): boolean {
+  return (
+    /\b(no|nope|wait|hold on|hold up|stop)\b/i.test(message) ||
+    /\b(change|wrong|incorrect|not quite|not exactly)\b/i.test(message) ||
+    /\bactually\b.{0,40}\b(we|i)\s+(?:are|run|use|have|work with)\b/i.test(message)
+  );
+}
+
+function inferUrgency(message: string): ExtractedIntake["urgency"] | undefined {
+  if (/\b(urgent|asap|immediately|right away|right now)\b/i.test(message)) return "urgent";
+  if (/\b(high priority|soon|quickly|this month|blocking us)\b/i.test(message)) return "high";
+  if (/\b(this quarter|planning|moderate)\b/i.test(message)) return "medium";
+  if (/\b(exploring|eventually|later|low priority)\b/i.test(message)) return "low";
+  return undefined;
+}
+
+function inferVolume(message: string): string | undefined {
+  const match = message.match(
+    /\b(\d[\d,]*(?:\s*(?:\+|plus))?\s*(?:orders?|requests?|deliveries?|tickets?|jobs?|patients?|clients?|leads?|tenants?|cases?|invoices?)\s*(?:\/|per)?\s*(?:day|week|month)?)\b/i
+  );
+  return match ? cleanField(match[1], 200) : undefined;
+}
+
+function inferCurrentTools(message: string): string | undefined {
+  const match = message.match(
+    /\b(?:we use|we currently use|currently use|current tools(?: are| include)?|tools(?: are| include)?|our stack(?: is| includes)?|we work with)\s+([^.!?\n]+)/i
+  );
+  if (!match) return undefined;
+  return cleanField(match[1], 500);
+}
+
+function inferIndustry(message: string): string | undefined {
+  const match = message.match(
+    /\b(?:i run|we run|i own|we own|i'm in|i am in|my company is|our business is)\s+(?:a|an)?\s*([^,.!\n]{2,80})/i
+  );
+  if (!match) return undefined;
+
+  const value = match[1]
+    .replace(/\b(company|business|firm|team|shop|agency)\b/gi, "")
+    .trim();
+
+  if (
+    !value ||
+    /\b(use|using|problem|bottleneck|manual|urgent|currently|tool|stack)\b/i.test(value)
+  ) {
+    return undefined;
+  }
+  return cleanField(value, 200);
+}
+
+function inferBottleneck(message: string): string | undefined {
+  const explicitMatch = message.match(
+    /\b(?:bottleneck|problem|pain point|biggest issue|biggest problem|main issue|main problem)\s*(?:is|:)\s*([^.!?\n]+(?:[.!?]\s*[^.!?\n]+)*)/i
+  );
+  if (explicitMatch) {
+    return cleanField(explicitMatch[1], 2000);
+  }
+
+  if (
+    /\b(?:we're dealing with|we are dealing with|we keep hitting|the process is|our workflow is|things get stuck|we lose time because|we get delayed because)\b/i.test(message) &&
+    /\b(manual|spreadsheet|slow|delay|rework|double[- ]entry|follow[- ]up|handoff|chasing|bottleneck|stuck|missed|error|backlog)\b/i.test(message)
+  ) {
+    return cleanField(message, 2000);
+  }
+
+  return undefined;
+}
+
+export function extractHeuristicIntakeData(message: string): Partial<ExtractedIntake> {
+  return {
+    industry: inferIndustry(message),
+    bottleneck: inferBottleneck(message),
+    current_tools: inferCurrentTools(message),
+    urgency: inferUrgency(message),
+    volume: inferVolume(message),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Phase detection
 // ---------------------------------------------------------------------------
@@ -70,10 +171,10 @@ export function detectPhase(
 
   // If confirming and user affirms, move to building
   if (currentPhase === "confirming") {
-    const negation = /\b(no|not|nope|wait|hold|stop|change|wrong|actually|incorrect|don't|dont)\b/i;
-    if (negation.test(lastUserMessage)) return "gathering";
+    if (hasRevisionSignal(lastUserMessage)) return "gathering";
     const affirm = /\b(yes|yeah|yep|sure|go|ready|build|do it|let's go|looks good|correct|right|proceed)\b/i;
     if (affirm.test(lastUserMessage)) return "building";
+    if (looksLikeQuestion(lastUserMessage)) return "confirming";
     // Ambiguous — stay in confirming to ask again
     return "confirming";
   }
@@ -149,12 +250,13 @@ Visitor: ${userMessage}
 
 function buildConfirmingPrompt(
   history: ChatMessage[],
-  extracted: ExtractedIntake
+  extracted: ExtractedIntake,
+  userMessage: string
 ): string {
   return `${SYSTEM_IDENTITY}
 
 ## Your task
-Summarize what you understand about this visitor's situation and ask if they're ready for you to build their Preview Plan.
+Summarize what you understand about this visitor's situation, respond to any clarification in their latest message, and ask if they're ready for you to build their Preview Plan.
 
 ## Collected information
 - Industry: ${extracted.industry}
@@ -166,11 +268,16 @@ ${extracted.volume ? `- Volume: ${extracted.volume}` : ""}
 ## Conversation so far
 ${formatHistory(history)}
 
+## Latest visitor message
+${userMessage}
+
 ## Instructions
-1. Write a brief 2-3 sentence summary of their situation.
-2. End with something like "Ready for me to build your Preview Plan?" or "Shall I put together your plan?"
-3. Be warm and confident. Make them feel understood.
-4. Respond ONLY with your conversational message. No JSON.`;
+1. Write a brief summary of their situation.
+2. If their latest message adds detail or asks a clarification question, address it directly before asking to proceed.
+3. If their latest message sounds uncertain, invite corrections instead of pushing straight to build.
+4. End with a clear next step like "Ready for me to build your Preview Plan?" when appropriate.
+5. Be warm and confident. Make them feel understood.
+6. Respond ONLY with your conversational message. No JSON.`;
 }
 
 function buildFollowUpPrompt(
@@ -228,6 +335,8 @@ export async function extractIntakeData(
   userMessage: string,
   existing: ExtractedIntake
 ): Promise<ExtractedIntake> {
+  const heuristic = extractHeuristicIntakeData(userMessage);
+  const heuristicMerged = mergeExtractedIntake(existing, heuristic);
   const client = getGeminiClient();
   const model = client.getGenerativeModel({
     model: getFastModel(),
@@ -265,7 +374,7 @@ Visitor: ${userMessage}`;
       .trim();
 
     const parsed = JSON.parse(cleaned) as Record<string, unknown>;
-    const updated = { ...existing };
+    const updated = { ...heuristicMerged };
 
     if (typeof parsed.industry === "string" && parsed.industry.trim()) {
       updated.industry = parsed.industry.trim();
@@ -286,10 +395,10 @@ Visitor: ${userMessage}`;
       updated.volume = parsed.volume.trim();
     }
 
-    return updated;
-  } catch (err) {
-    console.error("Extraction failed, keeping existing data:", err);
-    return existing;
+    return mergeExtractedIntake(existing, updated);
+  } catch {
+    console.error("Extraction failed, falling back to heuristics");
+    return heuristicMerged;
   }
 }
 
@@ -316,7 +425,7 @@ export async function* generateConversationalResponse(
       prompt = buildGatheringPrompt(history, extracted, userMessage);
       break;
     case "confirming":
-      prompt = buildConfirmingPrompt(history, extracted);
+      prompt = buildConfirmingPrompt(history, extracted, userMessage);
       break;
     case "follow_up":
       prompt = buildFollowUpPrompt(
@@ -333,13 +442,18 @@ export async function* generateConversationalResponse(
 
   try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text()?.trim() ?? "";
+    let text = result.response.text()?.trim() ?? "";
     if (!text) return;
+
+    // Enforce response size limit
+    if (text.length > MAX_RESPONSE_LENGTH) {
+      text = text.slice(0, MAX_RESPONSE_LENGTH);
+    }
 
     assertSafeAgentText(text, `conversation:${phase}`);
     yield text;
-  } catch (err) {
-    console.error("Conversation safety fallback triggered:", err);
+  } catch {
+    console.error("Conversation safety fallback triggered");
     yield buildSafeConversationFallback(phase);
   }
 }

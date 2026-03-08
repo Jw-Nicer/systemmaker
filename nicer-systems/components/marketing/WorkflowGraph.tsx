@@ -8,7 +8,8 @@ interface Node {
   id: number;
   x: number;
   y: number;
-  size: number;
+  rx: number;
+  ry: number;
   phase: number;
   amplitude: number;
   duration: number;
@@ -38,7 +39,8 @@ function generateGraph(seed: number) {
         id: nodeIndex,
         x: 10 + col * 22 + seededRandom(key * 3.1) * 12,
         y: 5 + row * 16 + seededRandom(key * 5.7) * 8,
-        size: 3 + seededRandom(key * 2.9) * 3,
+        rx: 2 + seededRandom(key * 2.9) * 2,
+        ry: 1.5 + seededRandom(key * 4.1) * 2,
         phase: seededRandom(key * 1.7) * Math.PI * 2,
         amplitude: 1.5 + seededRandom(key * 4.3) * 3,
         duration: 8 + seededRandom(key * 6.1) * 10,
@@ -61,15 +63,21 @@ function generateGraph(seed: number) {
   return { nodes, edges };
 }
 
+function cubicPath(x1: number, y1: number, x2: number, y2: number): string {
+  const mx = (x1 + x2) / 2;
+  const offset = (y2 - y1) * 0.3;
+  return `M${x1},${y1} C${mx},${y1 + offset} ${mx},${y2 - offset} ${x2},${y2}`;
+}
+
 export function WorkflowGraph() {
   const reduced = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(true);
   const [packetEdge, setPacketEdge] = useState(0);
-  const [packetEdge2, setPacketEdge2] = useState(0);
   const graph = useMemo(() => generateGraph(42), []);
+  const [packetEdge2, setPacketEdge2] = useState(() =>
+    graph.edges.length >= 3 ? Math.floor(graph.edges.length / 2) : 0
+  );
 
-  // Parallax: subtle drift based on scroll
   const { scrollYProgress } = useScroll();
   const parallaxY = useTransform(scrollYProgress, [0, 1], [0, -15]);
 
@@ -78,6 +86,8 @@ export function WorkflowGraph() {
       animate: {
         cx: [node.x, node.x + node.amplitude * 0.3, node.x - node.amplitude * 0.2, node.x],
         cy: [node.y, node.y - node.amplitude * 0.2, node.y + node.amplitude * 0.3, node.y],
+        rx: [node.rx, node.rx * 1.2, node.rx * 0.9, node.rx],
+        ry: [node.ry, node.ry * 0.9, node.ry * 1.15, node.ry],
       },
       transition: {
         duration: node.duration,
@@ -90,16 +100,11 @@ export function WorkflowGraph() {
   );
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     const handler = () => setVisible(!document.hidden);
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
   }, []);
 
-  // First data packet
   useEffect(() => {
     if (reduced || !visible || graph.edges.length === 0) return;
     const interval = setInterval(() => {
@@ -108,18 +113,13 @@ export function WorkflowGraph() {
     return () => clearInterval(interval);
   }, [reduced, visible, graph.edges.length]);
 
-  // Second data packet (offset by half the edges)
   useEffect(() => {
     if (reduced || !visible || graph.edges.length < 3) return;
-    const offset = Math.floor(graph.edges.length / 2);
-    setPacketEdge2(offset);
     const interval = setInterval(() => {
       setPacketEdge2((prev) => (prev + 1) % graph.edges.length);
     }, 3500);
     return () => clearInterval(interval);
   }, [reduced, visible, graph.edges.length]);
-
-  if (!mounted) return null;
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -129,32 +129,41 @@ export function WorkflowGraph() {
         className="w-full h-full"
         style={{ y: reduced ? 0 : parallaxY }}
       >
+        <defs>
+          {graph.nodes.map((node) => (
+            <radialGradient key={`grad-${node.id}`} id={`node-fill-${node.id}`}>
+              <stop offset="0%" stopColor="var(--theme-primary)" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="var(--theme-secondary)" stopOpacity="0.05" />
+            </radialGradient>
+          ))}
+        </defs>
+
+        {/* Curved edges */}
         {graph.edges.map((edge, i) => {
           const from = graph.nodes[edge.from];
           const to = graph.nodes[edge.to];
           if (!from || !to) return null;
           return (
-            <line
+            <path
               key={`e-${i}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
+              d={cubicPath(from.x, from.y, to.x, to.y)}
               stroke="var(--theme-primary)"
-              strokeOpacity={0.1}
+              strokeOpacity={0.08}
               strokeWidth={0.15}
+              fill="none"
             />
           );
         })}
 
+        {/* Ellipse nodes with morph */}
         {graph.nodes.map((node, i) => (
-          <motion.circle
+          <motion.ellipse
             key={`n-${node.id}`}
             cx={node.x}
             cy={node.y}
-            r={node.size * 0.1}
-            fill="var(--theme-primary)"
-            fillOpacity={0.15}
+            rx={node.rx}
+            ry={node.ry}
+            fill={`url(#node-fill-${node.id})`}
             animate={!reduced && visible ? nodeAnimations[i].animate : undefined}
             transition={!reduced && visible ? nodeAnimations[i].transition : undefined}
           />

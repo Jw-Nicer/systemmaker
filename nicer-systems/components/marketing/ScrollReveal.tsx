@@ -32,10 +32,16 @@ export const ScrollReveal = React.memo(function ScrollReveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, ...offsets[direction] }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      initial={{ opacity: 0, scale: 0.97, ...offsets[direction] }}
+      whileInView={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.6, ease: "easeOut", delay }}
+      transition={{
+        type: "spring",
+        stiffness: 80,
+        damping: 20,
+        mass: 1,
+        delay,
+      }}
     >
       {children}
     </motion.div>
@@ -72,8 +78,13 @@ export function StaggeredReveal({ children, className }: StaggeredRevealProps) {
       {React.Children.map(children, (child) => (
         <motion.div
           variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+            hidden: { opacity: 0, y: 20, scale: 0.97 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: { type: "spring", stiffness: 80, damping: 20 },
+            },
           }}
         >
           {child}

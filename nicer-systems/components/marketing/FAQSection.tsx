@@ -1,65 +1,53 @@
 import { getPublishedFAQs } from "@/lib/firestore/faqs";
 import { FAQAccordion } from "./FAQAccordion";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 
-const fallbackFAQs = [
-  {
-    id: "f1",
-    question: "How long does it take to get started?",
-    answer:
-      "We start with a 45-minute scoping call. Within 24 hours, you'll have a clear plan. From there, most projects are fully installed within 30 days.",
-    sort_order: 0,
-    is_published: true,
-  },
-  {
-    id: "f2",
-    question: "What tools do you work with?",
-    answer:
-      "We're tool-agnostic. Whether you use Google Sheets, Airtable, Notion, Salesforce, or something else — we build on top of what you already have, adding dashboards, alerts, and automation where they matter most.",
-    sort_order: 1,
-    is_published: true,
-  },
-  {
-    id: "f3",
-    question: "Do I need to change my current workflow?",
-    answer:
-      "No. We map your existing workflow first, then layer visibility and automation on top. We don't rip and replace — we enhance what's already working.",
-    sort_order: 2,
-    is_published: true,
-  },
-  {
-    id: "f4",
-    question: "What's a Weekly Ops Pulse?",
-    answer:
-      "It's a concise weekly report that surfaces the key metrics, stuck items, and trends in your operations. Think of it as a heartbeat monitor for your business — delivered every Monday morning.",
-    sort_order: 3,
-    is_published: true,
-  },
-  {
-    id: "f5",
-    question: "What if I only have one workflow to fix?",
-    answer:
-      "That's exactly what the Starter plan is for. One workflow, mapped and automated, delivered in 30 days. Most clients start here and expand once they see the results.",
-    sort_order: 4,
-    is_published: true,
-  },
-];
-
-export async function FAQSection() {
-  let faqs = await getPublishedFAQs();
-
+export async function FAQSection({
+  eyebrow = "FAQ",
+  title = "Common questions",
+  description = "",
+}: {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+} = {}) {
+  const faqs = await getPublishedFAQs();
   if (faqs.length === 0) {
-    faqs = fallbackFAQs;
+    return null;
   }
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+
   return (
-    <section className="py-24 bg-surface/30">
-      <div className="max-w-3xl mx-auto px-6">
-        <SectionHeading
-          eyebrow="FAQ"
-          title="Frequently Asked Questions"
-          description="Everything you need to know before we start."
-        />
+    <section id="faq" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className="mb-10 sm:mb-12">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+            {eyebrow}
+          </p>
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-6xl">
+            {title}
+          </h2>
+          {description ? (
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+              {description}
+            </p>
+          ) : null}
+        </div>
         <FAQAccordion faqs={faqs} />
       </div>
     </section>

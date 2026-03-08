@@ -11,10 +11,14 @@ export interface SafetyIssue {
 
 const SECRET_PATTERNS = [
   /-----begin [a-z ]*private key-----/i,
-  /\bsk-[a-z0-9]{16,}\b/i,
+  /\bsk[-_][a-z0-9]{16,}\b/i,
   /\bAIza[0-9A-Za-z\-_]{20,}\b/,
   /\bghp_[0-9A-Za-z]{20,}\b/,
   /\bxox[baprs]-[0-9A-Za-z-]{10,}\b/,
+  /\bglpat-[0-9A-Za-z\-_]{10,}\b/, // GitLab
+  /\bnpm_[0-9A-Za-z]{20,}\b/, // npm tokens
+  /\bSG\.[0-9A-Za-z\-_]{20,}\b/, // SendGrid
+  /\bre_[0-9A-Za-z_]{20,}\b/, // Resend
 ];
 
 const CREDENTIAL_REQUEST_PATTERNS = [
@@ -39,9 +43,12 @@ const IMPERSONATION_PATTERNS = [
 ];
 
 function extractExcerpt(text: string, match: RegExpExecArray): string {
-  const start = Math.max(0, match.index - 20);
-  const end = Math.min(text.length, match.index + match[0].length + 20);
-  return text.slice(start, end).trim();
+  // Mask sensitive content — only show first 4 and last 2 chars of the matched value
+  const matched = match[0];
+  const masked = matched.length > 8
+    ? matched.slice(0, 4) + "***" + matched.slice(-2)
+    : "***";
+  return `...${masked}...`;
 }
 
 function findIssuesForPattern(

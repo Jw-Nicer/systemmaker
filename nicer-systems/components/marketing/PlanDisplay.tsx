@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { ShareButtons } from "./ShareButtons";
+import { EVENTS, track } from "@/lib/analytics";
 
 interface PlanDisplayProps {
   plan: PreviewPlan;
@@ -41,7 +42,10 @@ export function PlanDisplay({
         <div className="flex items-center justify-between print:hidden">
           <ShareButtons planId={planId} />
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              track(EVENTS.PLAN_PDF_DOWNLOAD, { plan_id: planId });
+              window.print();
+            }}
             className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

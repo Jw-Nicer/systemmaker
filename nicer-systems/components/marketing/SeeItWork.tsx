@@ -1,54 +1,83 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ScrollReveal } from "./ScrollReveal";
-import { SectionHeading } from "@/components/ui/SectionHeading";
-import { GlowLine } from "@/components/ui/GlowLine";
+import { motion } from "framer-motion";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 const AgentChat = dynamic(
   () => import("./AgentChat").then((m) => ({ default: m.AgentChat })),
   {
     ssr: false,
     loading: () => (
-      <div className="h-[480px] sm:h-[520px] flex items-center justify-center text-sm text-muted">
+      <div className="flex h-[380px] items-center justify-center px-4 text-center text-sm text-[#7e7b70] sm:h-[520px]">
         Initializing agent...
       </div>
     ),
   }
 );
 
-export function SeeItWork() {
-  return (
-    <section id="see-it-work" className="py-24 bg-surface/30">
-      <div className="max-w-4xl mx-auto px-6">
-        <ScrollReveal>
-          <SectionHeading
-            eyebrow="Live Demo"
-            title="See It Work"
-            description="Tell our agent about your bottleneck. It'll ask a few questions, then build a custom Preview Plan — live."
-          />
-        </ScrollReveal>
+export function SeeItWork({
+  eyebrow = "Live Demo",
+  title = "Build a preview plan",
+  description = "Tell the agent about your bottleneck. It asks a few intake questions, then streams a draft preview plan with workflow stages, KPIs, alerts, and recommended actions.",
+}: {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+} = {}) {
+  const reducedMotion = useReducedMotion();
 
-        <ScrollReveal delay={0.2}>
-          <div className="relative rounded-xl border border-glass-border bg-glass-bg backdrop-blur-[var(--glass-blur)] overflow-hidden gradient-border hover:shadow-[var(--glow-md)] transition-shadow scan-lines">
-            {/* Terminal header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-glass-border bg-surface-light/50">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-              <div className="w-3 h-3 rounded-full bg-green-500/60 shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
-              <span className="ml-2 text-xs text-muted font-mono">
-                nicer-agent
+  return (
+    <section id="see-it-work" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={reducedMotion ? { duration: 0.3 } : { type: "spring", stiffness: 80, damping: 20 }}
+          className="mb-10"
+        >
+          <p className="text-[11px] uppercase tracking-[0.22em] sm:tracking-[0.3em] text-[#7e7b70]">
+            {eyebrow}
+          </p>
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+            {title}
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+            {description}
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={reducedMotion ? { duration: 0.3, delay: 0.1 } : { type: "spring", stiffness: 80, damping: 20, delay: 0.15 }}
+        >
+          <div className="relative overflow-hidden rounded-[30px] border border-[#cfd1c2] bg-[linear-gradient(180deg,#f8f4ea,#eee6d8)] shadow-[0_28px_84px_rgba(66,57,39,0.14)]">
+            {/* Status header */}
+            <div className="flex flex-col gap-3 border-b border-[#d0c8ba] bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(242,234,220,0.92))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+              <div className="relative flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full border border-[#6d7a42]/28 bg-[linear-gradient(180deg,#f1f4e8,#e3ead2)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+                  <div className="h-2 w-2 rounded-full bg-[#55722b] animate-[breathe_3s_ease-in-out_infinite] shadow-[0_0_0_4px_rgba(85,114,43,0.12)]" />
+                  <span className="text-xs font-medium text-[#315329]">Streaming</span>
+                </div>
+                <span className="text-xs text-[#616657]">
+                  preview-plan-agent
+                </span>
+              </div>
+              <span className="hidden rounded-full border border-[#88956d]/28 bg-[linear-gradient(180deg,rgba(232,239,219,0.85),rgba(248,244,234,0.7))] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-[#47553b] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:inline-flex">
+                Workflow, KPIs, alerts
               </span>
             </div>
 
-            <GlowLine />
-
             {/* Chat body */}
-            <div className="relative z-[2]">
+            <div className="relative z-[2] bg-[linear-gradient(180deg,rgba(247,242,232,0.84),rgba(234,228,214,0.94))]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(84,104,41,0.28),transparent)]" />
               <AgentChat />
             </div>
           </div>
-        </ScrollReveal>
+        </motion.div>
       </div>
     </section>
   );

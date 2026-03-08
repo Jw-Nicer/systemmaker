@@ -1,4 +1,5 @@
 import type { PreviewPlan } from "./preview-plan";
+import type { ExperimentAssignment } from "./experiment";
 
 // --- Conversation phases ---
 
@@ -20,6 +21,8 @@ export interface ChatMessage {
   timestamp: number;
   /** Set when the message contains a plan section during building phase */
   plan_section?: PlanSectionType;
+  /** Human-readable label for the plan section (e.g. "Bottleneck analysis complete") */
+  plan_section_label?: string;
   /** Set when the message is an email capture prompt/response */
   email_capture?: boolean;
 }
@@ -47,6 +50,7 @@ export interface ConversationState {
   extracted: ExtractedIntake;
   plan?: PreviewPlan;
   plan_id?: string;
+  lead_id?: string;
   /** Condensed summary of intake for context management */
   intake_summary?: string;
 }
@@ -72,6 +76,7 @@ export interface SSEMessageData {
   is_chunk?: boolean;
   extracted?: ExtractedIntake;
   is_extraction_update?: boolean;
+  email_capture?: boolean;
 }
 
 export interface SSEPhaseChangeData {
@@ -87,6 +92,7 @@ export interface SSEPlanSectionData {
 
 export interface SSEPlanCompleteData {
   plan_id: string;
+  lead_id?: string;
   share_url: string;
 }
 
@@ -103,6 +109,8 @@ export interface AgentChatRequest {
   history: ChatMessage[];
   phase: ConversationPhase;
   extracted: ExtractedIntake;
+  landing_path?: string;
+  experiment_assignments?: ExperimentAssignment[];
 }
 
 // --- Stored plan (Firestore) ---

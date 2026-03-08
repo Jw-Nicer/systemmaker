@@ -18,10 +18,66 @@ import type {
   ExtractedIntake,
   SSEEventType,
 } from "@/types/chat";
+import type { ExperimentAssignment } from "@/types/experiment";
 
 // ---------------------------------------------------------------------------
 // SSE helpers
 // ---------------------------------------------------------------------------
+
+// Track concurrent SSE connections per IP with staleness cleanup
+const activeConnections = new Map<string, { count: number; lastSeen: number }>();
+const MAX_SSE_CONNECTIONS_PER_IP = 3;
+const CONNECTION_STALE_MS = 5 * 60_000; // 5 minutes
+
+// Periodic cleanup of stale entries to prevent unbounded Map growth
+let cleanupScheduled = false;
+function scheduleConnectionCleanup() {
+  if (cleanupScheduled) return;
+  cleanupScheduled = true;
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of activeConnections.entries()) {
+      if (now - data.lastSeen > CONNECTION_STALE_MS) {
+        activeConnections.delete(ip);
+      }
+    }
+  }, 60_000).unref?.();
+}
+
+function getClientIP(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+export function reserveSSEConnection(ip: string): boolean {
+  const current = activeConnections.get(ip);
+  const currentConns = current?.count ?? 0;
+  if (currentConns >= MAX_SSE_CONNECTIONS_PER_IP) {
+    return false;
+  }
+  activeConnections.set(ip, { count: currentConns + 1, lastSeen: Date.now() });
+  return true;
+}
+
+export function releaseSSEConnection(ip: string) {
+  const entry = activeConnections.get(ip);
+  if (!entry || entry.count <= 1) {
+    activeConnections.delete(ip);
+    return;
+  }
+  activeConnections.set(ip, { count: entry.count - 1, lastSeen: Date.now() });
+}
+
+export function getActiveSSEConnectionCount(ip: string) {
+  return activeConnections.get(ip)?.count ?? 0;
+}
+
+export function resetSSEConnectionTracking() {
+  activeConnections.clear();
+}
 
 function sseEncode(type: SSEEventType, data: Record<string, unknown>): string {
   return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -31,9 +87,17 @@ function createSSEStream(
   handler: (
     write: (type: SSEEventType, data: Record<string, unknown>) => void,
     close: () => void
-  ) => Promise<void>
+  ) => Promise<void>,
+  onClose?: () => void
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
+  let finalized = false;
+
+  const finalize = () => {
+    if (finalized) return;
+    finalized = true;
+    onClose?.();
+  };
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -51,17 +115,21 @@ function createSSEStream(
           controller.close();
         } catch {
           // Already closed
+        } finally {
+          finalize();
         }
       };
 
       try {
         await handler(write, close);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Unknown error";
-        write("error", { message });
+        console.error("SSE handler error:", err);
+        write("error", { message: "Something went wrong. Please try again." });
         close();
       }
+    },
+    cancel() {
+      finalize();
     },
   });
 }
@@ -71,6 +139,9 @@ function createSSEStream(
 // ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
+  const ip = getClientIP(request);
+  scheduleConnectionCleanup();
+
   // Rate limit: 20 messages per 10 minutes per IP
   const limited = await enforceRateLimit(request, {
     keyPrefix: "agent_chat",
@@ -99,15 +170,22 @@ export async function POST(request: Request) {
   const parsed = agentChatSchema.safeParse(body);
   if (!parsed.success) {
     return new Response(
-      JSON.stringify({
-        error: "Validation failed",
-        details: parsed.error.flatten(),
-      }),
+      JSON.stringify({ error: "Invalid request data" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
 
   const { message, history, phase: clientPhase, extracted, plan: clientPlan } = parsed.data;
+  const landingPath = parsed.data.landing_path;
+  const experimentAssignments =
+    parsed.data.experiment_assignments as ExperimentAssignment[] | undefined;
+
+  if (!reserveSSEConnection(ip)) {
+    return new Response(
+      JSON.stringify({ error: "Too many concurrent connections" }),
+      { status: 429, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const stream = createSSEStream(async (write, close) => {
     // Step 1: Extract intake data and detect phase
@@ -157,12 +235,14 @@ export async function POST(request: Request) {
         name: "",
         email: "",
         company: "",
-        industry: input.industry,
-        bottleneck: input.bottleneck,
-        tools: input.current_tools,
-        urgency: input.urgency ?? "",
+        industry: (input.industry ?? "Unknown").slice(0, 200),
+        bottleneck: (input.bottleneck ?? "").slice(0, 2000),
+        tools: (input.current_tools ?? "").slice(0, 500),
+        urgency: (input.urgency ?? "").slice(0, 20),
         status: "new",
         source: "agent_chat",
+        landing_path: landingPath ?? null,
+        experiment_assignments: experimentAssignments ?? [],
         score: computeLeadScore({
           email: "",
           company: "",
@@ -172,8 +252,8 @@ export async function POST(request: Request) {
           preview_plan_sent: false,
         }),
         created_at: new Date(),
-      }).catch((err) => {
-        console.error("Failed to create lead:", err);
+      }).catch(() => {
+        console.error("Failed to create lead");
         return null;
       });
 
@@ -192,6 +272,19 @@ export async function POST(request: Request) {
       // Resolve lead write (should be done by now since agent chain took ~30s)
       const leadRef = await leadWritePromise;
       const leadId = leadRef?.id;
+
+      if (leadId) {
+        db.collection("events").add({
+          event_name: "lead_submit",
+          payload: {
+            source: "agent_chat",
+            landing_path: landingPath ?? null,
+            experiment_assignments: experimentAssignments ?? [],
+          },
+          lead_id: leadId,
+          created_at: new Date(),
+        }).catch(() => {});
+      }
 
       // Save plan to Firestore (for shareable URLs)
       let planId: string | undefined;
@@ -224,6 +317,7 @@ export async function POST(request: Request) {
 
       write("plan_complete", {
         plan_id: planId ?? "",
+        lead_id: leadId ?? "",
         share_url: planId ? `/plan/${planId}` : "",
       });
 
@@ -234,6 +328,7 @@ export async function POST(request: Request) {
       write("message", {
         content:
           "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
+        email_capture: true,
       });
 
       close();
@@ -250,7 +345,6 @@ export async function POST(request: Request) {
     }
 
     // Stream conversational response
-    let fullResponse = "";
     for await (const chunk of generateConversationalResponse(
       nextPhase,
       history as ChatMessage[],
@@ -258,7 +352,6 @@ export async function POST(request: Request) {
       message,
       planSummary
     )) {
-      fullResponse += chunk;
       write("message", { content: chunk, is_chunk: true });
     }
 
@@ -273,7 +366,7 @@ export async function POST(request: Request) {
     }
 
     close();
-  });
+  }, () => releaseSSEConnection(ip));
 
   return new Response(stream, {
     headers: {

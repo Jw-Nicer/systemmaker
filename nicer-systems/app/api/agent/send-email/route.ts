@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const preview_plan = parsed.data.preview_plan as unknown as PreviewPlan;
+    const preview_plan = parsed.data.preview_plan as PreviewPlan;
     const lead_id = parsed.data.lead_id;
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -55,14 +55,19 @@ export async function POST(request: Request) {
       html,
     });
 
-    // Validate lead_id before using it — must exist and be from agent_demo
-    if (lead_id && typeof lead_id === "string" && lead_id.length < 128) {
+    // Validate lead_id before using it — must exist and match a supported agent lead source
+    const validLeadId = lead_id
+      && typeof lead_id === "string"
+      && lead_id.length < 128
+      && /^[a-zA-Z0-9_-]+$/.test(lead_id);
+
+    if (validLeadId) {
       const db = getAdminDb();
       const leadDoc = await db.collection("leads").doc(lead_id).get();
       const leadData = leadDoc.data();
 
-      if (!leadDoc.exists || !leadData || leadData.source !== "agent_demo") {
-        // Still return success (email was sent), just skip lead update
+      if (!leadDoc.exists || !leadData || !["agent_demo", "agent_chat"].includes(leadData.source)) {
+        // Always return success (blind response) — email was already sent
         return NextResponse.json({ success: true }, { status: 200 });
       }
 
@@ -99,7 +104,7 @@ export async function POST(request: Request) {
         industry: leadData.industry,
         bottleneck: leadData.bottleneck,
         score,
-        source: "agent_demo",
+        source: leadData.source,
       }).catch(() => {});
 
       enrollInNurture({
@@ -113,7 +118,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
-    console.error("Send email error:", err);
+    console.error("Send email request failed", err);
     return NextResponse.json(
       { error: "Failed to send email" },
       { status: 500 }

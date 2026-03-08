@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { track, EVENTS } from "@/lib/analytics";
+import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
 import type {
   ChatMessage,
   ConversationPhase,
@@ -21,11 +22,11 @@ import type { PreviewPlan } from "@/types/preview-plan";
 type ChatAction =
   | { type: "SEND_MESSAGE"; message: string }
   | { type: "STREAM_CHUNK"; content: string }
-  | { type: "STREAM_MESSAGE"; content: string }
+  | { type: "STREAM_MESSAGE"; content: string; email_capture?: boolean }
   | { type: "UPDATE_EXTRACTED"; extracted: ExtractedIntake }
   | { type: "PHASE_CHANGE"; from: ConversationPhase; to: ConversationPhase }
   | { type: "PLAN_SECTION"; section: string; label: string; content: string | null }
-  | { type: "PLAN_COMPLETE"; plan_id: string; share_url: string }
+  | { type: "PLAN_COMPLETE"; plan_id: string; lead_id?: string; share_url: string }
   | { type: "SET_PLAN"; plan: PreviewPlan }
   | { type: "STREAM_DONE" }
   | { type: "ERROR"; message: string }
@@ -107,7 +108,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
     case "STREAM_MESSAGE": {
       // Full message received — add as assistant message
-      const assistantMsg = createMessage("assistant", action.content);
+      const assistantMsg = createMessage("assistant", action.content, {
+        email_capture: action.email_capture,
+      });
       return {
         ...state,
         messages: [...state.messages, assistantMsg],
@@ -152,6 +155,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
       const sectionMsg = createMessage("assistant", action.content ?? "", {
         plan_section: action.section as ChatMessage["plan_section"],
+        plan_section_label: action.label,
       });
       return {
         ...state,
@@ -165,6 +169,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         plan_id: action.plan_id,
+        lead_id: action.lead_id,
         share_url: action.share_url,
         plan: isPreviewPlanComplete(state.streamedPlan)
           ? state.streamedPlan
@@ -260,7 +265,14 @@ export function useSSEChat() {
         history: current.messages.slice(-20), // Keep last 20 for context window
         phase: current.phase,
         extracted: current.extracted,
+        landing_path:
+          typeof window !== "undefined" ? window.location.pathname : undefined,
       };
+
+      const experimentAssignments = getCurrentExperimentAssignments();
+      if (experimentAssignments.length > 0) {
+        body.experiment_assignments = experimentAssignments;
+      }
 
       // Include plan data for follow_up phase context
       if (current.phase === "follow_up" && current.plan) {
@@ -355,6 +367,7 @@ export function useSSEChat() {
                     dispatch({
                       type: "STREAM_MESSAGE",
                       content: msgData.content,
+                      email_capture: msgData.email_capture,
                     });
                   }
                   break;
@@ -392,6 +405,7 @@ export function useSSEChat() {
                   dispatch({
                     type: "PLAN_COMPLETE",
                     plan_id: completeData.plan_id,
+                    lead_id: completeData.lead_id,
                     share_url: completeData.share_url,
                   });
                   track(EVENTS.AGENT_CHAT_PLAN_COMPLETE);
@@ -427,7 +441,7 @@ export function useSSEChat() {
         });
       }
     },
-    [] // eslint-disable-line react-hooks/exhaustive-deps -- uses stateRef for stability
+    []
   );
 
   const setPlan = useCallback((plan: PreviewPlan) => {
@@ -459,6 +473,7 @@ export function useSSEChat() {
     extracted: state.extracted,
     plan: state.plan,
     plan_id: state.plan_id,
+    lead_id: state.lead_id,
     share_url: state.share_url,
 
     // Actions

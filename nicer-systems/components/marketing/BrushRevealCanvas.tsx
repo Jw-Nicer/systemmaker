@@ -592,7 +592,6 @@ export function BrushRevealCanvas({ className }: BrushRevealCanvasProps) {
       canvas.removeEventListener("pointerleave", onPointerLeave);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (fallback) {
