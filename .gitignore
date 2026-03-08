@@ -21,3 +21,12 @@ npm-debug.log*
 
 # zip files (keep specs accessible but don't track archives)
 *.zip
+
+# large raw media assets at repo root
+Glass_orb_on_wildflower_meadow_aa1f9cad35.mp4
+
+# Claude Code worktrees
+.claude/worktrees/
+
+# temporary screenshots
+tmp-screens/

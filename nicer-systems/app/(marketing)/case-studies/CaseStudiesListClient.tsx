@@ -23,7 +23,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
   return (
     <section className="py-24">
       <div className="max-w-6xl mx-auto px-6">
-        <h1 className="text-4xl font-bold mb-4 text-glow">Proof of Work</h1>
+        <h1 className="text-4xl font-bold mb-4 text-soft-glow">Case Studies</h1>
         <p className="text-muted mb-12 leading-relaxed">
           Real implementations. Real metrics. Real outcomes.
         </p>
@@ -34,10 +34,10 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeFilter === filter
-                  ? "bg-primary text-background shadow-[var(--glow-sm)]"
-                  : "bg-glass-bg backdrop-blur-sm border border-glass-border text-muted hover:border-primary/30 hover:text-primary"
+                  ? "bg-gradient-to-r from-primary to-secondary text-background shadow-[var(--shadow-soft-sm)]"
+                  : "bg-glass-bg backdrop-blur-sm border border-glass-border text-muted hover:border-primary/20 hover:text-primary"
               }`}
             >
               {filter}
@@ -58,7 +58,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
               >
                 <GlassCard hover className="group overflow-hidden">
                   {/* Thumbnail */}
-                  <div className="h-40 rounded-t-xl bg-surface-light/50 flex items-center justify-center overflow-hidden">
+                  <div className="h-40 rounded-t-[var(--radius-lg)] bg-surface-light/50 flex items-center justify-center overflow-hidden">
                     {cs.thumbnail_url ? (
                       <Image
                         src={cs.thumbnail_url}
@@ -69,7 +69,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-primary/20 text-4xl font-bold text-glow">
+                      <div className="text-primary/15 text-4xl font-bold">
                         {cs.industry.charAt(0)}
                       </div>
                     )}
@@ -83,7 +83,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
                       ))}
                     </div>
 
-                    <h3 className="font-semibold mb-2 group-hover:text-primary group-hover:text-glow transition-all">
+                    <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors duration-300">
                       {cs.title}
                     </h3>
                     <p className="text-sm text-muted line-clamp-2 leading-relaxed">
@@ -101,7 +101,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
                             <span className="text-red-400 line-through">
                               {m.before}
                             </span>
-                            <span className="text-primary font-medium text-glow">
+                            <span className="text-primary font-medium">
                               {m.after}
                             </span>
                           </div>

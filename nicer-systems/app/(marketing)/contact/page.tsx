@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { leadSchema, type LeadInput } from "@/lib/validation";
 import { track, EVENTS } from "@/lib/analytics";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { GlowLine } from "@/components/ui/GlowLine";
+import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
 
 type FormErrors = Partial<Record<keyof LeadInput, string>>;
 
@@ -19,10 +19,14 @@ export default function ContactPage() {
 
 function ContactFormSkeleton() {
   return (
-    <section className="py-24">
-      <div className="max-w-3xl mx-auto px-6">
-        <div className="h-10 w-48 bg-surface rounded animate-pulse mb-4" />
-        <div className="h-5 w-96 bg-surface rounded animate-pulse mb-12" />
+    <section className="border-b border-[#d8d1c4] bg-[#f4efe5] py-24">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="h-3 w-28 rounded-full bg-[#e2dbc9] animate-pulse" />
+        <div className="mt-5 h-16 w-full max-w-2xl rounded-[28px] bg-[#ebe4d6] animate-pulse" />
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="h-48 rounded-[28px] bg-[#ece4d6] animate-pulse" />
+          <div className="h-48 rounded-[28px] bg-[#ece4d6] animate-pulse" />
+        </div>
       </div>
     </section>
   );
@@ -41,8 +45,8 @@ function ContactForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [serverError, setServerError] = useState("");
-
   const [utmParams, setUtmParams] = useState<Record<string, string>>({});
+
   useEffect(() => {
     const utm: Record<string, string> = {};
     for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content"] as const) {
@@ -73,9 +77,13 @@ function ContactForm() {
       company: formData.company,
       ...utmParams,
     };
+    const experimentAssignments = getCurrentExperimentAssignments();
     if (formData.bottleneck) payload.bottleneck = formData.bottleneck;
     if (formData.tools) payload.tools = formData.tools;
     if (formData.urgency) payload.urgency = formData.urgency;
+    if (experimentAssignments.length > 0) {
+      payload.experiment_assignments = experimentAssignments;
+    }
 
     const result = leadSchema.safeParse(payload);
     if (!result.success) {
@@ -101,8 +109,9 @@ function ContactForm() {
         throw new Error(body?.error || "Something went wrong");
       }
 
+      const body = await res.json().catch(() => null);
       setStatus("success");
-      track(EVENTS.LEAD_SUBMIT);
+      track(EVENTS.LEAD_SUBMIT, { lead_id: body?.lead_id });
     } catch (err) {
       setStatus("error");
       setServerError(err instanceof Error ? err.message : "Something went wrong");
@@ -111,180 +120,259 @@ function ContactForm() {
 
   if (status === "success") {
     return (
-      <section className="py-24">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6 shadow-[var(--glow-md)] animate-[pulse-glow_3s_ease-in-out_infinite]">
-            <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <section className="border-b border-[#d8d1c4] bg-[#f4efe5] py-24">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full border border-[#ccd4bf] bg-[#e8eedf] shadow-[0_12px_32px_rgba(77,93,44,0.10)]">
+            <svg className="h-8 w-8 text-[#4f6328]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-4xl font-bold mb-4 text-glow">Message Received</h1>
-          <p className="text-muted text-lg leading-relaxed">
-            We&apos;ll review your details and reach out within 24 hours with a scoped plan.
+          <p className="mt-8 text-[11px] uppercase tracking-[0.3em] text-[#7f7c70]">
+            Request received
           </p>
+          <h1 className="mt-4 font-[var(--font-editorial)] text-5xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] md:text-6xl">
+            We&apos;ll follow up with the right next step.
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#50584b]">
+            We&apos;ll review the workflow details and reply within one business day.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <a
+              href="mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"
+              onClick={() => track(EVENTS.BOOKING_CLICK)}
+              className="inline-flex rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+            >
+              Book a Scoping Call
+            </a>
+            <Link
+              href="/#see-it-work"
+              onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}
+              className="inline-flex rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-semibold text-[#27311f] transition-colors hover:bg-white"
+            >
+              Get a Preview Plan
+            </Link>
+          </div>
         </div>
       </section>
     );
   }
 
-  const inputClasses = "w-full px-4 py-2.5 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted focus-glow transition-[border-color,box-shadow] duration-250";
+  const inputClasses =
+    "w-full rounded-[18px] border border-[#d5cdbd] bg-[#fbf7ef] px-4 py-3 text-sm text-[#25311f] placeholder:text-[#76806e] focus-organic transition-[border-color,box-shadow] duration-250";
 
   return (
-    <section className="py-24">
-      <div className="max-w-3xl mx-auto px-6">
-        <h1 className="text-4xl font-bold mb-4 text-glow">Let&apos;s Talk</h1>
-        <p className="text-muted mb-12 leading-relaxed">
-          Book a 45-minute scoping call, or send us your details and we&apos;ll
-          reach out within 24 hours.
-        </p>
+    <section className="border-b border-[#d8d1c4] bg-[#f4efe5] py-20 md:py-24">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="max-w-3xl">
+          <p className="text-[11px] uppercase tracking-[0.32em] text-[#7f7c70]">
+            Scoping Call
+          </p>
+          <h1 className="mt-4 font-[var(--font-editorial)] text-5xl leading-[0.96] tracking-[-0.05em] text-[#1d2318] md:text-7xl">
+            Choose the next step.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-[#50584b]">
+            Book the call if you want to scope the workflow together. Start with a preview plan if you want to see the output first.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-12">
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {/* Name */}
-            <div>
-              <label htmlFor="name" className="block text-sm mb-1.5 text-foreground">Name *</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder="Your name"
-              />
-              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="rounded-[30px] border border-[#d7d0c1] bg-[linear-gradient(180deg,#faf7ef,#f0e8db)] p-7 shadow-[0_18px_56px_rgba(70,58,40,0.08)]">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[#7e7b70]">
+              Option 1
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
+              Book a scoping call
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[#556052]">
+              Best if you already know the workflow and want to decide the next move fast.
+            </p>
+            <div className="mt-5 space-y-2 text-sm text-[#50584b]">
+              <p>45 minutes</p>
+              <p>One workflow</p>
+              <p>Clear next step</p>
+            </div>
+            <a
+              href="mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"
+              onClick={() => track(EVENTS.BOOKING_CLICK)}
+              className="mt-6 inline-flex rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+            >
+              Book a Scoping Call
+            </a>
+          </div>
+
+          <div className="rounded-[30px] border border-[#d7d0c1] bg-[linear-gradient(180deg,#faf7ef,#f0e8db)] p-7 shadow-[0_18px_56px_rgba(70,58,40,0.08)]">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[#7e7b70]">
+              Option 2
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
+              Get a preview plan first
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[#556052]">
+              Best if you want to see the workflow map, KPI ideas, and next actions before a call.
+            </p>
+            <div className="mt-5 space-y-2 text-sm text-[#50584b]">
+              <p>See the draft output</p>
+              <p>Review the scope</p>
+              <p>Come to the call sharper</p>
+            </div>
+            <Link
+              href="/#see-it-work"
+              onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}
+              className="mt-6 inline-flex rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-semibold text-[#27311f] transition-colors hover:bg-white"
+            >
+              Get a Preview Plan
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-[30px] border border-[#d7d0c1] bg-[linear-gradient(180deg,#f8f4ea,#eee6d8)] p-7 shadow-[0_18px_56px_rgba(70,58,40,0.08)]">
+          <div className="max-w-2xl">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[#7e7b70]">
+              Prefer email first?
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
+              Send the basics and we&apos;ll guide you.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[#556052]">
+              Required fields are enough. Add the bottleneck if you want us to review context before we reply.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#24311f]">Name *</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  placeholder="Your name"
+                />
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#24311f]">Email *</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  placeholder="you@company.com"
+                />
+                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+              </div>
             </div>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm mb-1.5 text-foreground">Email *</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder="you@company.com"
-              />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+            <div className="grid gap-4 md:grid-cols-[1fr_0.9fr]">
+              <div>
+                <label htmlFor="company" className="mb-1.5 block text-sm font-medium text-[#24311f]">Company *</label>
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  value={formData.company}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  placeholder="Your company"
+                />
+                {errors.company && <p className="mt-1 text-xs text-red-500">{errors.company}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="urgency" className="mb-1.5 block text-sm font-medium text-[#24311f]">Urgency</label>
+                <select
+                  id="urgency"
+                  name="urgency"
+                  value={formData.urgency}
+                  onChange={handleChange}
+                  className={inputClasses}
+                >
+                  <option value="">Select urgency</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
             </div>
 
-            {/* Company */}
-            <div>
-              <label htmlFor="company" className="block text-sm mb-1.5 text-foreground">Company *</label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                value={formData.company}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder="Your company"
-              />
-              {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
+            <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+              <div>
+                <label htmlFor="bottleneck" className="mb-1.5 block text-sm font-medium text-[#24311f]">
+                  Bottleneck
+                </label>
+                <textarea
+                  id="bottleneck"
+                  name="bottleneck"
+                  rows={4}
+                  value={formData.bottleneck}
+                  onChange={handleChange}
+                  className={`${inputClasses} resize-none`}
+                  placeholder="Describe the workflow issue."
+                />
+              </div>
+
+              <div>
+                <label htmlFor="tools" className="mb-1.5 block text-sm font-medium text-[#24311f]">
+                  Current tools
+                </label>
+                <input
+                  id="tools"
+                  name="tools"
+                  type="text"
+                  value={formData.tools}
+                  onChange={handleChange}
+                  className={inputClasses}
+                  placeholder="Slack, Airtable, HubSpot"
+                />
+              </div>
             </div>
 
-            {/* Bottleneck */}
-            <div>
-              <label htmlFor="bottleneck" className="block text-sm mb-1.5 text-foreground">
-                What&apos;s your biggest operational bottleneck?
-              </label>
-              <textarea
-                id="bottleneck"
-                name="bottleneck"
-                rows={4}
-                value={formData.bottleneck}
-                onChange={handleChange}
-                className={`${inputClasses} resize-none`}
-                placeholder="Describe the pain point..."
-              />
-            </div>
-
-            {/* Tools */}
-            <div>
-              <label htmlFor="tools" className="block text-sm mb-1.5 text-foreground">
-                Current tools / software
-              </label>
-              <input
-                id="tools"
-                name="tools"
-                type="text"
-                value={formData.tools}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder="e.g. Salesforce, Slack, Excel"
-              />
-            </div>
-
-            {/* Urgency */}
-            <div>
-              <label htmlFor="urgency" className="block text-sm mb-1.5 text-foreground">Urgency</label>
-              <select
-                id="urgency"
-                name="urgency"
-                value={formData.urgency}
-                onChange={handleChange}
-                className={inputClasses}
-              >
-                <option value="">Select urgency</option>
-                <option value="low">Low — exploring options</option>
-                <option value="medium">Medium — planning this quarter</option>
-                <option value="high">High — need it soon</option>
-                <option value="urgent">Urgent — this is blocking us</option>
-              </select>
-            </div>
-
-            {/* Server error */}
             {status === "error" && (
-              <div className="p-3 rounded-lg bg-red-900/30 border border-red-500/40 text-red-300 text-sm">
+              <div className="rounded-[18px] border border-[#dc8f8f] bg-[#fff2f2] p-3 text-sm text-[#9d3f3f]">
                 {serverError || "Something went wrong. Please try again."}
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={status === "submitting"}
-              className="w-full px-6 py-3 rounded-lg bg-primary text-background font-semibold hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-glow"
-            >
-              {status === "submitting" ? "Sending..." : "Send Message"}
-            </button>
-          </form>
-
-          {/* Booking / What happens next */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">What happens next</h2>
-            <ol className="space-y-3 text-sm text-muted">
-              <li className="flex gap-3">
-                <span className="text-primary font-bold text-glow">1.</span>
-                We confirm one workflow to focus on
-              </li>
-              <li className="flex gap-3">
-                <span className="text-primary font-bold text-glow">2.</span>
-                We confirm the output you need (e.g., &quot;ticket resolved&quot;)
-              </li>
-              <li className="flex gap-3">
-                <span className="text-primary font-bold text-glow">3.</span>
-                We confirm the owner + tool stack
-              </li>
-              <li className="flex gap-3">
-                <span className="text-primary font-bold text-glow">4.</span>
-                You get a scoped plan within 24 hours
-              </li>
-            </ol>
-
-            <GlowLine className="my-8" />
-
-            <GlassCard className="p-4 gradient-border gradient-border-active">
-              <p className="text-sm font-medium mb-2">Prefer to book directly?</p>
-              <a
-                href="mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"
-                className="inline-block px-4 py-2 rounded-lg bg-primary text-background text-sm font-semibold hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all"
+            <div className="flex flex-col gap-3 border-t border-[#ddd5c6] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm leading-6 text-[#596351]">
+                  We&apos;ll reply within one business day.
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#6d7567]">
+                  By sending details, you agree we may use this information to
+                  respond to your request. See our{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-[#2d4a2a] underline decoration-[#93a071] underline-offset-4"
+                  >
+                    Privacy Policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/terms"
+                    className="text-[#2d4a2a] underline decoration-[#93a071] underline-offset-4"
+                  >
+                    Terms
+                  </Link>
+                  .
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={status === "submitting"}
+                className="inline-flex rounded-full bg-[#171d13] px-6 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 focus-organic"
               >
-                Schedule a Call
-              </a>
-            </GlassCard>
-          </div>
+                {status === "submitting" ? "Sending..." : "Send details"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </section>

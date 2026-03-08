@@ -1,5 +1,8 @@
+import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
+
 export const EVENTS = {
   LANDING_VIEW: "landing_view",
+  LANDING_EXPERIMENT_EXPOSURE: "landing_experiment_exposure",
   BRUSH_REVEAL_START: "brush_reveal_start",
   BRUSH_REVEAL_COMPLETE: "brush_reveal_complete",
   AGENT_DEMO_START: "agent_demo_start",
@@ -10,6 +13,7 @@ export const EVENTS = {
   CTA_CLICK_PREVIEW_PLAN: "cta_click_preview_plan",
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
+  PREVIEW_PLAN_EMAIL_CAPTURE: "preview_plan_email_capture",
 
   // Phase 4A: Agent Chat
   AGENT_CHAT_START: "agent_chat_start",
@@ -36,15 +40,71 @@ export const EVENTS = {
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
 
-export function track(eventName: EventName, payload?: Record<string, unknown>) {
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[analytics] ${eventName}`, payload ?? "");
+function withAnalyticsContext(payload?: Record<string, unknown>) {
+  const nextPayload = { ...(payload ?? {}) };
+
+  if (
+    typeof window !== "undefined" &&
+    typeof nextPayload.landing_path !== "string"
+  ) {
+    nextPayload.landing_path = window.location.pathname;
+  }
+
+  if (typeof window !== "undefined" && nextPayload.experiment_assignments === undefined) {
+    const assignments = getCurrentExperimentAssignments();
+    if (assignments.length > 0) {
+      nextPayload.experiment_assignments = assignments;
+    }
+  }
+
+  return nextPayload;
+}
+
+function persistEvent(eventName: string, payload?: Record<string, unknown>) {
+  if (typeof window === "undefined" || process.env.NODE_ENV === "test") {
     return;
   }
 
+  const contextualPayload = withAnalyticsContext(payload);
+  const body = JSON.stringify({
+    event_name: eventName,
+    payload: contextualPayload,
+    lead_id:
+      typeof contextualPayload.lead_id === "string"
+        ? contextualPayload.lead_id
+        : undefined,
+  });
+
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const ok = navigator.sendBeacon(
+        "/api/events",
+        new Blob([body], { type: "application/json" })
+      );
+      if (ok) return;
+    }
+  } catch {
+    // Fall back to fetch when sendBeacon is unavailable or fails.
+  }
+
+  void fetch("/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+export function track(eventName: EventName, payload?: Record<string, unknown>) {
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[analytics] ${eventName}`, withAnalyticsContext(payload));
+  }
+
+  persistEvent(eventName, payload);
+
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     import("posthog-js").then(({ default: posthog }) => {
-      posthog.capture(eventName, payload);
+      posthog.capture(eventName, withAnalyticsContext(payload));
     });
   }
 }

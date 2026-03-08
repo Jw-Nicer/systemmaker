@@ -7,7 +7,13 @@ interface AdminNotificationInput {
   industry?: string;
   bottleneck?: string;
   score: number;
-  source: "contact" | "agent_demo";
+  source: "contact" | "agent_demo" | "agent_chat";
+}
+
+function getLeadSourceLabel(source: AdminNotificationInput["source"]): string {
+  if (source === "agent_demo") return "Agent Demo";
+  if (source === "agent_chat") return "Agent Chat";
+  return "Contact Form";
 }
 
 function renderAdminNotificationHTML(lead: AdminNotificationInput): string {
@@ -39,7 +45,7 @@ function renderAdminNotificationHTML(lead: AdminNotificationInput): string {
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Source</td>
-      <td style="padding:6px 0;">${lead.source === "agent_demo" ? "Agent Demo" : "Contact Form"}</td>
+      <td style="padding:6px 0;">${getLeadSourceLabel(lead.source)}</td>
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Score</td>
@@ -77,7 +83,7 @@ export async function sendAdminNotification(
     await resend.emails.send({
       from: "Nicer Systems <onboarding@resend.dev>",
       to: adminEmail,
-      subject: `New ${lead.source === "agent_demo" ? "Agent Demo" : "Contact"} Lead: ${lead.name} (Score: ${lead.score})`,
+      subject: `New ${getLeadSourceLabel(lead.source)} Lead: ${lead.name} (Score: ${lead.score})`,
       html: renderAdminNotificationHTML(lead),
     });
   } catch (err) {

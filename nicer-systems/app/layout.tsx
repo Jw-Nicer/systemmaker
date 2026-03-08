@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PostHogProvider from "@/components/ui/PostHogProvider";
 import { getSiteSettings } from "@/lib/firestore/site-settings";
+import { themeToCSSVariables } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +18,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Nicer Systems — Tell us the problem. We'll build the system.",
   description:
-    "Automation and ops visibility systems for admin-heavy businesses. Dashboards, alerts, and weekly Ops Pulse — installed in 30 days.",
+    "Automation and ops visibility systems for admin-heavy businesses. Preview plans include workflow mapping, KPI recommendations, alerts, and next actions.",
+  metadataBase: new URL("https://nicer-systems.web.app"),
+  openGraph: {
+    title: "Nicer Systems — Tell us the problem. We'll build the system.",
+    description:
+      "Automation and ops visibility systems for admin-heavy businesses. Preview plans include workflow mapping, KPI recommendations, alerts, and next actions.",
+    url: "https://nicer-systems.web.app",
+    siteName: "Nicer Systems",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nicer Systems — Tell us the problem. We'll build the system.",
+    description:
+      "Automation and ops visibility for admin-heavy businesses. Workflow mapping, KPI dashboards, alerts, and next actions.",
+  },
 };
 
 export default async function RootLayout({
@@ -26,13 +43,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const settings = await getSiteSettings();
-
-  const themeVars: Record<string, string> = {
-    "--theme-primary": settings.theme_primary,
-    "--theme-secondary": settings.theme_secondary,
-    "--theme-glow-intensity": `${settings.glow_intensity}%`,
-    "--theme-motion-intensity": String(settings.motion_intensity),
-  };
+  const themeVars = themeToCSSVariables(settings);
 
   return (
     <html lang="en" style={themeVars as React.CSSProperties}>

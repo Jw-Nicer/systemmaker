@@ -2,20 +2,18 @@
 
 import { useState, Fragment } from "react";
 import Link from "next/link";
+import type { Lead } from "@/types/lead";
 import {
   updateLeadStatus,
   exportLeadsCSV,
-  type Lead,
 } from "@/lib/actions/leads";
+import {
+  AdminPageHeader,
+  AdminPanel,
+  AdminPill,
+} from "@/components/admin/AdminPrimitives";
 
 const STATUSES = ["new", "qualified", "booked", "closed", "unqualified"];
-const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-500/10 text-blue-400",
-  qualified: "bg-green-500/10 text-green-400",
-  booked: "bg-purple-500/10 text-purple-400",
-  closed: "bg-muted/10 text-muted",
-  unqualified: "bg-red-500/10 text-red-400",
-};
 
 export default function LeadsManager({
   initialData,
@@ -49,6 +47,9 @@ export default function LeadsManager({
       return 0; // already sorted by date from server
     });
 
+  const hasActiveExportFilters =
+    filter !== "all" || search.trim().length > 0 || sortBy !== "date";
+
   async function handleStatusChange(id: string, newStatus: string) {
     setStatusError(null);
     const result = await updateLeadStatus(id, newStatus);
@@ -63,7 +64,11 @@ export default function LeadsManager({
 
   async function handleExport() {
     setExporting(true);
-    const csv = await exportLeadsCSV();
+    const csv = await exportLeadsCSV({
+      status: filter,
+      search,
+      sortBy,
+    });
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -88,33 +93,36 @@ export default function LeadsManager({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Leads</h1>
-          <p className="text-muted text-sm">
-            Track and triage incoming inquiries.
-          </p>
-        </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          {exporting ? "Exporting..." : "Export CSV"}
-        </button>
-      </div>
+      <AdminPageHeader
+        eyebrow="CRM"
+        title="Leads"
+        description="Track, qualify, and follow up on inbound requests from contact and preview-plan flows."
+        actions={
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-medium text-[#27311f] transition-colors hover:bg-white disabled:opacity-50"
+          >
+            {exporting
+              ? "Exporting..."
+              : hasActiveExportFilters
+                ? "Export Filtered CSV"
+                : "Export CSV"}
+          </button>
+        }
+      />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <AdminPanel className="mt-8">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1">
           {["all", ...STATUSES].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === s
-                  ? "bg-primary text-background"
-                  : "bg-surface-light text-muted hover:text-foreground border border-border"
+                  ? "bg-[#171d13] text-[#f7f2e8]"
+                  : "border border-[#d7d0c1] bg-white/55 text-[#596351] hover:bg-white"
               }`}
             >
               {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -126,42 +134,42 @@ export default function LeadsManager({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search leads..."
-          className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm flex-1 max-w-xs"
+          className="max-w-xs flex-1 rounded-[16px] border border-[#d7d0c1] bg-[#fbf7ef] px-3 py-2 text-sm text-[#1d2318]"
         />
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as "date" | "score")}
-          className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm"
+          className="rounded-[16px] border border-[#d7d0c1] bg-[#fbf7ef] px-3 py-2 text-sm text-[#1d2318]"
         >
           <option value="date">Sort: Newest</option>
           <option value="score">Sort: Score</option>
         </select>
       </div>
+      </AdminPanel>
 
       {statusError && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-500/40 text-red-300 text-sm">
+        <div className="mb-4 mt-4 rounded-[16px] border border-[#dc8f8f] bg-[#fff2f2] p-3 text-sm text-[#9d3f3f]">
           {statusError}
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <AdminPanel className="mt-6 overflow-hidden p-0">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-6 py-3 text-muted font-medium">Name</th>
-              <th className="px-6 py-3 text-muted font-medium">Email</th>
-              <th className="px-6 py-3 text-muted font-medium">Company</th>
-              <th className="px-6 py-3 text-muted font-medium">Score</th>
-              <th className="px-6 py-3 text-muted font-medium">Status</th>
-              <th className="px-6 py-3 text-muted font-medium">Source</th>
-              <th className="px-6 py-3 text-muted font-medium">Date</th>
+          <thead className="bg-white/45">
+            <tr className="border-b border-[#ddd5c7] text-left">
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Name</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Email</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Company</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Score</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Status</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Source</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Date</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-muted">
+                <td colSpan={7} className="px-6 py-12 text-center text-[#6c7467]">
                   No leads found.
                 </td>
               </tr>
@@ -174,9 +182,9 @@ export default function LeadsManager({
                         expandedId === lead.id ? null : lead.id
                       )
                     }
-                    className="border-b border-border last:border-b-0 hover:bg-surface-light/50 cursor-pointer"
+                    className="cursor-pointer border-b border-[#e1d9cb] last:border-b-0 hover:bg-white/35"
                   >
-                    <td className="px-6 py-3 font-medium">
+                    <td className="px-6 py-3 font-medium text-[#1d2318]">
                       <div className="flex items-center gap-2">
                         {lead.follow_up_at && new Date(lead.follow_up_at) < new Date() && (
                           <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Overdue follow-up" />
@@ -188,33 +196,29 @@ export default function LeadsManager({
                         <Link
                           href={`/admin/leads/${lead.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-xs text-primary hover:underline ml-1"
+                          className="ml-1 text-xs text-[#4f6032] hover:underline"
                         >
                           View
                         </Link>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-muted">
+                    <td className="px-6 py-3 text-[#596351]">
                       {lead.email || "—"}
                     </td>
-                    <td className="px-6 py-3 text-muted">
+                    <td className="px-6 py-3 text-[#596351]">
                       {lead.company || "—"}
                     </td>
                     <td className="px-6 py-3">
                       {lead.score != null ? (
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            lead.score >= 50
-                              ? "bg-green-500/10 text-green-400"
-                              : lead.score >= 25
-                                ? "bg-yellow-500/10 text-yellow-400"
-                                : "bg-red-500/10 text-red-400"
-                          }`}
+                        <AdminPill
+                          tone={
+                            lead.score >= 50 ? "green" : lead.score >= 25 ? "yellow" : "red"
+                          }
                         >
                           {lead.score}
-                        </span>
+                        </AdminPill>
                       ) : (
-                        <span className="text-xs text-muted">—</span>
+                        <span className="text-xs text-[#6c7467]">—</span>
                       )}
                     </td>
                     <td className="px-6 py-3">
@@ -225,7 +229,7 @@ export default function LeadsManager({
                           handleStatusChange(lead.id, e.target.value);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className={`text-xs px-2 py-1 rounded-full font-medium border-0 cursor-pointer ${STATUS_COLORS[lead.status] ?? STATUS_COLORS.new}`}
+                        className="cursor-pointer rounded-full border border-[#d7d0c1] bg-[#fbf7ef] px-2 py-1 text-xs font-medium text-[#27311f]"
                       >
                         {STATUSES.map((s) => (
                           <option key={s} value={s}>
@@ -234,10 +238,10 @@ export default function LeadsManager({
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-3 text-muted text-xs">
+                    <td className="px-6 py-3 text-xs text-[#6c7467]">
                       {lead.source}
                     </td>
-                    <td className="px-6 py-3 text-muted text-xs">
+                    <td className="px-6 py-3 text-xs text-[#6c7467]">
                       {formatDate(lead.created_at)}
                     </td>
                   </tr>
@@ -245,56 +249,67 @@ export default function LeadsManager({
                     <tr key={`${lead.id}-detail`}>
                       <td
                         colSpan={7}
-                        className="px-6 py-4 bg-surface-light/30 border-b border-border"
+                        className="border-b border-[#e1d9cb] bg-white/42 px-6 py-4"
                       >
                         <div className="grid sm:grid-cols-3 gap-4 text-sm">
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               Bottleneck
                             </p>
-                            <p>{lead.bottleneck || "—"}</p>
+                            <p className="text-[#1d2318]">{lead.bottleneck || "—"}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               Tools
                             </p>
-                            <p>{lead.tools || "—"}</p>
+                            <p className="text-[#1d2318]">{lead.tools || "—"}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               Urgency
                             </p>
-                            <p>{lead.urgency || "—"}</p>
+                            <p className="text-[#1d2318]">{lead.urgency || "—"}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               UTM Source
                             </p>
-                            <p>{lead.utm_source || "—"}</p>
+                            <p className="text-[#1d2318]">{lead.utm_source || "—"}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               Nurture
                             </p>
                             <p>
                               {lead.nurture_enrolled ? (
-                                <span className="text-green-400">Enrolled</span>
+                                <span className="text-[#4f6032]">Enrolled</span>
                               ) : (
-                                <span className="text-muted">Not enrolled</span>
+                                <span className="text-[#6c7467]">Not enrolled</span>
                               )}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted uppercase mb-1">
+                            <p className="mb-1 text-xs uppercase text-[#7e7b70]">
                               Preview Plan
                             </p>
-                            <p>
+                            <div className="flex items-center gap-2">
                               {lead.preview_plan_sent_at ? (
-                                <span className="text-green-400">Sent</span>
+                                <span className="text-[#4f6032]">Sent</span>
                               ) : (
-                                <span className="text-muted">—</span>
+                                <span className="text-[#6c7467]">—</span>
                               )}
-                            </p>
+                              {lead.plan_id ? (
+                                <Link
+                                  href={`/plan/${lead.plan_id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs text-[#4f6032] hover:underline"
+                                >
+                                  View plan
+                                </Link>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -305,9 +320,9 @@ export default function LeadsManager({
             )}
           </tbody>
         </table>
-      </div>
+      </AdminPanel>
 
-      <p className="text-xs text-muted mt-4">
+      <p className="mt-4 text-xs text-[#6c7467]">
         {filtered.length} lead{filtered.length !== 1 ? "s" : ""} shown
       </p>
     </div>

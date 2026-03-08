@@ -1,4 +1,13 @@
 import { z } from "zod";
+import { EXPERIMENT_TARGETS } from "@/lib/constants/experiments";
+
+const experimentAssignmentSchema = z.object({
+  experiment_id: z.string().min(1).max(128),
+  experiment_name: z.string().min(1).max(200),
+  target: z.string().min(1).max(100),
+  variant_key: z.string().min(1).max(100),
+  variant_label: z.string().min(1).max(200),
+});
 
 export const leadSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -12,6 +21,7 @@ export const leadSchema = z.object({
   utm_campaign: z.string().max(200).optional(),
   utm_content: z.string().max(200).optional(),
   landing_path: z.string().max(500).optional(),
+  experiment_assignments: z.array(experimentAssignmentSchema).max(10).optional(),
 });
 
 export type LeadInput = z.infer<typeof leadSchema>;
@@ -86,6 +96,8 @@ export const agentRunSchema = z.object({
   current_tools: z.string().min(1, "Current tools are required").max(500),
   urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
   volume: z.string().max(200).optional(),
+  landing_path: z.string().max(500).optional(),
+  experiment_assignments: z.array(experimentAssignmentSchema).max(10).optional(),
 });
 
 export type AgentRunInput = z.infer<typeof agentRunSchema>;
@@ -144,7 +156,7 @@ export const chatMessageSchema = z.object({
 export const agentChatSchema = z.object({
   message: z.string().min(1, "Message is required").max(2000),
   conversation_id: z.string().max(100).optional(),
-  history: z.array(chatMessageSchema).max(100),
+  history: z.array(chatMessageSchema).max(30),
   phase: z.enum(["gathering", "confirming", "building", "complete", "follow_up"]),
   extracted: z.object({
     industry: z.string().max(200).optional(),
@@ -155,6 +167,8 @@ export const agentChatSchema = z.object({
   }),
   /** Plan data passed by client for follow_up phase context */
   plan: z.record(z.string(), z.unknown()).optional(),
+  landing_path: z.string().max(500).optional(),
+  experiment_assignments: z.array(experimentAssignmentSchema).max(10).optional(),
 });
 
 export type AgentChatInput = z.infer<typeof agentChatSchema>;
@@ -166,3 +180,115 @@ export const planRefinementSchema = z.object({
 });
 
 export type PlanRefinementInput = z.infer<typeof planRefinementSchema>;
+
+// --- Experiments ---
+
+export const experimentVariantSchema = z.object({
+  key: z.string().min(1, "Variant key is required").max(100),
+  label: z.string().min(1, "Variant label is required").max(200),
+  value: z.string().min(1, "Variant copy is required").max(5000),
+  weight: z.number().int().min(0).max(100),
+});
+
+export const experimentConfigSchema = z
+  .object({
+    name: z.string().min(1, "Experiment name is required").max(200),
+    target: z.enum(EXPERIMENT_TARGETS, {
+      message: "Unsupported experiment target",
+    }),
+    variants: z
+      .array(experimentVariantSchema)
+      .min(2, "Experiments require at least two variants"),
+  })
+  .refine(
+    (data) => data.variants.reduce((sum, v) => sum + v.weight, 0) === 100,
+    { message: "Variant weights must sum to 100", path: ["variants"] }
+  );
+
+export type ExperimentConfigInput = z.infer<typeof experimentConfigSchema>;
+
+// --- Variants ---
+
+const landingSectionIntroSchema = z.object({
+  eyebrow: z.string().max(1000),
+  title: z.string().max(1000),
+  description: z.string().max(5000),
+});
+
+const landingHeroSchema = z.object({
+  headline: z.string().max(300),
+  subheadline: z.string().max(500),
+  cta_text: z.string().max(100),
+  proof_line: z.string().max(500),
+});
+
+const landingHowItWorksStepSchema = z.object({
+  id: z.string().max(50),
+  title: z.string().max(300),
+  description: z.string().max(2000),
+});
+
+const landingFeatureItemSchema = z.object({
+  id: z.string().max(50),
+  title: z.string().max(300),
+  description: z.string().max(2000),
+  visual: z.string().max(1000),
+});
+
+const landingVariantSectionsSchema = z.object({
+  hero: landingHeroSchema,
+  demo: landingSectionIntroSchema,
+  proof: landingSectionIntroSchema.extend({
+    featured_industries: z.array(z.string().max(100)).max(20),
+  }),
+  how_it_works: z.object({
+    eyebrow: z.string().max(1000),
+    title: z.string().max(1000),
+    steps: z.array(landingHowItWorksStepSchema).max(20),
+  }),
+  features: z.object({
+    eyebrow: z.string().max(1000),
+    title: z.string().max(1000),
+    items: z.array(landingFeatureItemSchema).max(20),
+  }),
+  pricing: landingSectionIntroSchema.extend({
+    highlighted_tier: z.string().max(100).optional(),
+  }),
+  faq: landingSectionIntroSchema,
+  final_cta: z.object({
+    eyebrow: z.string().max(1000),
+    title: z.string().max(1000),
+    description: z.string().max(5000),
+    cta_text: z.string().max(100),
+  }),
+});
+
+export const variantSchema = z.object({
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .max(200)
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+  industry: z.string().min(1, "Industry is required").max(100),
+  headline: z.string().min(1, "Headline is required").max(300),
+  subheadline: z.string().min(1, "Subheadline is required").max(500),
+  cta_text: z.string().min(1, "CTA text is required").max(100),
+  meta_title: z.string().min(1, "Meta title is required").max(200),
+  meta_description: z.string().min(1, "Meta description is required").max(500),
+  featured_industries: z.array(z.string().max(100)).max(20),
+  sections: landingVariantSectionsSchema.optional(),
+});
+
+export type VariantInput = z.infer<typeof variantSchema>;
+
+// --- Agent Templates ---
+
+export const templateUpdateSchema = z.object({
+  markdown: z.string().min(1, "Template cannot be empty").max(50000),
+});
+
+// --- Lead Activity ---
+
+export const leadNoteSchema = z.object({
+  content: z.string().min(1, "Note cannot be empty").max(5000),
+});

@@ -1,35 +1,52 @@
-import { BrushRevealHero } from "@/components/marketing/BrushRevealHero";
 import { SeeItWork } from "@/components/marketing/SeeItWork";
 import { ProofOfWork } from "@/components/marketing/ProofOfWork";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
+import { ComputerFeatures } from "@/components/marketing/ComputerFeatures";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { FAQSection } from "@/components/marketing/FAQSection";
-import { FinalCTA } from "@/components/marketing/FinalCTA";
-import { WorkflowGraph } from "@/components/marketing/WorkflowGraph";
+import { TestimonialsSection } from "@/components/marketing/TestimonialsSection";
 import { LandingViewTracker } from "@/components/marketing/LandingViewTracker";
-import { GlowLine } from "@/components/ui/GlowLine";
+import {
+  HomepageExperimentFinalCTA,
+  HomepageExperimentHero,
+  HomepageExperimentTracker,
+} from "@/components/marketing/homepage-experiments";
+import { getHomepageExperiments } from "@/lib/firestore/experiments";
 
-export default function LandingPage() {
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Nicer Systems",
+  url: "https://nicer-systems.web.app",
+  description:
+    "Automation and ops visibility systems for admin-heavy businesses.",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "sales",
+    url: "https://nicer-systems.web.app/contact",
+  },
+};
+
+export default async function LandingPage() {
+  const homepageExperiments = await getHomepageExperiments();
+
   return (
     <>
-      <LandingViewTracker />
-      <BrushRevealHero />
-
-      <div className="relative">
-        <WorkflowGraph />
-        <GlowLine />
-        <SeeItWork />
-        <GlowLine />
-        <ProofOfWork />
-        <GlowLine />
-        <HowItWorks />
-        <GlowLine />
-        <PricingSection />
-        <GlowLine />
-        <FAQSection />
-      </div>
-
-      <FinalCTA />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <LandingViewTracker landingPath="/" />
+      <HomepageExperimentTracker experiments={homepageExperiments} />
+      <HomepageExperimentHero experiments={homepageExperiments} />
+      <SeeItWork />
+      <ProofOfWork />
+      <TestimonialsSection />
+      <HowItWorks />
+      <ComputerFeatures />
+      <PricingSection />
+      <FAQSection />
+      <HomepageExperimentFinalCTA experiments={homepageExperiments} />
     </>
   );
 }

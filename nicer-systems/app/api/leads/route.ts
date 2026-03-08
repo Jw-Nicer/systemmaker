@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { leadSchema } from "@/lib/validation";
 import { computeLeadScore } from "@/lib/leads/scoring";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
+import { enrollInNurture } from "@/lib/email/nurture-sequence";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
       ...parsed.data,
       score,
       status: "new",
+      source: "contact",
       created_at: new Date(),
     });
 
@@ -55,6 +57,14 @@ export async function POST(request: Request) {
       bottleneck: parsed.data.bottleneck,
       score,
       source: "contact",
+    }).catch(() => {});
+
+    // Fire-and-forget nurture sequence enrollment
+    enrollInNurture({
+      lead_id: docRef.id,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      bottleneck: parsed.data.bottleneck,
     }).catch(() => {});
 
     return NextResponse.json({ lead_id: docRef.id }, { status: 201 });

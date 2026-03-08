@@ -1,6 +1,7 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 import { unstable_cache } from "next/cache";
 import type { Offer } from "@/types/offer";
+import { serializeDoc } from "./serialize";
 
 export const getPublishedOffers = unstable_cache(
   async (): Promise<Offer[]> => {
@@ -12,8 +13,9 @@ export const getPublishedOffers = unstable_cache(
         .orderBy("sort_order", "asc")
         .get();
 
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Offer);
-    } catch {
+      return snap.docs.map((doc) => serializeDoc<Offer>(doc));
+    } catch (err) {
+      console.error("[firestore] getPublishedOffers failed:", err);
       return [];
     }
   },

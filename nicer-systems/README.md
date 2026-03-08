@@ -44,6 +44,10 @@ A conversion-first marketing site and web app for **Nicer Systems**, an automati
    - `RESEND_API_KEY` — Resend email service
    - `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` — PostHog analytics
 
+   Optional marketing variables:
+   - `NEXT_PUBLIC_SCOPING_CALL_EMBED_URL` — inline scheduler iframe source for the contact page
+   - `NEXT_PUBLIC_SCOPING_CALL_BOOKING_URL` — direct booking link used as a fallback/open-in-new-tab action
+
 3. Seed initial data:
    ```bash
    npx tsx scripts/seed-firestore.ts     # Seed default site settings
@@ -85,10 +89,18 @@ docs/              Product specification documents
 
 ```bash
 npm run dev              # Start Next.js dev server (port 3000)
-npx tsc --watch --noEmit # TypeScript type-checking in watch mode
 npm run lint             # Run ESLint
+npm run typecheck        # Run TypeScript type-checking
+npm test                 # Run the test suite
 npm run build            # Production build
 ```
+
+## Repo Health
+
+- `.env.example` documents the required runtime configuration.
+- `npm run typecheck` generates Next route/layout types before running `tsc --noEmit`, so it works on a fresh clone.
+- `npm run lint`, `npm run typecheck`, and `npm test` are the baseline verification commands.
+- Firebase seed scripts are idempotent setup helpers for local/dev environments.
 
 ## Deployment
 

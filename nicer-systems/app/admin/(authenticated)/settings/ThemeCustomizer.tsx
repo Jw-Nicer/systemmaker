@@ -2,7 +2,10 @@
 
 import { useState, useTransition, useCallback } from "react";
 import type { ThemeSettings } from "@/lib/theme";
-import { themeToCSSVariables } from "@/lib/theme";
+import {
+  GRADIENT_PRESET_BACKGROUNDS,
+  themeToCSSVariables,
+} from "@/lib/theme";
 import { saveThemeSettings } from "./actions";
 
 const GRADIENT_PRESETS = [
@@ -20,14 +23,6 @@ const BRUSH_STYLES = [
 ];
 
 const MOTION_LABELS = ["None", "Subtle", "Normal", "Full"];
-
-const GRADIENT_BACKGROUNDS: Record<string, string> = {
-  "dark-navy": "linear-gradient(135deg, #0a0e1a 0%, #1a1e3a 50%, #0a0e1a 100%)",
-  "midnight-purple": "linear-gradient(135deg, #0f0a1a 0%, #2d1b4e 50%, #0f0a1a 100%)",
-  "deep-ocean": "linear-gradient(135deg, #0a1a1a 0%, #0d2b3e 50%, #0a1a1a 100%)",
-  charcoal: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)",
-  obsidian: "linear-gradient(135deg, #050505 0%, #1a1a1a 50%, #050505 100%)",
-};
 
 export default function ThemeCustomizer({
   initialSettings,
@@ -223,8 +218,8 @@ export default function ThemeCustomizer({
           style={{
             ...cssVars,
             background:
-              GRADIENT_BACKGROUNDS[settings.gradient_preset] ??
-              GRADIENT_BACKGROUNDS["dark-navy"],
+              GRADIENT_PRESET_BACKGROUNDS[settings.gradient_preset] ??
+              GRADIENT_PRESET_BACKGROUNDS["dark-navy"],
           }}
         >
           {/* Mini hero preview */}

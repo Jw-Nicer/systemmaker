@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import type { CaseStudy } from "@/types/case-study";
 import {
   createCaseStudy,
-  updateCaseStudy,
   deleteCaseStudy,
-  toggleCaseStudyPublished,
   reorderCaseStudies,
+  toggleCaseStudyPublished,
+  updateCaseStudy,
 } from "@/lib/actions/case-studies";
+import {
+  AdminPageHeader,
+  AdminPanel,
+  AdminPill,
+} from "@/components/admin/AdminPrimitives";
+import ImageUploadField from "@/components/admin/ImageUploadField";
+import { useCrudManager, INPUT_CLASS_NAME } from "@/hooks/useCrudManager";
 
 type FormData = {
   title: string;
@@ -46,456 +51,364 @@ function toSlug(s: string) {
     .replace(/^-|-$/g, "");
 }
 
+const actions = {
+  create: createCaseStudy,
+  update: updateCaseStudy,
+  remove: deleteCaseStudy,
+  toggle: toggleCaseStudyPublished,
+  reorder: reorderCaseStudies,
+};
+
+function itemToForm(item: CaseStudy): FormData {
+  return {
+    title: item.title,
+    slug: item.slug,
+    client_name: item.client_name,
+    industry: item.industry,
+    tools: item.tools.join(", "),
+    challenge: item.challenge,
+    solution: item.solution,
+    metrics: item.metrics.length
+      ? item.metrics
+      : [{ label: "", before: "", after: "" }],
+    thumbnail_url: item.thumbnail_url,
+    is_published: item.is_published,
+    sort_order: item.sort_order,
+  };
+}
+
+function preparePayload(form: FormData) {
+  return {
+    ...form,
+    tools: form.tools
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+    metrics: form.metrics.filter((m) => m.label || m.before || m.after),
+  };
+}
+
 export default function CaseStudiesManager({
   initialData,
 }: {
   initialData: CaseStudy[];
 }) {
-  const router = useRouter();
-  const [items, setItems] = useState<CaseStudy[]>(initialData);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormData>(emptyForm);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
-
-  function openCreate() {
-    setEditingId(null);
-    setForm({ ...emptyForm, sort_order: items.length });
-    setShowForm(true);
-    setError("");
-  }
-
-  function openEdit(item: CaseStudy) {
-    setEditingId(item.id);
-    setForm({
-      title: item.title,
-      slug: item.slug,
-      client_name: item.client_name,
-      industry: item.industry,
-      tools: item.tools.join(", "),
-      challenge: item.challenge,
-      solution: item.solution,
-      metrics: item.metrics.length
-        ? item.metrics
-        : [{ label: "", before: "", after: "" }],
-      thumbnail_url: item.thumbnail_url,
-      is_published: item.is_published,
-      sort_order: item.sort_order,
-    });
-    setShowForm(true);
-    setError("");
-  }
-
-  function cancelForm() {
-    setShowForm(false);
-    setEditingId(null);
-    setError("");
-  }
-
-  function updateField(field: keyof FormData, value: unknown) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
+  const crud = useCrudManager<CaseStudy, FormData>({
+    initialData,
+    emptyForm,
+    actions,
+    itemToForm,
+    preparePayload,
+  });
 
   function updateMetric(
     idx: number,
     field: "label" | "before" | "after",
     value: string
   ) {
-    setForm((f) => {
-      const metrics = [...f.metrics];
-      metrics[idx] = { ...metrics[idx], [field]: value };
-      return { ...f, metrics };
-    });
+    const metrics = [...crud.form.metrics];
+    metrics[idx] = { ...metrics[idx], [field]: value };
+    crud.updateField("metrics", metrics);
   }
 
   function addMetric() {
-    setForm((f) => ({
-      ...f,
-      metrics: [...f.metrics, { label: "", before: "", after: "" }],
-    }));
+    crud.updateField("metrics", [
+      ...crud.form.metrics,
+      { label: "", before: "", after: "" },
+    ]);
   }
 
   function removeMetric(idx: number) {
-    setForm((f) => ({
-      ...f,
-      metrics: f.metrics.filter((_, i) => i !== idx),
-    }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-
-    const payload = {
-      ...form,
-      tools: form.tools
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      metrics: form.metrics.filter((m) => m.label || m.before || m.after),
-    };
-
-    const result = editingId
-      ? await updateCaseStudy(editingId, payload)
-      : await createCaseStudy(payload);
-
-    setSaving(false);
-
-    if (!result.success) {
-      setError(result.error ?? "Something went wrong");
-      return;
-    }
-
-    setShowForm(false);
-    setEditingId(null);
-    setForm(emptyForm);
-    router.refresh();
-  }
-
-  async function handleTogglePublished(item: CaseStudy) {
-    const result = await toggleCaseStudyPublished(item.id, !item.is_published);
-    if (result.success) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id ? { ...i, is_published: !i.is_published } : i
-        )
-      );
-    }
-  }
-
-  async function handleDelete(id: string) {
-    const result = await deleteCaseStudy(id);
-    if (result.success) {
-      setItems((prev) => prev.filter((i) => i.id !== id));
-      setDeleteConfirm(null);
-    }
-  }
-
-  function handleDragStart(index: number) {
-    dragItem.current = index;
-  }
-
-  function handleDragEnter(index: number) {
-    dragOverItem.current = index;
-  }
-
-  async function handleDragEnd() {
-    if (dragItem.current === null || dragOverItem.current === null) return;
-    if (dragItem.current === dragOverItem.current) return;
-
-    const previous = [...items];
-    const reordered = [...items];
-    const [removed] = reordered.splice(dragItem.current, 1);
-    reordered.splice(dragOverItem.current, 0, removed);
-
-    setItems(reordered);
-    dragItem.current = null;
-    dragOverItem.current = null;
-
-    try {
-      await reorderCaseStudies(reordered.map((i) => i.id));
-    } catch {
-      setItems(previous);
-      setError("Failed to reorder. Changes reverted.");
-    }
+    crud.updateField(
+      "metrics",
+      crud.form.metrics.filter((_, i) => i !== idx)
+    );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Case Studies</h1>
-          <p className="text-muted text-sm">
-            Create and manage your proof of work.
-          </p>
-        </div>
-        {!showForm && (
-          <button
-            onClick={openCreate}
-            className="px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            + New Case Study
-          </button>
-        )}
-      </div>
+      <AdminPageHeader
+        eyebrow="Content"
+        title="Case Studies"
+        description="Manage proof points, client context, and published ordering for the marketing site."
+        actions={
+          !crud.showForm ? (
+            <button
+              onClick={crud.openCreate}
+              className="rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+            >
+              New Case Study
+            </button>
+          ) : null
+        }
+      />
 
-      {/* Form */}
-      {showForm && (
-        <div className="mb-8 rounded-xl border border-border bg-surface p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            {editingId ? "Edit Case Study" : "New Case Study"}
-          </h2>
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {error}
+      {crud.showForm && (
+        <AdminPanel className="mt-8 mb-8">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-[#1d2318]">
+                {crud.editingId ? "Edit Case Study" : "New Case Study"}
+              </h2>
+              <p className="mt-1 text-sm text-[#6c7467]">
+                Keep metrics and narrative aligned with the published proof of work.
+              </p>
+            </div>
+            <AdminPill tone={crud.form.is_published ? "green" : "neutral"}>
+              {crud.form.is_published ? "Published" : "Draft"}
+            </AdminPill>
+          </div>
+
+          {crud.error && (
+            <div className="mb-4 rounded-[18px] border border-red-200 bg-[#fff4f2] p-3 text-sm text-[#9d3f3f]">
+              {crud.error}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+
+          <form onSubmit={crud.handleSubmit} className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm text-muted mb-1">Title</label>
+                <label className="mb-1 block text-sm text-[#6c7467]">Title</label>
                 <input
                   type="text"
-                  value={form.title}
+                  value={crud.form.title}
                   onChange={(e) => {
-                    updateField("title", e.target.value);
-                    if (!editingId) updateField("slug", toSlug(e.target.value));
+                    crud.updateField("title", e.target.value);
+                    if (!crud.editingId) crud.updateField("slug", toSlug(e.target.value));
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                  className={INPUT_CLASS_NAME}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted mb-1">Slug</label>
+                <label className="mb-1 block text-sm text-[#6c7467]">Slug</label>
                 <input
                   type="text"
-                  value={form.slug}
-                  onChange={(e) => updateField("slug", e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                  value={crud.form.slug}
+                  onChange={(e) => crud.updateField("slug", e.target.value)}
+                  className={INPUT_CLASS_NAME}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted mb-1">
-                  Client Name
-                </label>
+                <label className="mb-1 block text-sm text-[#6c7467]">Client Name</label>
                 <input
                   type="text"
-                  value={form.client_name}
-                  onChange={(e) => updateField("client_name", e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                  value={crud.form.client_name}
+                  onChange={(e) => crud.updateField("client_name", e.target.value)}
+                  className={INPUT_CLASS_NAME}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted mb-1">
-                  Industry
-                </label>
+                <label className="mb-1 block text-sm text-[#6c7467]">Industry</label>
                 <input
                   type="text"
-                  value={form.industry}
-                  onChange={(e) => updateField("industry", e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                  value={crud.form.industry}
+                  onChange={(e) => crud.updateField("industry", e.target.value)}
+                  className={INPUT_CLASS_NAME}
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-muted mb-1">
-                Tools (comma-separated)
-              </label>
+              <label className="mb-1 block text-sm text-[#6c7467]">Tools (comma-separated)</label>
               <input
                 type="text"
-                value={form.tools}
-                onChange={(e) => updateField("tools", e.target.value)}
+                value={crud.form.tools}
+                onChange={(e) => crud.updateField("tools", e.target.value)}
                 placeholder="Zapier, Google Sheets, Slack"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                className={INPUT_CLASS_NAME}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-muted mb-1">Challenge</label>
+              <label className="mb-1 block text-sm text-[#6c7467]">Challenge</label>
               <textarea
-                value={form.challenge}
-                onChange={(e) => updateField("challenge", e.target.value)}
+                value={crud.form.challenge}
+                onChange={(e) => crud.updateField("challenge", e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm resize-y"
+                className={`${INPUT_CLASS_NAME} resize-y`}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-muted mb-1">Solution</label>
+              <label className="mb-1 block text-sm text-[#6c7467]">Solution</label>
               <textarea
-                value={form.solution}
-                onChange={(e) => updateField("solution", e.target.value)}
+                value={crud.form.solution}
+                onChange={(e) => crud.updateField("solution", e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm resize-y"
+                className={`${INPUT_CLASS_NAME} resize-y`}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-muted mb-1">
-                Thumbnail URL
-              </label>
-              <input
-                type="text"
-                value={form.thumbnail_url}
-                onChange={(e) => updateField("thumbnail_url", e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+              <ImageUploadField
+                label="Thumbnail"
+                value={crud.form.thumbnail_url}
+                onChange={(value) => crud.updateField("thumbnail_url", value)}
+                pathPrefix="admin/case-studies"
               />
             </div>
 
-            {/* Metrics */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm text-muted">Metrics</label>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-sm text-[#6c7467]">Metrics</label>
                 <button
                   type="button"
                   onClick={addMetric}
-                  className="text-xs text-primary hover:opacity-80"
+                  className="text-sm font-medium text-[#4f6032] hover:underline"
                 >
-                  + Add Metric
+                  Add Metric
                 </button>
               </div>
-              <div className="space-y-2">
-                {form.metrics.map((m, idx) => (
-                  <div key={idx} className="flex gap-2 items-start">
+              <div className="space-y-3">
+                {crud.form.metrics.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="grid gap-2 rounded-[18px] border border-[#ddd5c7] bg-white/70 p-3 md:grid-cols-[1fr_130px_130px_auto]"
+                  >
                     <input
                       type="text"
                       value={m.label}
                       onChange={(e) => updateMetric(idx, "label", e.target.value)}
                       placeholder="Label"
-                      className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                      className={INPUT_CLASS_NAME}
                     />
                     <input
                       type="text"
                       value={m.before}
-                      onChange={(e) =>
-                        updateMetric(idx, "before", e.target.value)
-                      }
+                      onChange={(e) => updateMetric(idx, "before", e.target.value)}
                       placeholder="Before"
-                      className="w-28 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                      className={INPUT_CLASS_NAME}
                     />
                     <input
                       type="text"
                       value={m.after}
                       onChange={(e) => updateMetric(idx, "after", e.target.value)}
                       placeholder="After"
-                      className="w-28 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+                      className={INPUT_CLASS_NAME}
                     />
-                    {form.metrics.length > 1 && (
+                    {crud.form.metrics.length > 1 ? (
                       <button
                         type="button"
                         onClick={() => removeMetric(idx)}
-                        className="px-2 py-2 text-red-400 hover:text-red-300 text-sm"
+                        className="rounded-full border border-[#e3d8cb] px-3 py-2 text-sm text-[#8a4b4b] hover:bg-[#fff4f2]"
                       >
-                        &times;
+                        Remove
                       </button>
+                    ) : (
+                      <div />
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.is_published}
-                  onChange={(e) => updateField("is_published", e.target.checked)}
-                  className="rounded"
-                />
-                Published
-              </label>
-            </div>
+            <label className="flex items-center gap-2 text-sm text-[#27311f]">
+              <input
+                type="checkbox"
+                checked={crud.form.is_published}
+                onChange={(e) => crud.updateField("is_published", e.target.checked)}
+                className="rounded"
+              />
+              Published
+            </label>
 
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-lg bg-primary text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                disabled={crud.saving}
+                className="rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02] disabled:opacity-50"
               >
-                {saving
+                {crud.saving
                   ? "Saving..."
-                  : editingId
+                  : crud.editingId
                     ? "Update Case Study"
                     : "Create Case Study"}
               </button>
               <button
                 type="button"
-                onClick={cancelForm}
-                className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:text-foreground transition-colors"
+                onClick={crud.cancelForm}
+                className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-medium text-[#596351] transition-colors hover:bg-white"
               >
                 Cancel
               </button>
             </div>
           </form>
-        </div>
+        </AdminPanel>
       )}
 
-      {/* List */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <AdminPanel className="mt-8 overflow-hidden p-0">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="px-6 py-3 text-muted font-medium w-8"></th>
-              <th className="px-6 py-3 text-muted font-medium">Title</th>
-              <th className="px-6 py-3 text-muted font-medium">Industry</th>
-              <th className="px-6 py-3 text-muted font-medium">Status</th>
-              <th className="px-6 py-3 text-muted font-medium text-right">
-                Actions
-              </th>
+          <thead className="bg-white/55">
+            <tr className="border-b border-[#ddd5c7] text-left">
+              <th className="w-8 px-6 py-3 font-medium text-[#6c7467]"></th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Title</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Industry</th>
+              <th className="px-6 py-3 font-medium text-[#6c7467]">Status</th>
+              <th className="px-6 py-3 text-right font-medium text-[#6c7467]">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.length === 0 ? (
+            {crud.items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-muted">
+                <td colSpan={5} className="px-6 py-12 text-center text-[#6c7467]">
                   No case studies yet. Create your first one to get started.
                 </td>
               </tr>
             ) : (
-              items.map((item, idx) => (
+              crud.items.map((item, idx) => (
                 <tr
                   key={item.id}
                   draggable
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragEnter={() => handleDragEnter(idx)}
-                  onDragEnd={handleDragEnd}
+                  onDragStart={() => crud.handleDragStart(idx)}
+                  onDragEnter={() => crud.handleDragEnter(idx)}
+                  onDragEnd={crud.handleDragEnd}
                   onDragOver={(e) => e.preventDefault()}
-                  className="border-b border-border last:border-b-0 hover:bg-surface-light/50 cursor-grab active:cursor-grabbing"
+                  className="cursor-grab border-b border-[#e1d9cb] transition-colors hover:bg-white/45 active:cursor-grabbing"
                 >
-                  <td className="px-6 py-3 text-muted">⠿</td>
-                  <td className="px-6 py-3 font-medium">{item.title}</td>
-                  <td className="px-6 py-3 text-muted">{item.industry}</td>
-                  <td className="px-6 py-3">
-                    <button
-                      onClick={() => handleTogglePublished(item)}
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        item.is_published
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-yellow-500/10 text-yellow-400"
-                      }`}
-                    >
-                      {item.is_published ? "Published" : "Draft"}
+                  <td className="px-6 py-4 text-[#8a8f7f]">⠿</td>
+                  <td className="px-6 py-4 font-medium text-[#1d2318]">{item.title}</td>
+                  <td className="px-6 py-4 text-[#596351]">{item.industry}</td>
+                  <td className="px-6 py-4">
+                    <button onClick={() => crud.handleTogglePublished(item)}>
+                      <AdminPill tone={item.is_published ? "green" : "neutral"}>
+                        {item.is_published ? "Published" : "Draft"}
+                      </AdminPill>
                     </button>
                   </td>
-                  <td className="px-6 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-3">
                       <button
-                        onClick={() => openEdit(item)}
-                        className="text-xs text-muted hover:text-foreground transition-colors"
+                        onClick={() => crud.openEdit(item)}
+                        className="text-sm text-[#4f6032] hover:underline"
                       >
                         Edit
                       </button>
-                      {deleteConfirm === item.id ? (
-                        <span className="flex items-center gap-1">
+                      {crud.deleteConfirm === item.id ? (
+                        <span className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDelete(item.id)}
-                            className="text-xs text-red-400 hover:text-red-300"
+                            onClick={() => crud.handleDelete(item.id)}
+                            className="text-sm text-[#9d3f3f] hover:underline"
                           >
                             Confirm
                           </button>
                           <button
-                            onClick={() => setDeleteConfirm(null)}
-                            className="text-xs text-muted hover:text-foreground"
+                            onClick={() => crud.setDeleteConfirm(null)}
+                            className="text-sm text-[#6c7467] hover:underline"
                           >
                             Cancel
                           </button>
                         </span>
                       ) : (
                         <button
-                          onClick={() => setDeleteConfirm(item.id)}
-                          className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                          onClick={() => crud.setDeleteConfirm(item.id)}
+                          className="text-sm text-[#9d3f3f] hover:underline"
                         >
                           Delete
                         </button>
@@ -507,7 +420,7 @@ export default function CaseStudiesManager({
             )}
           </tbody>
         </table>
-      </div>
+      </AdminPanel>
     </div>
   );
 }

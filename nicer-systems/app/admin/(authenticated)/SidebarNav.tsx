@@ -2,19 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const sidebarLinks = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/case-studies", label: "Case Studies" },
-  { href: "/admin/testimonials", label: "Testimonials" },
-  { href: "/admin/faqs", label: "FAQs" },
-  { href: "/admin/offers", label: "Offers" },
-  { href: "/admin/leads", label: "Leads" },
-  { href: "/admin/variants", label: "Landing Variants" },
-  { href: "/admin/experiments", label: "A/B Tests" },
-  { href: "/admin/agent-templates", label: "Agent Templates" },
-  { href: "/admin/settings", label: "Settings" },
-];
+import { SIDEBAR_GROUPS } from "@/lib/admin/sidebar-config";
 
 export default function SidebarNav() {
   const pathname = usePathname();
@@ -25,19 +13,28 @@ export default function SidebarNav() {
   }
 
   return (
-    <nav className="flex-1 p-4 space-y-1">
-      {sidebarLinks.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`block px-4 py-2.5 rounded-lg text-sm transition-colors ${
-            isActive(link.href)
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted hover:text-foreground hover:bg-surface-light"
-          }`}
-        >
-          {link.label}
-        </Link>
+    <nav className="flex-1 space-y-6 px-4 py-6">
+      {SIDEBAR_GROUPS.map((group) => (
+        <div key={group.title}>
+          <p className="px-3 text-[11px] uppercase tracking-[0.2em] text-[#91a08f]">
+            {group.title}
+          </p>
+          <div className="mt-2 space-y-1">
+            {group.links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`block rounded-2xl px-4 py-3 text-sm transition-colors ${
+                  isActive(link.href)
+                    ? "bg-[#edf2e5] text-[#1f2b19] font-medium"
+                    : "text-[#d8d2c5] hover:bg-white/8 hover:text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
       ))}
     </nav>
   );

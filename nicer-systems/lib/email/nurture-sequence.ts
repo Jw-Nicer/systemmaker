@@ -72,6 +72,6 @@ export async function enrollInNurture(
       nurture_enrolled_at: new Date(),
     });
   } catch (err) {
-    console.error("Failed to update nurture status on lead:", err);
+    console.error("Failed to update nurture status on lead", err);
   }
 }

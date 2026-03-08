@@ -20,7 +20,17 @@
       "Bash(gcloud services:*)",
       "Bash(gcloud logging:*)",
       "Bash(tail:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx next:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "WebFetch(domain:webcache.googleusercontent.com)",
+      "Bash(rm:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(grep:*)",
+      "Bash(npx vitest:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ]
   }
 }

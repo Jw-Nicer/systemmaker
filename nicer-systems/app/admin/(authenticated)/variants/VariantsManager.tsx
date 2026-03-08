@@ -1,36 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LandingVariant } from "@/types/variant";
+import type {
+  LandingFeatureItem,
+  LandingHowItWorksStep,
+  LandingVariant,
+  LandingVariantSections,
+} from "@/types/variant";
 import {
   createVariant,
-  updateVariant,
   deleteVariant,
+  reorderVariants,
   toggleVariantPublished,
+  updateVariant,
 } from "@/lib/actions/variants";
+import { normalizeVariantSections } from "@/lib/marketing/variant-content";
+import {
+  AdminPageHeader,
+  AdminPanel,
+  AdminPill,
+} from "@/components/admin/AdminPrimitives";
 
 type FormData = {
   slug: string;
   industry: string;
-  headline: string;
-  subheadline: string;
-  cta_text: string;
   meta_title: string;
   meta_description: string;
-  featured_industries: string;
+  sections: LandingVariantSections;
 };
 
 const emptyForm: FormData = {
   slug: "",
   industry: "",
-  headline: "",
-  subheadline: "",
-  cta_text: "Book a Scoping Call",
   meta_title: "",
   meta_description: "",
-  featured_industries: "",
+  sections: normalizeVariantSections(null),
 };
+
+function inputClassName() {
+  return "w-full rounded-[18px] border border-[#d7d0c1] bg-[#fbf7ef] px-4 py-3 text-sm text-[#1d2318] outline-none transition-colors focus:border-[#92a07a]";
+}
 
 export default function VariantsManager({
   initialData,
@@ -45,6 +56,14 @@ export default function VariantsManager({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [origin] = useState(() =>
+    typeof window !== "undefined" ? window.location.origin : ""
+  );
+
+  useEffect(() => {
+    setItems(initialData);
+  }, [initialData]);
 
   function openCreate() {
     setEditingId(null);
@@ -58,12 +77,9 @@ export default function VariantsManager({
     setForm({
       slug: item.slug,
       industry: item.industry,
-      headline: item.headline,
-      subheadline: item.subheadline,
-      cta_text: item.cta_text,
       meta_title: item.meta_title,
       meta_description: item.meta_description,
-      featured_industries: item.featured_industries.join(", "),
+      sections: normalizeVariantSections(item),
     });
     setShowForm(true);
     setError("");
@@ -75,8 +91,36 @@ export default function VariantsManager({
     setError("");
   }
 
-  function updateField(field: keyof FormData, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+  function updateField<K extends keyof FormData>(field: K, value: FormData[K]) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateSection<K extends keyof LandingVariantSections>(
+    section: K,
+    value: LandingVariantSections[K]
+  ) {
+    setForm((current) => ({
+      ...current,
+      sections: { ...current.sections, [section]: value },
+    }));
+  }
+
+  function updateHowStep(index: number, field: keyof LandingHowItWorksStep, value: string) {
+    updateSection("how_it_works", {
+      ...form.sections.how_it_works,
+      steps: form.sections.how_it_works.steps.map((step, idx) =>
+        idx === index ? { ...step, [field]: value } : step
+      ),
+    });
+  }
+
+  function updateFeature(index: number, field: keyof LandingFeatureItem, value: string) {
+    updateSection("features", {
+      ...form.sections.features,
+      items: form.sections.features.items.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item
+      ),
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,257 +131,686 @@ export default function VariantsManager({
     const payload = {
       slug: form.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
       industry: form.industry,
-      headline: form.headline,
-      subheadline: form.subheadline,
-      cta_text: form.cta_text,
+      headline: form.sections.hero.headline,
+      subheadline: form.sections.hero.subheadline,
+      cta_text: form.sections.hero.cta_text,
       meta_title: form.meta_title || `${form.industry} Automation — Nicer Systems`,
-      meta_description: form.meta_description || form.subheadline,
-      featured_industries: form.featured_industries
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      meta_description: form.meta_description || form.sections.hero.subheadline,
+      featured_industries: form.sections.proof.featured_industries,
+      sections: form.sections,
     };
 
-    try {
-      if (editingId) {
-        await updateVariant(editingId, payload);
-        setItems((prev) =>
-          prev.map((i) => (i.id === editingId ? { ...i, ...payload } : i))
-        );
-      } else {
-        await createVariant(payload);
-        router.refresh();
-      }
-      setShowForm(false);
-      setEditingId(null);
-    } catch {
-      setError("Failed to save variant");
-    } finally {
-      setSaving(false);
+    let result;
+    if (editingId) {
+      result = await updateVariant(editingId, payload);
+    } else {
+      result = await createVariant(payload);
     }
+
+    setSaving(false);
+
+    if (!result.success) {
+      setError(result.error ?? "Failed to save variant");
+      return;
+    }
+
+    if (editingId) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === editingId
+            ? {
+                ...item,
+                ...payload,
+                sections: payload.sections,
+              }
+            : item
+        )
+      );
+    } else {
+      router.refresh();
+    }
+
+    setShowForm(false);
+    setEditingId(null);
   }
 
   async function handleToggle(id: string, published: boolean) {
-    await toggleVariantPublished(id, !published);
+    setError("");
+    const result = await toggleVariantPublished(id, !published);
+    if (!result.success) {
+      setError(result.error ?? "Failed to update variant");
+      return;
+    }
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, is_published: !published } : i))
+      prev.map((item) =>
+        item.id === id ? { ...item, is_published: !published } : item
+      )
     );
   }
 
   async function handleDelete(id: string) {
-    await deleteVariant(id);
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    setError("");
+    const result = await deleteVariant(id);
+    if (!result.success) {
+      setError(result.error ?? "Failed to delete variant");
+      return;
+    }
+    setItems((prev) => prev.filter((item) => item.id !== id));
     setDeleteConfirm(null);
+  }
+
+  async function moveItem(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+
+    const next = [...items];
+    const [item] = next.splice(index, 1);
+    next.splice(targetIndex, 0, item);
+
+    setItems(next);
+    const result = await reorderVariants(next.map((variant) => variant.id));
+    if (!result.success) {
+      setItems(items);
+      setError(result.error ?? "Failed to reorder variants");
+    }
+  }
+
+  function getVariantUrl(slug: string) {
+    return origin ? `${origin}/${slug}` : `/${slug}`;
+  }
+
+  async function handleCopyLink(slug: string) {
+    const variantUrl = getVariantUrl(slug);
+
+    try {
+      await navigator.clipboard.writeText(variantUrl);
+    } catch {
+      const input = document.createElement("input");
+      input.value = variantUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+
+    setCopiedLink(slug);
+    window.setTimeout(() => {
+      setCopiedLink((current) => (current === slug ? null : current));
+    }, 2000);
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Landing Variants</h1>
-          <p className="text-sm text-muted mt-1">
-            Industry-specific landing pages with tailored copy.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2.5 rounded-lg bg-primary text-background text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          + New Variant
-        </button>
-      </div>
+      <AdminPageHeader
+        eyebrow="Growth"
+        title="Industry Landing Variants"
+        description="Manage full section-level configuration for industry landing pages. Published variants render at /{slug} with shared layout and variant-specific section copy."
+        actions={
+          !showForm ? (
+            <button
+              onClick={openCreate}
+              className="rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+            >
+              New Variant
+            </button>
+          ) : null
+        }
+      />
 
-      {/* Form */}
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="mb-8 p-6 rounded-xl border border-border bg-surface space-y-4"
-        >
-          <h2 className="font-semibold">
-            {editingId ? "Edit Variant" : "New Variant"}
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-4">
+        <AdminPanel className="mt-8 mb-8">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <label className="block text-sm mb-1">Industry Name *</label>
-              <input
-                value={form.industry}
-                onChange={(e) => updateField("industry", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-                placeholder="e.g. Healthcare"
-                required
-              />
+              <h2 className="text-lg font-semibold text-[#1d2318]">
+                {editingId ? "Edit Variant" : "New Variant"}
+              </h2>
+              <p className="mt-1 text-sm text-[#6c7467]">
+                Draft a full industry landing page by adjusting the shared sections below.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm mb-1">URL Slug *</label>
-              <input
-                value={form.slug}
-                onChange={(e) => updateField("slug", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-                placeholder="e.g. healthcare"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Headline *</label>
-            <input
-              value={form.headline}
-              onChange={(e) => updateField("headline", e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-              placeholder="e.g. Automate your healthcare admin"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Subheadline *</label>
-            <textarea
-              value={form.subheadline}
-              onChange={(e) => updateField("subheadline", e.target.value)}
-              rows={2}
-              className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm resize-none"
-              placeholder="Supporting text below the headline"
-              required
-            />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1">CTA Button Text</label>
-              <input
-                value={form.cta_text}
-                onChange={(e) => updateField("cta_text", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">
-                Featured Industries (comma-separated)
-              </label>
-              <input
-                value={form.featured_industries}
-                onChange={(e) => updateField("featured_industries", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-                placeholder="e.g. Healthcare, Medical Devices"
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1">Meta Title</label>
-              <input
-                value={form.meta_title}
-                onChange={(e) => updateField("meta_title", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-                placeholder="Auto-generated if empty"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">Meta Description</label>
-              <input
-                value={form.meta_description}
-                onChange={(e) => updateField("meta_description", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm"
-                placeholder="Uses subheadline if empty"
-              />
-            </div>
+            <AdminPill tone="blue">Full section config</AdminPill>
           </div>
 
           {error && (
-            <p className="text-red-400 text-sm">{error}</p>
+            <div className="mb-4 rounded-[18px] border border-red-200 bg-[#fff4f2] p-3 text-sm text-[#9d3f3f]">
+              {error}
+            </div>
           )}
 
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2.5 rounded-lg bg-primary text-background text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {saving ? "Saving..." : editingId ? "Update" : "Create"}
-            </button>
-            <button
-              type="button"
-              onClick={cancelForm}
-              className="px-5 py-2.5 rounded-lg border border-border text-sm hover:bg-surface-light transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">Identity</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">Industry Name</label>
+                  <input
+                    value={form.industry}
+                    onChange={(e) => updateField("industry", e.target.value)}
+                    className={inputClassName()}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">URL Slug</label>
+                  <input
+                    value={form.slug}
+                    onChange={(e) => updateField("slug", e.target.value)}
+                    className={inputClassName()}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">Meta Title</label>
+                  <input
+                    value={form.meta_title}
+                    onChange={(e) => updateField("meta_title", e.target.value)}
+                    className={inputClassName()}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">Meta Description</label>
+                  <input
+                    value={form.meta_description}
+                    onChange={(e) => updateField("meta_description", e.target.value)}
+                    className={inputClassName()}
+                  />
+                </div>
+              </div>
+            </AdminPanel>
+
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">Hero</h3>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">Headline</label>
+                  <textarea
+                    value={form.sections.hero.headline}
+                    onChange={(e) =>
+                      updateSection("hero", { ...form.sections.hero, headline: e.target.value })
+                    }
+                    rows={2}
+                    className={`${inputClassName()} resize-y`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[#6c7467]">Subheadline</label>
+                  <textarea
+                    value={form.sections.hero.subheadline}
+                    onChange={(e) =>
+                      updateSection("hero", { ...form.sections.hero, subheadline: e.target.value })
+                    }
+                    rows={3}
+                    className={`${inputClassName()} resize-y`}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm text-[#6c7467]">Primary CTA Text</label>
+                    <input
+                      value={form.sections.hero.cta_text}
+                      onChange={(e) =>
+                        updateSection("hero", { ...form.sections.hero, cta_text: e.target.value })
+                      }
+                      className={inputClassName()}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-[#6c7467]">Proof Line</label>
+                    <input
+                      value={form.sections.hero.proof_line}
+                      onChange={(e) =>
+                        updateSection("hero", { ...form.sections.hero, proof_line: e.target.value })
+                      }
+                      className={inputClassName()}
+                    />
+                  </div>
+                </div>
+              </div>
+            </AdminPanel>
+
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">Demo + Proof</h3>
+              <div className="mt-4 grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-[#46523a]">Live Demo</p>
+                  <input
+                    value={form.sections.demo.eyebrow}
+                    onChange={(e) =>
+                      updateSection("demo", { ...form.sections.demo, eyebrow: e.target.value })
+                    }
+                    className={inputClassName()}
+                    placeholder="Eyebrow"
+                  />
+                  <input
+                    value={form.sections.demo.title}
+                    onChange={(e) =>
+                      updateSection("demo", { ...form.sections.demo, title: e.target.value })
+                    }
+                    className={inputClassName()}
+                    placeholder="Title"
+                  />
+                  <textarea
+                    value={form.sections.demo.description}
+                    onChange={(e) =>
+                      updateSection("demo", { ...form.sections.demo, description: e.target.value })
+                    }
+                    rows={3}
+                    className={`${inputClassName()} resize-y`}
+                    placeholder="Description"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-[#46523a]">Proof / Case Studies</p>
+                  <input
+                    value={form.sections.proof.eyebrow}
+                    onChange={(e) =>
+                      updateSection("proof", { ...form.sections.proof, eyebrow: e.target.value })
+                    }
+                    className={inputClassName()}
+                    placeholder="Eyebrow"
+                  />
+                  <input
+                    value={form.sections.proof.title}
+                    onChange={(e) =>
+                      updateSection("proof", { ...form.sections.proof, title: e.target.value })
+                    }
+                    className={inputClassName()}
+                    placeholder="Title"
+                  />
+                  <textarea
+                    value={form.sections.proof.description}
+                    onChange={(e) =>
+                      updateSection("proof", { ...form.sections.proof, description: e.target.value })
+                    }
+                    rows={3}
+                    className={`${inputClassName()} resize-y`}
+                    placeholder="Description"
+                  />
+                  <input
+                    value={form.sections.proof.featured_industries.join(", ")}
+                    onChange={(e) =>
+                      updateSection("proof", {
+                        ...form.sections.proof,
+                        featured_industries: e.target.value
+                          .split(",")
+                          .map((value) => value.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Featured industries"
+                  />
+                </div>
+              </div>
+            </AdminPanel>
+
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">How It Works</h3>
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input
+                    value={form.sections.how_it_works.eyebrow}
+                    onChange={(e) =>
+                      updateSection("how_it_works", {
+                        ...form.sections.how_it_works,
+                        eyebrow: e.target.value,
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Eyebrow"
+                  />
+                  <input
+                    value={form.sections.how_it_works.title}
+                    onChange={(e) =>
+                      updateSection("how_it_works", {
+                        ...form.sections.how_it_works,
+                        title: e.target.value,
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Section title"
+                  />
+                </div>
+                {form.sections.how_it_works.steps.map((step, index) => (
+                  <div key={step.id} className="grid gap-3 rounded-[18px] border border-[#ddd5c7] bg-white/65 p-4 md:grid-cols-[140px_1fr_1fr]">
+                    <input value={step.id} readOnly className={`${inputClassName()} bg-[#f1eadf] text-[#6c7467]`} />
+                    <input
+                      value={step.title}
+                      onChange={(e) => updateHowStep(index, "title", e.target.value)}
+                      className={inputClassName()}
+                      placeholder="Step title"
+                    />
+                    <textarea
+                      value={step.description}
+                      onChange={(e) => updateHowStep(index, "description", e.target.value)}
+                      rows={2}
+                      className={`${inputClassName()} resize-y`}
+                      placeholder="Step description"
+                    />
+                  </div>
+                ))}
+              </div>
+            </AdminPanel>
+
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">Features + Deliverables</h3>
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input
+                    value={form.sections.features.eyebrow}
+                    onChange={(e) =>
+                      updateSection("features", {
+                        ...form.sections.features,
+                        eyebrow: e.target.value,
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Eyebrow"
+                  />
+                  <input
+                    value={form.sections.features.title}
+                    onChange={(e) =>
+                      updateSection("features", {
+                        ...form.sections.features,
+                        title: e.target.value,
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Section title"
+                  />
+                </div>
+                {form.sections.features.items.map((item, index) => (
+                  <div key={item.id} className="grid gap-3 rounded-[18px] border border-[#ddd5c7] bg-white/65 p-4 md:grid-cols-[120px_1fr_1fr_1fr]">
+                    <input value={item.id} readOnly className={`${inputClassName()} bg-[#f1eadf] text-[#6c7467]`} />
+                    <input
+                      value={item.title}
+                      onChange={(e) => updateFeature(index, "title", e.target.value)}
+                      className={inputClassName()}
+                      placeholder="Feature title"
+                    />
+                    <textarea
+                      value={item.description}
+                      onChange={(e) => updateFeature(index, "description", e.target.value)}
+                      rows={2}
+                      className={`${inputClassName()} resize-y`}
+                      placeholder="Feature description"
+                    />
+                    <textarea
+                      value={item.visual}
+                      onChange={(e) => updateFeature(index, "visual", e.target.value)}
+                      rows={2}
+                      className={`${inputClassName()} resize-y`}
+                      placeholder="Visual caption"
+                    />
+                  </div>
+                ))}
+              </div>
+            </AdminPanel>
+
+            <AdminPanel tone="soft" className="p-5">
+              <h3 className="text-base font-semibold text-[#1d2318]">Pricing + FAQ + Final CTA</h3>
+              <div className="mt-4 space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-[#46523a]">Pricing</p>
+                    <input
+                      value={form.sections.pricing.eyebrow}
+                      onChange={(e) =>
+                        updateSection("pricing", { ...form.sections.pricing, eyebrow: e.target.value })
+                      }
+                      className={inputClassName()}
+                      placeholder="Eyebrow"
+                    />
+                    <input
+                      value={form.sections.pricing.title}
+                      onChange={(e) =>
+                        updateSection("pricing", { ...form.sections.pricing, title: e.target.value })
+                      }
+                      className={inputClassName()}
+                      placeholder="Title"
+                    />
+                    <textarea
+                      value={form.sections.pricing.description}
+                      onChange={(e) =>
+                        updateSection("pricing", { ...form.sections.pricing, description: e.target.value })
+                      }
+                      rows={3}
+                      className={`${inputClassName()} resize-y`}
+                      placeholder="Description"
+                    />
+                    <input
+                      value={form.sections.pricing.highlighted_tier ?? ""}
+                      onChange={(e) =>
+                        updateSection("pricing", {
+                          ...form.sections.pricing,
+                          highlighted_tier: e.target.value,
+                        })
+                      }
+                      className={inputClassName()}
+                      placeholder="Highlighted tier"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-[#46523a]">FAQ</p>
+                    <input
+                      value={form.sections.faq.eyebrow}
+                      onChange={(e) =>
+                        updateSection("faq", { ...form.sections.faq, eyebrow: e.target.value })
+                      }
+                      className={inputClassName()}
+                      placeholder="Eyebrow"
+                    />
+                    <input
+                      value={form.sections.faq.title}
+                      onChange={(e) =>
+                        updateSection("faq", { ...form.sections.faq, title: e.target.value })
+                      }
+                      className={inputClassName()}
+                      placeholder="Title"
+                    />
+                    <textarea
+                      value={form.sections.faq.description}
+                      onChange={(e) =>
+                        updateSection("faq", { ...form.sections.faq, description: e.target.value })
+                      }
+                      rows={3}
+                      className={`${inputClassName()} resize-y`}
+                      placeholder="Description"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-[#46523a]">Final CTA</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      value={form.sections.final_cta.eyebrow}
+                      onChange={(e) =>
+                        updateSection("final_cta", {
+                          ...form.sections.final_cta,
+                          eyebrow: e.target.value,
+                        })
+                      }
+                      className={inputClassName()}
+                      placeholder="Eyebrow"
+                    />
+                    <input
+                      value={form.sections.final_cta.cta_text}
+                      onChange={(e) =>
+                        updateSection("final_cta", {
+                          ...form.sections.final_cta,
+                          cta_text: e.target.value,
+                        })
+                      }
+                      className={inputClassName()}
+                      placeholder="CTA text"
+                    />
+                  </div>
+                  <input
+                    value={form.sections.final_cta.title}
+                    onChange={(e) =>
+                      updateSection("final_cta", {
+                        ...form.sections.final_cta,
+                        title: e.target.value,
+                      })
+                    }
+                    className={inputClassName()}
+                    placeholder="Title"
+                  />
+                  <textarea
+                    value={form.sections.final_cta.description}
+                    onChange={(e) =>
+                      updateSection("final_cta", {
+                        ...form.sections.final_cta,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className={`${inputClassName()} resize-y`}
+                    placeholder="Description"
+                  />
+                </div>
+              </div>
+            </AdminPanel>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02] disabled:opacity-50"
+              >
+                {saving ? "Saving..." : editingId ? "Update Variant" : "Create Variant"}
+              </button>
+              <button
+                type="button"
+                onClick={cancelForm}
+                className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-medium text-[#596351] transition-colors hover:bg-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </AdminPanel>
       )}
 
-      {/* List */}
       {items.length === 0 ? (
-        <p className="text-sm text-muted">
-          No variants yet. Create one to add an industry-specific landing page.
-        </p>
+        <AdminPanel className="mt-8 text-sm text-[#6c7467]">
+          No variants yet. Create one to add an industry landing page with tailored section copy.
+        </AdminPanel>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between p-4 rounded-xl border border-border bg-surface"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold truncate">{item.industry}</h3>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      item.is_published
-                        ? "bg-green-500/20 text-green-300"
-                        : "bg-gray-500/20 text-gray-400"
-                    }`}
-                  >
-                    {item.is_published ? "Published" : "Draft"}
-                  </span>
-                </div>
-                <p className="text-sm text-muted truncate mt-0.5">
-                  /{item.slug} — {item.headline}
-                </p>
-              </div>
+        <div className="mt-8 space-y-3">
+          {items.map((item, index) => {
+            const sections = normalizeVariantSections(item);
+            const variantUrl = getVariantUrl(item.slug);
 
-              <div className="flex items-center gap-2 ml-4">
-                <button
-                  onClick={() => handleToggle(item.id, item.is_published)}
-                  className="px-3 py-1.5 rounded-lg border border-border text-xs hover:bg-surface-light transition-colors"
-                >
-                  {item.is_published ? "Unpublish" : "Publish"}
-                </button>
-                <button
-                  onClick={() => openEdit(item)}
-                  className="px-3 py-1.5 rounded-lg border border-border text-xs hover:bg-surface-light transition-colors"
-                >
-                  Edit
-                </button>
-                {deleteConfirm === item.id ? (
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 text-xs"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="px-3 py-1.5 rounded-lg border border-border text-xs"
-                    >
-                      Cancel
-                    </button>
+            return (
+              <AdminPanel key={item.id} className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[#1d2318]">{item.industry}</h3>
+                    <AdminPill tone={item.is_published ? "green" : "neutral"}>
+                      {item.is_published ? "Published" : "Draft"}
+                    </AdminPill>
+                    <AdminPill tone="blue">/{item.slug}</AdminPill>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setDeleteConfirm(item.id)}
-                    className="px-3 py-1.5 rounded-lg border border-border text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                  <p className="mt-2 truncate text-sm text-[#596351]">{sections.hero.headline}</p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <label className="text-[11px] uppercase tracking-[0.14em] text-[#7e7b70]">
+                      Variant URL
+                    </label>
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                      <input
+                        readOnly
+                        value={variantUrl}
+                        className={`${inputClassName()} bg-[#f3ede2] font-mono text-xs text-[#596351] md:max-w-[28rem]`}
+                      />
+                      <a
+                        href={variantUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#27311f] hover:bg-white"
+                      >
+                        Open
+                      </a>
+                      <button
+                        onClick={() => handleCopyLink(item.slug)}
+                        className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#4f6032] hover:bg-white"
+                      >
+                        {copiedLink === item.slug ? "Copied" : "Copy Link"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-[#6c7467]">
+                    <span>Hero CTA: {sections.hero.cta_text}</span>
+                    <span>Proof filters: {sections.proof.featured_industries.length}</span>
+                    <span>How-it-works steps: {sections.how_it_works.steps.length}</span>
+                    <span>Features: {sections.features.items.length}</span>
+                    <span>Order: {index + 1}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  <Link
+                    href={`/preview/variant/${item.id}`}
+                    target="_blank"
+                    className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#596351] hover:bg-white"
                   >
-                    Delete
+                    Preview
+                  </Link>
+                  <button
+                    onClick={() => moveItem(index, -1)}
+                    disabled={index === 0}
+                    className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#596351] disabled:opacity-40"
+                  >
+                    Move up
                   </button>
-                )}
-              </div>
-            </div>
-          ))}
+                  <button
+                    onClick={() => moveItem(index, 1)}
+                    disabled={index === items.length - 1}
+                    className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#596351] disabled:opacity-40"
+                  >
+                    Move down
+                  </button>
+                  <button
+                    onClick={() => handleToggle(item.id, item.is_published)}
+                    className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#596351] hover:bg-white"
+                  >
+                    {item.is_published ? "Unpublish" : "Publish"}
+                  </button>
+                  <button
+                    onClick={() => openEdit(item)}
+                    className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#4f6032] hover:bg-white"
+                  >
+                    Edit
+                  </button>
+                  {deleteConfirm === item.id ? (
+                    <>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="rounded-full bg-[#8f3f3f] px-3 py-2 text-xs font-medium text-white"
+                      >
+                        Confirm Delete
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-3 py-2 text-xs text-[#596351]"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirm(item.id)}
+                      className="rounded-full border border-[#e3d8cb] bg-[#fff7f4] px-3 py-2 text-xs text-[#9d3f3f]"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </AdminPanel>
+            );
+          })}
         </div>
       )}
     </div>

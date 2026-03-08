@@ -1,14 +1,40 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { GlowLine } from "@/components/ui/GlowLine";
+import { Logo } from "@/components/ui/Logo";
+import { MobileNav } from "@/components/marketing/MobileNav";
 
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/case-studies", label: "Proof of Work" },
-  { href: "/contact", label: "Contact" },
+  { href: "/#see-it-work", label: "Demo" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/case-studies", label: "Case Studies" },
+];
+
+const footerColumns = [
+  {
+    title: "Company",
+    links: [
+      { label: "Case Studies", href: "/case-studies" },
+      { label: "Contact", href: "/contact" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+    ],
+  },
+  {
+    title: "Explore",
+    links: [
+      { label: "Live Demo", href: "/#see-it-work" },
+      { label: "How It Works", href: "/#how-it-works" },
+      { label: "Pricing", href: "/#pricing" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Get a Preview Plan", href: "/#see-it-work" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Book a Scoping Call", href: "/contact" },
+    ],
+  },
 ];
 
 export default function MarketingLayout({
@@ -16,107 +42,83 @@ export default function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-glass-border bg-glass-bg backdrop-blur-xl sticky top-0 z-50">
-        <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-primary text-glow">
-            Nicer Systems
-          </Link>
+    <div className="min-h-screen bg-[#f4efe5] text-[#1d2318]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[#171d13] focus:px-4 focus:py-2 focus:text-sm focus:text-[#f7f2e8] focus:outline-none focus:ring-2 focus:ring-[#758941]"
+      >
+        Skip to main content
+      </a>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-muted hover:text-primary transition-colors relative group"
-              >
-                {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
-              </Link>
-            ))}
-            <Link
-              href="/contact"
-              className="text-sm font-medium px-4 py-2 rounded-lg bg-primary text-background hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all"
-            >
-              Book a Call
-            </Link>
+      <header className="sticky top-0 z-50 border-b border-[#d9d1c3]/80 bg-[#f4efe5]/95 backdrop-blur-md">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:h-18 sm:px-6 lg:px-10"
+        >
+          <div className="sm:hidden">
+            <Logo size="sm" variant="light" />
+          </div>
+          <div className="hidden sm:block">
+            <Logo size="md" variant="light" />
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden text-muted hover:text-foreground transition-colors p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {mobileMenuOpen ? (
-                <path d="M6 6l12 12M6 18L18 6" />
-              ) : (
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </nav>
+          <div className="hidden items-center gap-8 md:flex">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-[#46523a] transition-colors hover:text-[#11150d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2 focus-visible:rounded-sm"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
 
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="md:hidden overflow-hidden border-t border-glass-border bg-glass-bg backdrop-blur-xl"
+          <div className="flex items-center gap-3">
+            <MobileNav links={navLinks} />
+            <Link
+              href="/contact"
+              className="shrink-0 rounded-full bg-[#171d13] px-3 py-2 text-xs font-medium text-[#f7f2e8] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm"
             >
-              <div className="px-6 py-4 flex flex-col gap-3">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm text-muted hover:text-primary transition-colors py-2"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <Link
-                  href="/contact"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm font-medium px-4 py-2.5 rounded-lg bg-primary text-background text-center hover:shadow-[var(--glow-md)] transition-all mt-2"
-                >
-                  Book a Call
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <span className="sm:hidden">Book Call</span>
+              <span className="hidden sm:inline">Book a Scoping Call</span>
+            </Link>
+          </div>
+        </nav>
       </header>
 
-      <main className="flex-1 relative">
-        {/* Cyber grid background layer */}
-        <div className="absolute inset-0 cyber-grid pointer-events-none" aria-hidden="true" />
-        <div className="relative z-[1]">{children}</div>
-      </main>
+      <main id="main-content">{children}</main>
 
-      <footer className="border-t border-glass-border bg-surface/80 relative">
-        <GlowLine />
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted">
-              &copy; {new Date().getFullYear()} Nicer Systems. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="text-sm text-muted hover:text-primary transition-colors">
-                Privacy
-              </Link>
-              <Link href="/terms" className="text-sm text-muted hover:text-primary transition-colors">
-                Terms
-              </Link>
+      <footer className="border-t border-[#224131]/20 bg-[linear-gradient(180deg,#163122,#193126)] text-[#e7e0cf]" role="contentinfo">
+        <div className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
+          <div className="grid gap-10 pt-2 md:grid-cols-[1.3fr_repeat(3,1fr)]">
+            <div>
+              <Logo size="lg" variant="dark" className="mb-4" />
+              <p className="mt-3 max-w-sm text-sm leading-6 text-[#c2cac0]">
+                Automation and visibility for operations teams. We map your
+                workflows, build dashboards, and automate the repetitive
+                work — so you can focus on the business.
+              </p>
+              <p className="mt-4 text-xs text-[#a4b1a0]">
+                Tell us the problem. We&apos;ll build the system.
+              </p>
             </div>
+
+            {footerColumns.map((column) => (
+              <div key={column.title}>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#9fae9d]">
+                  {column.title}
+                </p>
+                <div className="mt-4 space-y-3">
+                  {column.links.map((link) => (
+                    <Link key={link.label} href={link.href} className="block text-sm text-[#f0e9db] transition-colors hover:text-white">
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </footer>

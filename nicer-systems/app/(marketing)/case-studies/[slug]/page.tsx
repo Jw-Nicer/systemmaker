@@ -1,13 +1,41 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { getCaseStudyBySlug, getRelatedCaseStudies, getPublishedCaseStudies } from "@/lib/firestore/case-studies";
 import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { GlowLine } from "@/components/ui/GlowLine";
+import { WaveDivider } from "@/components/ui/GlowLine";
 
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const cs = await getCaseStudyBySlug(slug);
+  if (!cs) return { title: "Case Study Not Found | Nicer Systems" };
+
+  const title = `${cs.title} | Nicer Systems`;
+  const description = cs.challenge?.slice(0, 160) || `${cs.industry} automation case study`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      siteName: "Nicer Systems",
+      ...(cs.thumbnail_url && { images: [{ url: cs.thumbnail_url, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(cs.thumbnail_url && { images: [cs.thumbnail_url] }),
+    },
+  };
 }
 
 export default async function CaseStudyDetailPage({ params }: Props) {
@@ -21,8 +49,22 @@ export default async function CaseStudyDetailPage({ params }: Props) {
 
   const related = getRelatedCaseStudies(cs, allStudies);
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://nicer-systems.web.app" },
+      { "@type": "ListItem", position: 2, name: "Case Studies", item: "https://nicer-systems.web.app/case-studies" },
+      { "@type": "ListItem", position: 3, name: cs.title },
+    ],
+  };
+
   return (
     <section className="py-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="max-w-4xl mx-auto px-6">
         {/* Breadcrumb */}
         <nav className="mb-8 text-sm text-muted">
@@ -41,7 +83,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
               <Badge key={tool} variant="muted">{tool}</Badge>
             ))}
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-glow">{cs.title}</h1>
+          <h1 className="text-4xl font-bold mb-3 text-soft-glow">{cs.title}</h1>
           {cs.client_name && (
             <p className="text-muted">{cs.client_name}</p>
           )}
@@ -49,7 +91,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
 
         {/* Thumbnail */}
         {cs.thumbnail_url && (
-          <div className="rounded-xl overflow-hidden border border-glass-border mb-12">
+          <div className="rounded-[var(--radius-lg)] overflow-hidden border border-glass-border mb-12">
             <Image
               src={cs.thumbnail_url}
               alt={cs.title}
@@ -62,15 +104,15 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         )}
 
         {/* Challenge */}
-        <div className="mb-10 border-l-2 border-l-primary pl-6">
-          <h2 className="text-xl font-semibold mb-3 text-primary text-glow">The Challenge</h2>
+        <div className="mb-10 border-l-2 border-l-primary/40 pl-6">
+          <h2 className="text-xl font-semibold mb-3 text-primary">The Challenge</h2>
           <p className="text-muted leading-relaxed">{cs.challenge}</p>
         </div>
 
         {/* Solution */}
         {cs.solution && (
-          <div className="mb-10 border-l-2 border-l-primary pl-6">
-            <h2 className="text-xl font-semibold mb-3 text-primary text-glow">The Solution</h2>
+          <div className="mb-10 border-l-2 border-l-secondary/40 pl-6">
+            <h2 className="text-xl font-semibold mb-3 text-secondary">The Solution</h2>
             <p className="text-muted leading-relaxed">{cs.solution}</p>
           </div>
         )}
@@ -78,7 +120,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Metrics Before/After */}
         {cs.metrics.length > 0 && (
           <div className="mb-10">
-            <h2 className="text-xl font-semibold mb-4 text-primary text-glow border-l-2 border-l-primary pl-6">Results</h2>
+            <h2 className="text-xl font-semibold mb-4 text-primary border-l-2 border-l-tertiary/40 pl-6">Results</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {cs.metrics.map((m) => (
                 <GlassCard key={m.label} hover className="p-5">
@@ -101,7 +143,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                     </svg>
                     <div>
                       <p className="text-xs text-muted uppercase mb-0.5">After</p>
-                      <p className="text-lg font-semibold text-primary text-glow">{m.after}</p>
+                      <p className="text-lg font-semibold text-primary">{m.after}</p>
                     </div>
                   </div>
                 </GlassCard>
@@ -113,7 +155,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Tools Used */}
         {cs.tools.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4 text-primary text-glow border-l-2 border-l-primary pl-6">Tools Used</h2>
+            <h2 className="text-xl font-semibold mb-4 text-primary border-l-2 border-l-primary/40 pl-6">Tools Used</h2>
             <div className="flex flex-wrap gap-2">
               {cs.tools.map((tool) => (
                 <GlassCard key={tool} className="px-4 py-2 text-sm">
@@ -142,7 +184,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                         width={480}
                         height={256}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="w-full h-32 object-cover rounded-lg mb-3"
+                        className="w-full h-32 object-cover rounded-[var(--radius-sm)] mb-3"
                       />
                     )}
                     <Badge variant="primary" className="mb-1">{r.industry}</Badge>
@@ -154,20 +196,14 @@ export default async function CaseStudyDetailPage({ params }: Props) {
           </div>
         )}
 
-        <GlowLine className="mb-12" />
+        <WaveDivider className="mb-12" />
 
         {/* CTA */}
-        <GlassCard className="p-8 text-center gradient-border gradient-border-active relative overflow-hidden">
-          {/* Radial glow bg */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "radial-gradient(ellipse at center, rgba(0, 212, 255, 0.04) 0%, transparent 70%)",
-            }}
-            aria-hidden="true"
-          />
+        <GlassCard hover className="p-8 text-center relative overflow-hidden">
+          {/* Organic mesh bg */}
+          <div className="absolute inset-0 organic-mesh pointer-events-none" aria-hidden="true" />
           <div className="relative z-[1]">
-            <h3 className="text-xl font-bold mb-2 text-glow">
+            <h3 className="text-xl font-bold mb-2 text-soft-glow">
               Ready to get results like these?
             </h3>
             <p className="text-muted mb-6 max-w-lg mx-auto">
@@ -175,7 +211,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
             </p>
             <Link
               href="/contact"
-              className="inline-block px-6 py-3 rounded-lg bg-primary text-background font-medium hover:shadow-[var(--glow-md)] active:scale-[0.97] transition-all"
+              className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-background font-medium hover:shadow-[var(--shadow-soft-md)] active:scale-[0.97] transition-all"
             >
               Book a Scoping Call
             </Link>

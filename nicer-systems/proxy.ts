@@ -15,13 +15,6 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Redirect logged-in users away from login page
-  if (request.nextUrl.pathname === "/admin/login" && sessionCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 

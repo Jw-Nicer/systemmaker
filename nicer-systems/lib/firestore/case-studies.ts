@@ -1,6 +1,7 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 import { unstable_cache } from "next/cache";
 import type { CaseStudy } from "@/types/case-study";
+import { serializeDoc } from "./serialize";
 
 export const getPublishedCaseStudies = unstable_cache(
   async (): Promise<CaseStudy[]> => {
@@ -12,8 +13,9 @@ export const getPublishedCaseStudies = unstable_cache(
         .orderBy("sort_order", "asc")
         .get();
 
-      return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as CaseStudy);
-    } catch {
+      return snap.docs.map((doc) => serializeDoc<CaseStudy>(doc));
+    } catch (err) {
+      console.error("[firestore] getPublishedCaseStudies failed:", err);
       return [];
     }
   },
@@ -34,9 +36,9 @@ export async function getCaseStudyBySlug(
       .get();
 
     if (snap.empty) return null;
-    const doc = snap.docs[0];
-    return { id: doc.id, ...doc.data() } as CaseStudy;
-  } catch {
+    return serializeDoc<CaseStudy>(snap.docs[0]);
+  } catch (err) {
+    console.error("[firestore] getCaseStudyBySlug failed:", err);
     return null;
   }
 }

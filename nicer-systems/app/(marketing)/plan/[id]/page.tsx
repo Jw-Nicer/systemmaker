@@ -58,7 +58,7 @@ export default async function PlanPage({ params }: Props) {
             Preview Plan
           </p>
           <h1 className="text-3xl font-bold mb-3">
-            {plan.input_summary.industry} Automation Plan
+            {plan.input_summary.industry} Preview Plan
           </h1>
           <p className="text-muted max-w-2xl mx-auto">
             {plan.input_summary.bottleneck_summary}
@@ -99,7 +99,7 @@ export default async function PlanPage({ params }: Props) {
           </h2>
           <p className="text-muted mb-6">
             Tell us your bottleneck and our agent will build a custom Preview
-            Plan — in under 2 minutes.
+            Plan with workflow, KPI, alert, and action recommendations.
           </p>
           <Link
             href="/#see-it-work"
