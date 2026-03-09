@@ -1,0 +1,61 @@
+
+> nicer-systems@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 6.4s
+  Running TypeScript ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/30) ...
+  Generating static pages using 15 workers (7/30) 
+  Generating static pages using 15 workers (14/30) 
+  Generating static pages using 15 workers (22/30) 
+Γ£ô Generating static pages using 15 workers (30/30) in 2.6s
+  Finalizing page optimization ...
+
+Route (app)                            Revalidate  Expire
+Γöî Γùï /                                          1m      1y
+Γö£ Γùï /_not-found                                5m      1y
+Γö£ ΓùÅ /[industry]
+Γö£ ╞Æ /admin
+Γö£ ╞Æ /admin/agent-templates
+Γö£ ╞Æ /admin/case-studies
+Γö£ ╞Æ /admin/experiments
+Γö£ ╞Æ /admin/faqs
+Γö£ ╞Æ /admin/leads
+Γö£ ╞Æ /admin/leads/[id]
+Γö£ Γùï /admin/login                               5m      1y
+Γö£ ╞Æ /admin/offers
+Γö£ ╞Æ /admin/settings
+Γö£ ╞Æ /admin/testimonials
+Γö£ ╞Æ /admin/variants
+Γö£ ╞Æ /api/agent/chat
+Γö£ ╞Æ /api/agent/refine
+Γö£ ╞Æ /api/agent/run
+Γö£ ╞Æ /api/agent/send-email
+Γö£ ╞Æ /api/auth/session
+Γö£ ╞Æ /api/auth/signout
+Γö£ ╞Æ /api/events
+Γö£ ╞Æ /api/leads
+Γö£ ╞Æ /api/plans
+Γö£ Γùï /case-studies                              1m      1y
+Γö£ ╞Æ /case-studies/[slug]
+Γö£ Γùï /contact                                   5m      1y
+Γö£ ╞Æ /plan/[id]
+Γö£ ╞Æ /plan/[id]/opengraph-image-d60jn9
+Γö£ ╞Æ /preview/variant/[id]
+Γö£ Γùï /privacy                                   5m      1y
+Γö£ Γùï /robots.txt
+Γö£ Γùï /sitemap.xml                               1m      1y
+Γöö Γùï /terms                                     5m      1y
+
+
+╞Æ Proxy (Middleware)
+
+Γùï  (Static)   prerendered as static content
+ΓùÅ  (SSG)      prerendered as static HTML (uses generateStaticParams)
+╞Æ  (Dynamic)  server-rendered on demand
+

@@ -79,3 +79,27 @@ test("buildLeadsCSV serializes the filtered lead set", () => {
   assert.match(csv, /Carol/);
   assert.doesNotMatch(csv, /Bob/);
 });
+
+test("filterLeadsForExport tolerates sparse lead fields during search", () => {
+  const sparseLead = {
+    id: "lead_4",
+    name: "Dana",
+    email: "dana@example.com",
+    company: undefined,
+    bottleneck: undefined,
+    tools: "",
+    urgency: "",
+    status: "new",
+    source: "agent_chat",
+    created_at: "2026-03-04T12:00:00.000Z",
+  } as unknown as Lead;
+
+  const filtered = filterLeadsForExport([...LEADS, sparseLead], {
+    search: "dana@example.com",
+  });
+
+  assert.deepEqual(
+    filtered.map((lead) => lead.id),
+    ["lead_4"]
+  );
+});

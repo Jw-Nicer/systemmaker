@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { track, EVENTS } from "@/lib/analytics";
 
 interface ShareButtonsProps {
@@ -9,8 +9,8 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ planId }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState("");
-  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const origin =
+    typeof window === "undefined" ? "" : window.location.origin;
   const planUrl = origin ? `${origin}/plan/${planId}` : `/plan/${planId}`;
 
   async function handleCopy() {

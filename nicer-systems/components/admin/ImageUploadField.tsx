@@ -1,8 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import { useId, useState, type ChangeEvent } from "react";
 import { INPUT_CLASS_NAME } from "@/hooks/useCrudManager";
 import { uploadImageFile } from "@/lib/firebase/storage-upload";
+
+const PREVIEW_IMAGE_HOSTS = new Set([
+  "firebasestorage.googleapis.com",
+  "storage.googleapis.com",
+  "images.unsplash.com",
+]);
+
+function canUseNextImage(src: string) {
+  if (src.startsWith("/")) return true;
+
+  try {
+    const url = new URL(src);
+    return url.protocol === "https:" && PREVIEW_IMAGE_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 export default function ImageUploadField({
   label,
@@ -70,11 +88,23 @@ export default function ImageUploadField({
 
       {value ? (
         <div className="overflow-hidden rounded-[20px] border border-[#ddd5c7] bg-white/70 p-3">
-          <img
-            src={value}
-            alt={`${label} preview`}
-            className="h-40 w-full rounded-[16px] object-cover"
-          />
+          {canUseNextImage(value) ? (
+            <Image
+              src={value}
+              alt={`${label} preview`}
+              width={1200}
+              height={320}
+              unoptimized
+              className="h-40 w-full rounded-[16px] object-cover"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={value}
+              alt={`${label} preview`}
+              className="h-40 w-full rounded-[16px] object-cover"
+            />
+          )}
         </div>
       ) : null}
 

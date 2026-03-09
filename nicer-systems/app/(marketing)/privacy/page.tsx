@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PrivacyPreferencesButton } from "@/components/ui/AnalyticsConsentControls";
 
 const LAST_UPDATED = "March 8, 2026";
 const CONTACT_EMAIL = "johnwilnicer@gmail.com";
@@ -40,7 +41,7 @@ const dataCategories = [
   {
     title: "Interaction analytics",
     body:
-      "We log product and marketing events such as landing views, booking clicks, preview-plan actions, and lead submissions. In production, analytics tooling may also process those events if enabled.",
+      "We log product and marketing events such as landing views, booking clicks, preview-plan actions, and lead submissions. In production, analytics tooling may also process those events if enabled. You can change analytics tracking from the Privacy Preferences control in the footer.",
   },
   {
     title: "Plan sharing and email delivery",
@@ -165,6 +166,9 @@ export default function PrivacyPage() {
                 >
                   Terms of Service
                 </Link>
+                <PrivacyPreferencesButton className="inline-flex rounded-full border border-[#d0c8b8] bg-white/70 px-5 py-3 text-sm font-semibold text-[#27311f] transition-colors hover:bg-white">
+                  Manage Privacy Preferences
+                </PrivacyPreferencesButton>
               </div>
             </div>
 
@@ -390,6 +394,10 @@ export default function PrivacyPage() {
                   {CONTACT_EMAIL}
                 </a>
                 .
+              </p>
+              <p>
+                You can also reopen the analytics banner at any time from the
+                footer&apos;s Privacy Preferences control.
               </p>
             </Section>
 

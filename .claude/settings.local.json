@@ -30,7 +30,8 @@
       "Bash(grep:*)",
       "Bash(npx vitest:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(sed:*)"
     ]
   }
 }

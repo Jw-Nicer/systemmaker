@@ -1,0 +1,7 @@
+Usage: firebase hosting:channel:list [options]
+
+list all Firebase Hosting channels for your project
+
+Options:
+  --site <siteName>  list channels for the specified site
+  -h, --help         display help for command

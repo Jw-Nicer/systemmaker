@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { leadSchema, type LeadInput } from "@/lib/validation";
 import { track, EVENTS } from "@/lib/analytics";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
+import { PrivacyPreferencesButton } from "@/components/ui/AnalyticsConsentControls";
 
 type FormErrors = Partial<Record<keyof LeadInput, string>>;
 
@@ -363,6 +364,9 @@ function ContactForm() {
                   </Link>
                   .
                 </p>
+                <PrivacyPreferencesButton className="mt-2 text-xs font-medium text-[#2d4a2a] underline decoration-[#93a071] underline-offset-4">
+                  Manage Privacy Preferences
+                </PrivacyPreferencesButton>
               </div>
               <button
                 type="submit"

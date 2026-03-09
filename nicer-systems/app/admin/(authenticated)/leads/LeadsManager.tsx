@@ -12,8 +12,13 @@ import {
   AdminPanel,
   AdminPill,
 } from "@/components/admin/AdminPrimitives";
+import { formatDateLabel, isPastDate, parseDateValue } from "@/lib/date";
 
 const STATUSES = ["new", "qualified", "booked", "closed", "unqualified"];
+
+function toSearchValue(value: unknown) {
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
 
 export default function LeadsManager({
   initialData,
@@ -34,10 +39,10 @@ export default function LeadsManager({
       if (search) {
         const q = search.toLowerCase();
         return (
-          l.name.toLowerCase().includes(q) ||
-          l.email.toLowerCase().includes(q) ||
-          l.company.toLowerCase().includes(q) ||
-          l.bottleneck.toLowerCase().includes(q)
+          toSearchValue(l.name).includes(q) ||
+          toSearchValue(l.email).includes(q) ||
+          toSearchValue(l.company).includes(q) ||
+          toSearchValue(l.bottleneck).includes(q)
         );
       }
       return true;
@@ -77,18 +82,6 @@ export default function LeadsManager({
     a.click();
     URL.revokeObjectURL(url);
     setExporting(false);
-  }
-
-  function formatDate(iso: string) {
-    try {
-      return new Date(iso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return iso;
-    }
   }
 
   return (
@@ -186,10 +179,10 @@ export default function LeadsManager({
                   >
                     <td className="px-6 py-3 font-medium text-[#1d2318]">
                       <div className="flex items-center gap-2">
-                        {lead.follow_up_at && new Date(lead.follow_up_at) < new Date() && (
+                        {isPastDate(lead.follow_up_at) && (
                           <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Overdue follow-up" />
                         )}
-                        {lead.follow_up_at && new Date(lead.follow_up_at) >= new Date() && (
+                        {lead.follow_up_at && parseDateValue(lead.follow_up_at) && !isPastDate(lead.follow_up_at) && (
                           <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" title="Follow-up scheduled" />
                         )}
                         <span>{lead.name || "—"}</span>
@@ -242,7 +235,7 @@ export default function LeadsManager({
                       {lead.source}
                     </td>
                     <td className="px-6 py-3 text-xs text-[#6c7467]">
-                      {formatDate(lead.created_at)}
+                      {formatDateLabel(lead.created_at)}
                     </td>
                   </tr>
                   {expandedId === lead.id && (

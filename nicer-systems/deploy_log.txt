@@ -1,0 +1,140 @@
+
+> nicer-systems@0.1.0 deploy:hosting
+> firebase deploy --only hosting
+
+
+   Thank you for trying our [3mearly preview[23m of Next.js support on Firebase Hosting.
+   [31mDuring the preview, support is best-effort and breaking changes can be expected. Proceed with caution.[39m[33m
+   The integration is known to work with Next.js version [3m12 - 15.0[23m. You may encounter errors.[39m
+
+   [1mDocumentation:[22m https://firebase.google.com/docs/hosting/frameworks/nextjs
+   [1mFile a bug:[22m https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   [1mSubmit a feature request:[22m https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+
+- Environments: .env.local
+
+
+  Creating an optimized production build ...
+
+Γ£ô Compiled successfully in 6.2s
+
+  Running TypeScript ...
+
+  Collecting page data using 15 workers ...
+
+  Generating static pages using 15 workers (0/30) ...
+
+  Generating static pages using 15 workers (7/30) 
+
+  Generating static pages using 15 workers (14/30) 
+
+  Generating static pages using 15 workers (22/30) 
+
+Γ£ô Generating static pages using 15 workers (30/30) in 2.2s
+
+  Finalizing page optimization ...
+
+
+
+Route (app)                            Revalidate  Expire
+Γöî Γùï /                                          1m      1y
+Γö£ Γùï /_not-found                                5m      1y
+Γö£ ΓùÅ /[industry]
+Γö£ ╞Æ /admin
+Γö£ ╞Æ /admin/agent-templates
+Γö£ ╞Æ /admin/case-studies
+Γö£ ╞Æ /admin/experiments
+Γö£ ╞Æ /admin/faqs
+Γö£ ╞Æ /admin/leads
+Γö£ ╞Æ /admin/leads/[id]
+Γö£ Γùï /admin/login                               5m      1y
+Γö£ ╞Æ /admin/offers
+Γö£ ╞Æ /admin/settings
+Γö£ ╞Æ /admin/testimonials
+Γö£ ╞Æ /admin/variants
+Γö£ ╞Æ /api/agent/chat
+Γö£ ╞Æ /api/agent/refine
+Γö£ ╞Æ /api/agent/run
+Γö£ ╞Æ /api/agent/send-email
+Γö£ ╞Æ /api/auth/session
+Γö£ ╞Æ /api/auth/signout
+Γö£ ╞Æ /api/events
+Γö£ ╞Æ /api/leads
+Γö£ ╞Æ /api/plans
+Γö£ Γùï /case-studies                              1m      1y
+Γö£ ╞Æ /case-studies/[slug]
+Γö£ Γùï /contact                                   5m      1y
+Γö£ ╞Æ /plan/[id]
+Γö£ ╞Æ /plan/[id]/opengraph-image-d60jn9
+Γö£ ╞Æ /preview/variant/[id]
+Γö£ Γùï /privacy                                   5m      1y
+Γö£ Γùï /robots.txt
+Γö£ Γùï /sitemap.xml                               1m      1y
+Γöö Γùï /terms                                     5m      1y
+
+
+╞Æ Proxy (Middleware)
+
+
+Γùï  (Static)   prerendered as static content
+ΓùÅ  (SSG)      prerendered as static HTML (uses generateStaticParams)
+╞Æ  (Dynamic)  server-rendered on demand
+
+
+Building a Cloud Function to run this application. This is needed due to:
+ ΓÇó use of fallback /[industry]
+ ΓÇó use of revalidate /_not-found
+ ΓÇó use of revalidate /case-studies
+ ΓÇó use of revalidate /contact
+ ΓÇó use of revalidate /
+ ΓÇó and 38 other reasons, use --debug to see more
+
+
+up to date in 6s
+
+55 packages are looking for funding
+  run `npm fund` for details
+[36m[1mi  hosting:[22m[39m The following function(s) are pinned to site [1mnicer-systems[22m and will be deployed as well: [1mssrnicersystems[22m
+
+[1m[37m===[39m Deploying to 'nicer-systems'...[22m
+
+[36m[1mi [22m[39m deploying [1mfunctions, hosting[22m
+[36m[1mi  functions:[22m[39m preparing codebase [1mfirebase-frameworks-nicer-systems[22m for deployment
+[36m[1mi  functions:[22m[39m ensuring required API [1mcloudfunctions.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m ensuring required API [1mcloudbuild.googleapis.com[22m is enabled...
+[36m[1mi  artifactregistry:[22m[39m ensuring required API [1martifactregistry.googleapis.com[22m is enabled...
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mpackage.json indicates an outdated version of firebase-functions. Please upgrade using [1mnpm install --save firebase-functions@latest[22m in your functions directory.
+[33m[1m! [22m[39m [1m[33mfunctions: [39m[22mPlease note that there will be breaking changes when you upgrade.
+[36m[1mi  functions:[22m[39m Loading and analyzing source code for codebase firebase-frameworks-nicer-systems to determine what to deploy
+Serving at port 8856
+
+[36m[1mi  extensions:[22m[39m ensuring required API [1mfirebaseextensions.googleapis.com[22m is enabled...
+[36m[1mi [22m[39m [36m[1mfunctions: [22m[39mLoaded environment variables from .env.
+[36m[1mi  functions:[22m[39m preparing [1m.firebase\nicer-systems\functions[22m directory for uploading...
+[36m[1mi [22m[39m [36m[1mfunctions:[22m[39m packaged [1mC:\Users\John\.gemini\antigravity\workspaces\Systemmaker\nicer-systems\.firebase\nicer-systems\functions[22m (432.9 MB) for uploading
+[36m[1mi  functions:[22m[39m ensuring required API [1mrun.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m ensuring required API [1meventarc.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m ensuring required API [1mpubsub.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m ensuring required API [1mstorage.googleapis.com[22m is enabled...
+[36m[1mi  functions:[22m[39m generating the service identity for [1mpubsub.googleapis.com[22m...
+[36m[1mi  functions:[22m[39m generating the service identity for [1meventarc.googleapis.com[22m...
+[32m[1m+  functions:[22m[39m [1m.firebase\nicer-systems\functions[22m source uploaded successfully
+[36m[1mi  hosting[nicer-systems]:[22m[39m beginning deploy...
+[36m[1mi  hosting[nicer-systems]:[22m[39m found 64 files in [1m.firebase\nicer-systems\hosting[22m
+[32m[1m+  hosting[nicer-systems]:[22m[39m file upload complete
+[36m[1mi  functions:[22m[39m updating Node.js 22 (2nd Gen) function [1mfirebase-frameworks-nicer-systems:ssrnicersystems(us-central1)[22m...
+[32m[1m+ [22m[39m [1m[32mfunctions[firebase-frameworks-nicer-systems:ssrnicersystems(us-central1)][39m[22m Successful update operation.
+[1mFunction URL[22m (firebase-frameworks-nicer-systems:ssrnicersystems(us-central1)): https://ssrnicersystems-rmm5x2lzzq-uc.a.run.app
+[36m[1mi  hosting[nicer-systems]:[22m[39m finalizing version...
+[32m[1m+  hosting[nicer-systems]:[22m[39m version finalized
+[36m[1mi  hosting[nicer-systems]:[22m[39m releasing new version...
+[32m[1m+  hosting[nicer-systems]:[22m[39m release complete
+
+[32m[1m+ [22m[39m [1m[4mDeploy complete![24m[22m
+
+[1mProject Console:[22m https://console.firebase.google.com/project/nicer-systems/overview
+[1mHosting URL:[22m https://nicer-systems.web.app

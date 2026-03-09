@@ -1,6 +1,10 @@
 import { escapeCsvCell } from "@/lib/csv";
 import type { Lead, LeadExportFilters } from "@/types/lead";
 
+function toSearchValue(value: unknown) {
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
+
 export function filterLeadsForExport(
   leads: Lead[],
   filters: LeadExportFilters = {}
@@ -20,10 +24,10 @@ export function filterLeadsForExport(
       }
 
       return (
-        lead.name.toLowerCase().includes(search) ||
-        lead.email.toLowerCase().includes(search) ||
-        lead.company.toLowerCase().includes(search) ||
-        lead.bottleneck.toLowerCase().includes(search)
+        toSearchValue(lead.name).includes(search) ||
+        toSearchValue(lead.email).includes(search) ||
+        toSearchValue(lead.company).includes(search) ||
+        toSearchValue(lead.bottleneck).includes(search)
       );
     })
     .sort((a, b) => {

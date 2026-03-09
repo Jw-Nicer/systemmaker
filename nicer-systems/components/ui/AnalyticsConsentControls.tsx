@@ -11,14 +11,20 @@ import {
   type AnalyticsConsentStatus,
 } from "@/lib/analytics-consent";
 
-export function PrivacyPreferencesButton() {
+export function PrivacyPreferencesButton({
+  className = "text-sm text-[#f0e9db] transition-colors hover:text-white",
+  children = "Privacy Preferences",
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       onClick={requestAnalyticsConsentManagerOpen}
-      className="text-sm text-[#f0e9db] transition-colors hover:text-white"
+      className={className}
     >
-      Privacy Preferences
+      {children}
     </button>
   );
 }
@@ -57,20 +63,20 @@ export function AnalyticsConsentBanner() {
   const isUpdate = consent !== "unset";
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[80] p-3 sm:p-4">
-      <div className="mx-auto max-w-4xl overflow-hidden rounded-[28px] border border-[#d3cab8] bg-[linear-gradient(180deg,rgba(248,244,234,0.97),rgba(237,230,216,0.99))] shadow-[0_24px_80px_rgba(50,41,28,0.18)] backdrop-blur-md">
-        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 sm:py-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="fixed inset-x-0 bottom-0 z-[80] p-2 sm:p-4">
+      <div className="mx-auto max-w-4xl overflow-hidden rounded-[24px] border border-[#d3cab8] bg-[linear-gradient(180deg,rgba(248,244,234,0.97),rgba(237,230,216,0.99))] shadow-[0_24px_80px_rgba(50,41,28,0.18)] backdrop-blur-md sm:rounded-[28px]">
+        <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-[#7d7a6f]">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#7d7a6f] sm:text-[11px] sm:tracking-[0.22em]">
               Privacy Preferences
             </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
+            <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[#1d2318] sm:mt-3 sm:text-2xl">
               {isUpdate ? "Update analytics preference" : "Allow analytics tracking?"}
             </h2>
-            <p className="mt-3 text-sm leading-6 text-[#50584b]">
-              We use analytics to understand page performance, feature usage,
-              and which calls to action are working. Declining keeps analytics
-              tracking off. Read the{" "}
+            <p className="mt-2 text-[13px] leading-5 text-[#50584b] sm:mt-3 sm:text-sm sm:leading-6">
+              We use analytics to understand performance, feature usage, and
+              which calls to action are working. Declining keeps analytics off.
+              Read the{" "}
               <Link
                 href="/privacy"
                 className="font-medium text-[#27311f] underline decoration-[#93a071] underline-offset-4"
@@ -81,7 +87,7 @@ export function AnalyticsConsentBanner() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:justify-end">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap lg:justify-end">
             <button
               type="button"
               onClick={() => {
@@ -89,7 +95,7 @@ export function AnalyticsConsentBanner() {
                 setConsent("denied");
                 setIsOpen(false);
               }}
-              className="inline-flex items-center justify-center rounded-full border border-[#cabfae] bg-white/60 px-5 py-3 text-sm font-medium text-[#25311f] transition-colors hover:bg-white"
+              className="inline-flex min-w-[8.5rem] items-center justify-center rounded-full border border-[#cabfae] bg-white/60 px-4 py-2.5 text-sm font-medium text-[#25311f] transition-colors hover:bg-white sm:px-5 sm:py-3"
             >
               Decline
             </button>
@@ -100,7 +106,7 @@ export function AnalyticsConsentBanner() {
                 setConsent("granted");
                 setIsOpen(false);
               }}
-              className="inline-flex items-center justify-center rounded-full bg-[#171d13] px-5 py-3 text-sm font-medium text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+              className="inline-flex min-w-[8.5rem] items-center justify-center rounded-full bg-[#171d13] px-4 py-2.5 text-sm font-medium text-[#f7f2e8] transition-transform hover:scale-[1.02] sm:px-5 sm:py-3"
             >
               Allow analytics
             </button>

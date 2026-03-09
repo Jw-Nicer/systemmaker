@@ -11,6 +11,12 @@ import {
 } from "@/lib/actions/leads";
 import { addLeadNote, type LeadActivity } from "@/lib/actions/lead-activity";
 import { AdminPageHeader, AdminPanel, AdminPill } from "@/components/admin/AdminPrimitives";
+import {
+  formatDateLabel,
+  formatDateTimeLabel,
+  isPastDate,
+  toDateInputValue,
+} from "@/lib/date";
 
 const STATUSES = ["new", "qualified", "booked", "closed", "unqualified"];
 
@@ -52,7 +58,7 @@ export default function LeadDetail({
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [followUpDate, setFollowUpDate] = useState(
-    lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().slice(0, 10) : ""
+    toDateInputValue(lead.follow_up_at)
   );
   const [followUpNote, setFollowUpNote] = useState(lead.follow_up_note ?? "");
   const [savingFollowUp, setSavingFollowUp] = useState(false);
@@ -126,31 +132,6 @@ export default function LeadDetail({
     setSavingFollowUp(false);
   }
 
-  function formatDate(iso: string) {
-    try {
-      return new Date(iso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return iso;
-    }
-  }
-
-  function formatDateTime(iso: string) {
-    try {
-      return new Date(iso).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
-  }
-
   const scoreColor =
     (lead.score ?? 0) >= 50
       ? "bg-green-500/10 text-green-400"
@@ -158,8 +139,7 @@ export default function LeadDetail({
         ? "bg-yellow-500/10 text-yellow-400"
         : "bg-red-500/10 text-red-400";
 
-  const isOverdue =
-    lead.follow_up_at && new Date(lead.follow_up_at) < new Date();
+  const isOverdue = isPastDate(lead.follow_up_at);
   const hasAttribution =
     Boolean(lead.utm_source || lead.utm_medium || lead.utm_campaign || lead.landing_path) ||
     Boolean(lead.experiment_assignments?.length);
@@ -226,7 +206,7 @@ export default function LeadDetail({
           </div>
           <div>
             <p className="mb-1 text-xs uppercase text-[#7e7b70]">Created</p>
-            <p className="text-[#1d2318]">{formatDate(lead.created_at)}</p>
+            <p className="text-[#1d2318]">{formatDateLabel(lead.created_at)}</p>
           </div>
           <div>
             <p className="mb-1 text-xs uppercase text-[#7e7b70]">Nurture</p>
@@ -244,7 +224,7 @@ export default function LeadDetail({
               <div className="flex flex-col gap-1">
                 <span className="text-[#4f6032]">
                   {lead.preview_plan_sent_at
-                    ? `Sent ${formatDate(lead.preview_plan_sent_at)}`
+                    ? `Sent ${formatDateLabel(lead.preview_plan_sent_at)}`
                     : "Generated"}
                 </span>
                 <Link
@@ -260,7 +240,7 @@ export default function LeadDetail({
               <p>
                 {lead.preview_plan_sent_at ? (
                   <span className="text-[#4f6032]">
-                    Sent {formatDate(lead.preview_plan_sent_at)}
+                    Sent {formatDateLabel(lead.preview_plan_sent_at)}
                   </span>
                 ) : (
                   <span className="text-[#6c7467]">—</span>
@@ -356,9 +336,9 @@ export default function LeadDetail({
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[#1d2318]">{item.content}</p>
-                    <p className="mt-1 text-xs text-[#6c7467]">
+                      <p className="mt-1 text-xs text-[#6c7467]">
                       {item.author && `${item.author} · `}
-                      {formatDateTime(item.created_at)}
+                      {formatDateTimeLabel(item.created_at)}
                     </p>
                   </div>
                 </AdminPanel>
@@ -377,7 +357,7 @@ export default function LeadDetail({
                 <p className="font-medium">
                   {isOverdue ? "Overdue" : "Upcoming"}
                 </p>
-                <p>{formatDate(lead.follow_up_at)}</p>
+                <p>{formatDateLabel(lead.follow_up_at)}</p>
                 {lead.follow_up_note && (
                   <p className="text-xs mt-1 opacity-80">
                     {lead.follow_up_note}
