@@ -140,9 +140,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       if (action.content) {
         try {
           const parsed = JSON.parse(action.content) as unknown;
+          // Map server section names to PreviewPlan field names
+          const planKey = action.section === "implementation_sequencer" ? "roadmap" : action.section;
           nextStreamedPlan = {
             ...state.streamedPlan,
-            [action.section]: parsed,
+            [planKey]: parsed,
           } as Partial<PreviewPlan>;
 
           if (isPreviewPlanComplete(nextStreamedPlan)) {

@@ -10,14 +10,15 @@ import {
   templateOutputSchemasByTemplateKey,
 } from "../lib/agents/registry";
 
-test("STAGE_REGISTRY has 5 stages in pipeline order", () => {
-  assert.equal(STAGE_REGISTRY.length, 5);
+test("STAGE_REGISTRY has 6 stages in pipeline order", () => {
+  assert.equal(STAGE_REGISTRY.length, 6);
   assert.deepEqual(STAGE_KEYS, [
     "intake",
     "workflow",
     "automation",
     "dashboard",
     "ops_pulse",
+    "implementation_sequencer",
   ]);
 });
 
@@ -73,9 +74,10 @@ test("getParallelGroups produces correct execution layers", () => {
   const group2Keys = groups[2].map((s) => s.key).sort();
   assert.deepEqual(group2Keys, ["automation", "dashboard"]);
 
-  // Group 3: ops_pulse (depends on automation + dashboard)
-  assert.equal(groups[3].length, 1);
-  assert.equal(groups[3][0].key, "ops_pulse");
+  // Group 3: ops_pulse + implementation_sequencer (both depend on automation + dashboard)
+  assert.equal(groups[3].length, 2);
+  const group3Keys = groups[3].map((s) => s.key).sort();
+  assert.deepEqual(group3Keys, ["implementation_sequencer", "ops_pulse"]);
 });
 
 test("all stages are covered by parallel groups", () => {

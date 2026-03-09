@@ -57,9 +57,15 @@ test("chatReducer assembles a complete plan from streamed sections", () => {
     label: "Ops pulse complete",
     content: JSON.stringify(plan.ops_pulse),
   });
+  state = chatReducer(state, {
+    type: "PLAN_SECTION",
+    section: "implementation_sequencer",
+    label: "Implementation roadmap complete",
+    content: JSON.stringify(plan.roadmap),
+  });
 
   assert.deepEqual(state.plan, plan);
-  assert.equal(state.messages.length, 5);
+  assert.equal(state.messages.length, 6);
 });
 
 test("chatReducer tolerates pending plan section events with null content", () => {
