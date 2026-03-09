@@ -23,12 +23,13 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
   });
 
   // Welcome message displayed locally (not sent to API)
+  // Use 0 as timestamp to avoid SSR/client hydration mismatch (never displayed)
   const welcomeMessage: ChatMessage = {
     id: "welcome",
     role: "assistant",
     content:
       "Hi! I'm the Nicer Systems preview-plan agent. Tell me about an operational bottleneck in your business, and I'll map a draft workflow, KPIs, alerts, and next actions.\n\nWhat industry are you in?",
-    timestamp: Date.now(),
+    timestamp: 0,
   };
 
   // Combine welcome message with chat messages

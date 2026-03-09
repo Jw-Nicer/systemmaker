@@ -57,9 +57,8 @@ export default function VariantsManager({
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [origin] = useState(() =>
-    typeof window !== "undefined" ? window.location.origin : ""
-  );
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
 
   useEffect(() => {
     setItems(initialData);
