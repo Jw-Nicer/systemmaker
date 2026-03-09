@@ -34,6 +34,8 @@ export const workflowMapperOutputSchema = z.object({
 
 // --- Automation Designer ---
 
+const automationPlatformEnum = z.enum(["zapier", "make", "n8n", "google_apps_script", "custom"]);
+
 export const automationDesignerOutputSchema = z.object({
   automations: z.array(
     z.object({
@@ -41,6 +43,9 @@ export const automationDesignerOutputSchema = z.object({
       steps: z.array(z.string().min(5).max(500)).min(1).max(20),
       data_required: z.array(z.string().min(2).max(500)).min(1).max(20),
       error_handling: z.string().min(10).max(1000),
+      platform: automationPlatformEnum.optional(),
+      setup_instructions: z.string().max(2000).optional(),
+      estimated_setup_minutes: z.number().min(1).max(480).optional(),
     })
   ).min(1).max(30),
   alerts: z.array(

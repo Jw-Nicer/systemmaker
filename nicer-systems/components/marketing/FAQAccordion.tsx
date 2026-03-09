@@ -37,6 +37,11 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
             >
               <span className="pr-2 font-medium text-[var(--text-heading)] sm:pr-4">
                 {faq.question}
+                {!faq.is_published && (
+                  <span className="ml-2 inline-block rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                    Draft
+                  </span>
+                )}
               </span>
               <motion.svg
                 width="20"

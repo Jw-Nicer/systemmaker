@@ -56,6 +56,11 @@ export async function PricingSection({
                   : "bg-[var(--cream-card)] text-[var(--text-heading)] rounded-[var(--radius-card-lg)] border border-white/60 shadow-[var(--shadow-card)]"
               }`}
             >
+              {!tier.is_published && (
+                <span className="absolute right-3 top-3 z-10 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                  Draft
+                </span>
+              )}
               {isHighlighted && (
                 <div className="absolute -top-px left-1/2 -translate-x-1/2">
                   <span className="inline-block rounded-b-full bg-[#f8f4ea] px-4 py-1 text-xs font-medium uppercase tracking-[0.14em] text-[#173220]">

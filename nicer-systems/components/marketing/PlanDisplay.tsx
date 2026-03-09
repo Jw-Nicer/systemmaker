@@ -73,23 +73,42 @@ export function PlanDisplay({
       {showShare && planId && (
         <div className="flex items-center justify-between print:hidden">
           <ShareButtons planId={planId} />
-          <button
-            onClick={() => {
-              track(EVENTS.PLAN_PDF_DOWNLOAD, { plan_id: planId });
-              window.print();
-            }}
-            className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1.5"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M4 6V2h8v4M4 12H2V8h12v4h-2M4 10h8v4H4v-4z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Download PDF
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/plans/export?id=${planId}&format=markdown`}
+              download
+              onClick={() => track(EVENTS.PLAN_PDF_DOWNLOAD, { plan_id: planId, format: "markdown" })}
+              className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M2 10v3h12v-3M8 2v8M5 7l3 3 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Export Markdown
+            </a>
+            <button
+              onClick={() => {
+                track(EVENTS.PLAN_PDF_DOWNLOAD, { plan_id: planId });
+                window.print();
+              }}
+              className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M4 6V2h8v4M4 12H2V8h12v4h-2M4 10h8v4H4v-4z"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Download PDF
+            </button>
+          </div>
         </div>
       )}
 
@@ -409,6 +428,57 @@ export function PlanDisplay({
   );
 }
 
+// ─── Automation card sub-component ──────────────────────────
+const PLATFORM_LABELS: Record<string, string> = {
+  zapier: "Zapier",
+  make: "Make",
+  n8n: "n8n",
+  google_apps_script: "Apps Script",
+  custom: "Custom",
+};
+
+function AutomationCard({ automation: a }: { automation: Automation }) {
+  const [showSetup, setShowSetup] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-sm font-medium">{a.trigger}</p>
+        {a.platform && (
+          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+            {PLATFORM_LABELS[a.platform] ?? a.platform}
+          </span>
+        )}
+        {a.estimated_setup_minutes != null && (
+          <span className="shrink-0 text-[10px] text-muted">
+            ~{a.estimated_setup_minutes}min
+          </span>
+        )}
+      </div>
+      <ol className="text-xs text-muted list-decimal pl-4 mt-1 space-y-0.5">
+        {a.steps.map((step, j) => (
+          <li key={j}>{step}</li>
+        ))}
+      </ol>
+      {a.setup_instructions && (
+        <div className="mt-2 print:hidden">
+          <button
+            onClick={() => setShowSetup(!showSetup)}
+            className="text-xs text-primary hover:text-primary/80 transition-colors"
+          >
+            {showSetup ? "Hide setup guide" : "Show setup guide"} &rarr;
+          </button>
+          {showSetup && (
+            <p className="mt-1 text-xs text-muted bg-surface-light/50 rounded p-2 whitespace-pre-line">
+              {a.setup_instructions}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Section sub-component ──────────────────────────────────
 function PlanSection({
   title,
@@ -427,6 +497,20 @@ function PlanSection({
   onRefine?: (sectionKey: string) => void;
   children: React.ReactNode;
 }) {
+  const [copied, setCopied] = useState(false);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    const text = contentRef.current?.innerText;
+    if (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  }
+
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden print:border-gray-200 print:break-inside-avoid">
       <button
@@ -434,13 +518,27 @@ function PlanSection({
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-light/50 transition-colors print:hover:bg-transparent"
       >
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-muted text-xs print:hidden">
-          {expanded ? "−" : "+"}
+        <span className="flex items-center gap-2 print:hidden">
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleCopy}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCopy(e as unknown as React.MouseEvent); }}
+            className="text-muted text-xs hover:text-foreground transition-colors"
+            title="Copy section"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </span>
+          <span className="text-muted text-xs">
+            {expanded ? "−" : "+"}
+          </span>
         </span>
       </button>
       {expanded && (
         <div className="px-4 pb-4">
-          {children}
+          <div ref={contentRef}>
+            {children}
+          </div>
           {showRefine && onRefine && (
             <button
               onClick={() => onRefine(sectionKey)}

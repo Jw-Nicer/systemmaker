@@ -112,6 +112,14 @@ export default async function AdminDashboard() {
             >
               View Leads
             </Link>
+            <a
+              href="/preview/site"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+            >
+              Preview Site
+            </a>
             <Link
               href="/admin/settings"
               className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-medium text-[#27311f] transition-colors hover:bg-white"

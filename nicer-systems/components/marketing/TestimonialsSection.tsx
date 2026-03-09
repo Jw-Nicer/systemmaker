@@ -41,8 +41,13 @@ export async function TestimonialsSection({
             return (
               <article
                 key={testimonial.id}
-                className="flex h-full flex-col rounded-[var(--radius-card-lg)] border border-[var(--border-card)] bg-[var(--cream-card)] p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                className="relative flex h-full flex-col rounded-[var(--radius-card-lg)] border border-[var(--border-card)] bg-[var(--cream-card)] p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
+                {!testimonial.is_published && (
+                  <span className="absolute right-3 top-3 z-10 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                    Draft
+                  </span>
+                )}
                 <p className="text-base leading-7 text-[var(--text-heading)]">
                   &ldquo;{testimonial.quote}&rdquo;
                 </p>

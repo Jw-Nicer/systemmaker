@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SeeItWork } from "@/components/marketing/SeeItWork";
 import { ProofOfWork } from "@/components/marketing/ProofOfWork";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
@@ -12,6 +13,25 @@ import {
   HomepageExperimentTracker,
 } from "@/components/marketing/homepage-experiments";
 import { getHomepageExperiments } from "@/lib/firestore/experiments";
+
+export const metadata: Metadata = {
+  title: "Nicer Systems — Automation & Ops Visibility for Admin-Heavy Businesses",
+  description:
+    "Tell us the problem. We'll build the system. Workflow mapping, KPI dashboards, alert rules, and automation for operations teams.",
+  openGraph: {
+    title: "Nicer Systems — Automation & Ops Visibility",
+    description:
+      "Workflow mapping, KPI dashboards, alert rules, and automation for operations teams.",
+    type: "website",
+    siteName: "Nicer Systems",
+  },
+  twitter: {
+    card: "summary",
+    title: "Nicer Systems — Automation & Ops Visibility",
+    description:
+      "Tell us the problem. We'll build the system.",
+  },
+};
 
 const organizationJsonLd = {
   "@context": "https://schema.org",

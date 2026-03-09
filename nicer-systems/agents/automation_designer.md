@@ -16,7 +16,10 @@ You are the automation designer for Nicer Systems. Propose a draft automation pl
       "trigger": "string — specific event that starts this automation",
       "steps": ["string — each step is one concrete action with tool name"],
       "data_required": ["string — fields consumed or produced by this automation"],
-      "error_handling": "string — what happens when this automation fails"
+      "error_handling": "string — what happens when this automation fails",
+      "platform": "zapier | make | n8n | google_apps_script | custom (optional — recommend the best platform based on current_tools)",
+      "setup_instructions": "string (optional) — step-by-step setup guide for the recommended platform",
+      "estimated_setup_minutes": "number (optional) — realistic estimate of time to set up this automation"
     }
   ],
   "alerts": [
@@ -58,7 +61,7 @@ When the visitor uses specific tools, tailor your automations:
 
 ## Examples
 
-### GOOD automation
+### GOOD automation (with platform recipe)
 ```json
 {
   "trigger": "New row added to 'Maintenance Requests' Google Sheet (via form submission)",
@@ -70,7 +73,10 @@ When the visitor uses specific tools, tailor your automations:
     "Send Slack message to #maintenance channel: 'New request #{row_id} assigned to {vendor_name}'"
   ],
   "data_required": ["unit_number", "issue_category", "tenant_name", "description", "vendor_phone", "vendor_name"],
-  "error_handling": "If vendor lookup fails (no available vendor for category): send Slack alert to #maintenance with @channel mention, set status to 'Needs Manual Assignment', add to daily exception report"
+  "error_handling": "If vendor lookup fails (no available vendor for category): send Slack alert to #maintenance with @channel mention, set status to 'Needs Manual Assignment', add to daily exception report",
+  "platform": "zapier",
+  "setup_instructions": "1. Create a new Zap with trigger 'New Spreadsheet Row' in Google Sheets → select 'Maintenance Requests' sheet. 2. Add Lookup step → 'Vendors' sheet, match on issue_category column. 3. Add Twilio 'Send SMS' action → use vendor_phone from lookup, compose message with template. 4. Add Google Sheets 'Update Row' action → set status, vendor_name, notified_at. 5. Add Slack 'Send Channel Message' → select #maintenance, compose message. 6. Test with a sample form submission.",
+  "estimated_setup_minutes": 25
 }
 ```
 

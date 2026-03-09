@@ -19,11 +19,16 @@ export interface WorkflowMapperOutput {
   failure_modes: string[];
 }
 
+export type AutomationPlatform = "zapier" | "make" | "n8n" | "google_apps_script" | "custom";
+
 export interface Automation {
   trigger: string;
   steps: string[];
   data_required: string[];
   error_handling: string;
+  platform?: AutomationPlatform;
+  setup_instructions?: string;
+  estimated_setup_minutes?: number;
 }
 
 export interface Alert {

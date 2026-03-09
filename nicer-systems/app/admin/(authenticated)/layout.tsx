@@ -48,14 +48,24 @@ export default async function AdminLayout({
               Operations Admin
             </h1>
           </div>
-          <a
-            href="/"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-4 py-2 text-sm text-[#27311f] transition-colors hover:bg-white"
-          >
-            View site
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/preview/site"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+            >
+              Preview Site
+            </a>
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-4 py-2 text-sm text-[#27311f] transition-colors hover:bg-white"
+            >
+              View site
+            </a>
+          </div>
         </header>
         <main className="flex-1 px-6 py-8 md:px-8">{children}</main>
       </div>

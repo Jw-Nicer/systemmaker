@@ -101,8 +101,13 @@ export function ProofOfWorkClient({
                     title: cs.title,
                   })
                 }
-                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                className="group relative block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
+                {!cs.is_published && (
+                  <span className="absolute right-3 top-3 z-10 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                    Draft
+                  </span>
+                )}
                 {/* Thumbnail */}
                 <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
                   {cs.thumbnail_url ? (
