@@ -1,0 +1,41 @@
+runConfig:
+  runtime: nodejs22
+  memoryMiB: 512
+  concurrency: 100
+
+env:
+  # Firebase Client SDK (public)
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+
+  # Firebase Admin SDK (server-side)
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+
+  # Third-party services
+  - variable: GOOGLE_GEMINI_API_KEY
+    secret: GOOGLE_GEMINI_API_KEY
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+  - variable: ADMIN_EMAIL
+    secret: ADMIN_EMAIL
+
+  # Analytics (public)
+  - variable: NEXT_PUBLIC_POSTHOG_KEY
+    secret: NEXT_PUBLIC_POSTHOG_KEY
+  - variable: NEXT_PUBLIC_POSTHOG_HOST
+    secret: NEXT_PUBLIC_POSTHOG_HOST
