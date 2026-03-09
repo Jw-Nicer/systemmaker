@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import type { PreviewPlan, Automation } from "@/types/preview-plan";
 import { ShareButtons } from "./ShareButtons";
 import { EVENTS, track } from "@/lib/analytics";
