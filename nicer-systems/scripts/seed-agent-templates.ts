@@ -10,6 +10,7 @@ const TEMPLATES = [
   { key: "automation_designer", name: "Automation Designer", file: "automation_designer.md" },
   { key: "dashboard_designer", name: "Dashboard Designer", file: "dashboard_designer.md" },
   { key: "ops_pulse_writer", name: "Ops Pulse Writer", file: "ops_pulse_writer.md" },
+  { key: "implementation_sequencer", name: "Implementation Sequencer", file: "implementation_sequencer.md" },
 ];
 
 async function main() {

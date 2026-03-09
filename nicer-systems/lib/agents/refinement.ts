@@ -355,6 +355,36 @@ export function getSectionSuggestions(
       }
       break;
     }
+
+    case "implementation_sequencer": {
+      if (plan.roadmap) {
+        if (plan.roadmap.phases.length < 3) {
+          suggestions.push({
+            label: "Add more phases",
+            feedback: "The roadmap seems compressed. Break it into more phases with clearer milestones between them.",
+          });
+        }
+        const hasQuickWins = plan.roadmap.phases.some((p) => p.quick_wins.length > 0);
+        if (!hasQuickWins) {
+          suggestions.push({
+            label: "Add quick wins",
+            feedback: "Add early quick wins to each phase — these build momentum and stakeholder confidence.",
+          });
+        }
+        const largeTasks = plan.roadmap.phases.flatMap((p) => p.tasks).filter((t) => t.effort === "large");
+        if (largeTasks.length > plan.roadmap.phases.length) {
+          suggestions.push({
+            label: "Break down large tasks",
+            feedback: `There are ${largeTasks.length} large tasks. Can any be split into smaller deliverables? Each task should be completable by one person in one week.`,
+          });
+        }
+      }
+      suggestions.push({
+        label: "Adjust timeline",
+        feedback: "Adjust the timeline based on our team's availability. We have a small team — can we extend phases to be more realistic?",
+      });
+      break;
+    }
   }
 
   // Always offer these as fallbacks if we have fewer than 2 suggestions
