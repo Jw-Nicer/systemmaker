@@ -161,3 +161,78 @@ export async function reorderVariants(
     return { success: false, error: err instanceof Error ? err.message : "Failed to reorder variants" };
   }
 }
+
+export async function getVariantAnalytics(): Promise<
+  Record<string, { views: number; leads: number }>
+> {
+  await requireAuth();
+  try {
+    const db = getAdminDb();
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [eventSnap, leadSnap] = await Promise.all([
+      db
+        .collection("events")
+        .where("event_name", "==", "landing_view")
+        .where("created_at", ">=", since)
+        .orderBy("created_at", "desc")
+        .limit(2500)
+        .get(),
+      db
+        .collection("leads")
+        .where("created_at", ">=", since)
+        .orderBy("created_at", "desc")
+        .limit(1000)
+        .get(),
+    ]);
+
+    const analytics: Record<string, { views: number; leads: number }> = {};
+
+    for (const doc of eventSnap.docs) {
+      const data = doc.data();
+      const slug = data.payload?.industry_slug ?? data.payload?.path?.replace(/^\//, "")?.split("/")[0];
+      if (typeof slug !== "string" || slug === "") continue;
+      if (!analytics[slug]) analytics[slug] = { views: 0, leads: 0 };
+      analytics[slug].views += 1;
+    }
+
+    for (const doc of leadSnap.docs) {
+      const data = doc.data();
+      const path = data.landing_path;
+      if (typeof path !== "string" || path === "/") continue;
+      const slug = path.replace(/^\//, "").split("/")[0];
+      if (!analytics[slug]) analytics[slug] = { views: 0, leads: 0 };
+      analytics[slug].leads += 1;
+    }
+
+    return analytics;
+  } catch (err) {
+    console.error("[actions] getVariantAnalytics failed:", err);
+    return {};
+  }
+}
+
+export async function bulkTogglePublished(
+  ids: string[],
+  is_published: boolean
+): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    const db = getAdminDb();
+    const batch = db.batch();
+
+    for (const id of ids) {
+      batch.update(db.collection("variants").doc(id), {
+        is_published,
+        updated_at: FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+    revalidateVariantSurfaces();
+    return { success: true };
+  } catch (err) {
+    console.error("[actions] bulkTogglePublished failed:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to bulk update variants" };
+  }
+}
