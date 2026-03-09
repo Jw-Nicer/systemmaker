@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { track, EVENTS } from "@/lib/analytics";
 
@@ -60,6 +61,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       {/* Scope */}
       <Section
         title="Suggested Scope"
+        id="scope"
         expanded={expanded.scope}
         onToggle={() => toggle("scope")}
       >
@@ -82,6 +84,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       {/* Workflow */}
       <Section
         title={`Workflow Map (${plan.workflow.stages.length} stages)`}
+        id="workflow"
         expanded={expanded.workflow}
         onToggle={() => toggle("workflow")}
       >
@@ -114,6 +117,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       {/* KPIs */}
       <Section
         title={`Dashboard KPIs (${plan.dashboard.kpis.length})`}
+        id="kpis"
         expanded={expanded.kpis}
         onToggle={() => toggle("kpis")}
       >
@@ -136,6 +140,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       {/* Alerts */}
       <Section
         title={`Automated Alerts (${plan.automation.alerts.length})`}
+        id="alerts"
         expanded={expanded.alerts}
         onToggle={() => toggle("alerts")}
       >
@@ -157,6 +162,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       {/* Actions */}
       <Section
         title="Recommended Actions"
+        id="actions"
         expanded={expanded.actions}
         onToggle={() => toggle("actions")}
       >
@@ -217,6 +223,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
                   setEmailForm((f) => ({ ...f, name: e.target.value }))
                 }
                 placeholder="Your name"
+                aria-label="Your name"
                 required
                 className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:border-primary focus:outline-none"
               />
@@ -227,6 +234,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
                   setEmailForm((f) => ({ ...f, email: e.target.value }))
                 }
                 placeholder="you@company.com"
+                aria-label="Email address"
                 required
                 className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:border-primary focus:outline-none"
               />
@@ -262,25 +270,61 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
 
 function Section({
   title,
+  id,
   expanded,
   onToggle,
   children,
 }: {
   title: string;
+  id: string;
   expanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const contentId = `section-content-${id}`;
+  const headerId = `section-header-${id}`;
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <button
+        id={headerId}
+        type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-light/50 transition-colors"
+        aria-expanded={expanded}
+        aria-controls={contentId}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-light/50 transition-colors focus-organic"
       >
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-muted text-xs">{expanded ? "−" : "+"}</span>
+        <motion.svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-muted"
+          animate={{ rotate: expanded ? 180 : 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </motion.svg>
       </button>
-      {expanded && <div className="px-4 pb-4">{children}</div>}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            id={contentId}
+            role="region"
+            aria-labelledby={headerId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <div className="px-4 pb-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
