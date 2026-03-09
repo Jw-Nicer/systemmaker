@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { getPublishedOffers } from "@/lib/firestore/offers";
+import type { Offer } from "@/types/offer";
 
 export async function PricingSection({
   eyebrow = "Pricing",
   title = "Simple, outcome-based\npricing",
   description = "Every engagement starts with a scoping call. We confirm the workflow, define the deliverables, and align the implementation plan to your actual operating stack.",
   highlightedTier,
+  offersData,
 }: {
   eyebrow?: string;
   title?: string;
   description?: string;
   highlightedTier?: string;
+  offersData?: Offer[];
 } = {}) {
-  const tiers = await getPublishedOffers();
+  const tiers = offersData ?? await getPublishedOffers();
 
   if (tiers.length === 0) {
     return null;

@@ -22,3 +22,17 @@ export const getPublishedFAQs = unstable_cache(
   ["published-faqs"],
   { revalidate: 60, tags: ["faqs"] }
 );
+
+export async function getAllFAQsForPreview(): Promise<FAQ[]> {
+  try {
+    const db = getAdminDb();
+    const snap = await db
+      .collection("faqs")
+      .orderBy("sort_order", "asc")
+      .get();
+    return snap.docs.map((doc) => serializeDoc<FAQ>(doc));
+  } catch (err) {
+    console.error("[firestore] getAllFAQsForPreview failed:", err);
+    return [];
+  }
+}

@@ -1,8 +1,13 @@
 import Image from "next/image";
 import { getPublishedTestimonials } from "@/lib/firestore/testimonials";
+import type { Testimonial } from "@/types/testimonial";
 
-export async function TestimonialsSection() {
-  const testimonials = await getPublishedTestimonials();
+export async function TestimonialsSection({
+  testimonialsData,
+}: {
+  testimonialsData?: Testimonial[];
+} = {}) {
+  const testimonials = testimonialsData ?? await getPublishedTestimonials();
 
   if (testimonials.length === 0) {
     return null;

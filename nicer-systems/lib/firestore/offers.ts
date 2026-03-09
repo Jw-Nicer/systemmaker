@@ -22,3 +22,17 @@ export const getPublishedOffers = unstable_cache(
   ["published-offers"],
   { revalidate: 60, tags: ["offers"] }
 );
+
+export async function getAllOffersForPreview(): Promise<Offer[]> {
+  try {
+    const db = getAdminDb();
+    const snap = await db
+      .collection("offers")
+      .orderBy("sort_order", "asc")
+      .get();
+    return snap.docs.map((doc) => serializeDoc<Offer>(doc));
+  } catch (err) {
+    console.error("[firestore] getAllOffersForPreview failed:", err);
+    return [];
+  }
+}

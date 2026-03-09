@@ -1,12 +1,14 @@
 import { getPublishedCaseStudies, getIndustries } from "@/lib/firestore/case-studies";
 import { ProofOfWorkClient } from "./ProofOfWorkClient";
 import { matchesIndustryKey } from "@/lib/marketing/industry-key";
+import type { CaseStudy } from "@/types/case-study";
 
 interface ProofOfWorkProps {
   featuredIndustries?: string[];
   eyebrow?: string;
   title?: string;
   description?: string;
+  caseStudiesData?: CaseStudy[];
 }
 
 export async function ProofOfWork({
@@ -14,8 +16,9 @@ export async function ProofOfWork({
   eyebrow,
   title,
   description,
+  caseStudiesData,
 }: ProofOfWorkProps = {}) {
-  let caseStudies = await getPublishedCaseStudies();
+  let caseStudies = caseStudiesData ?? await getPublishedCaseStudies();
 
   // Filter to featured industries if provided (variant pages)
   if (featuredIndustries && featuredIndustries.length > 0) {

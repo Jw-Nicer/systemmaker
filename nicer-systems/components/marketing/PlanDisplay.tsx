@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PreviewPlan } from "@/types/preview-plan";
+import type { PreviewPlan, Automation } from "@/types/preview-plan";
 import { ShareButtons } from "./ShareButtons";
 import { EVENTS, track } from "@/lib/analytics";
 
@@ -235,17 +235,7 @@ export function PlanDisplay({
             </p>
             <div className="space-y-2">
               {plan.automation.automations.map((a, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-border bg-background p-3"
-                >
-                  <p className="text-sm font-medium">{a.trigger}</p>
-                  <ol className="text-xs text-muted list-decimal pl-4 mt-1 space-y-0.5">
-                    {a.steps.map((step, j) => (
-                      <li key={j}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
+                <AutomationCard key={i} automation={a} />
               ))}
             </div>
           </div>
@@ -332,6 +322,83 @@ export function PlanDisplay({
           </div>
         )}
       </PlanSection>
+
+      {/* Implementation Roadmap */}
+      {plan.roadmap && plan.roadmap.phases.length > 0 && (
+        <PlanSection
+          title={`Implementation Roadmap (${plan.roadmap.total_estimated_weeks} weeks)`}
+          sectionKey="roadmap"
+          expanded={expanded.roadmap}
+          onToggle={() => toggle("roadmap")}
+          showRefine={showRefine}
+          onRefine={onRefineSection}
+        >
+          <div className="space-y-4">
+            {plan.roadmap.phases.map((phase, i) => (
+              <div
+                key={i}
+                className="rounded-lg border border-border bg-background p-4"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Week {phase.week}
+                  </span>
+                  <span className="font-medium text-sm">{phase.title}</span>
+                </div>
+                <div className="space-y-2 mb-3">
+                  {phase.tasks.map((t, j) => (
+                    <div key={j} className="flex items-start gap-2 text-sm">
+                      <span
+                        className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                          t.effort === "large"
+                            ? "bg-red-500/10 text-red-400"
+                            : t.effort === "medium"
+                              ? "bg-yellow-500/10 text-yellow-400"
+                              : "bg-green-500/10 text-green-400"
+                        }`}
+                      >
+                        {t.effort}
+                      </span>
+                      <div>
+                        <span className="text-muted">{t.owner_role}:</span>{" "}
+                        {t.task}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {phase.quick_wins.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-green-400 font-medium mb-1">Quick Wins</p>
+                    <ul className="text-xs text-muted list-disc pl-4 space-y-0.5">
+                      {phase.quick_wins.map((w, j) => (
+                        <li key={j}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {phase.risks.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-yellow-400 font-medium mb-1">Risks</p>
+                    <ul className="text-xs text-muted list-disc pl-4 space-y-0.5">
+                      {phase.risks.map((r, j) => (
+                        <li key={j}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {plan.roadmap.critical_path && (
+            <div className="mt-4 rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs text-primary uppercase tracking-wide font-medium mb-1">
+                Critical Path
+              </p>
+              <p className="text-sm text-muted">{plan.roadmap.critical_path}</p>
+            </div>
+          )}
+        </PlanSection>
+      )}
 
       {/* Disclaimer */}
       <p className="text-xs text-muted/60 italic text-center pt-2 print:text-black/40">

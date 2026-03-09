@@ -7,6 +7,7 @@ import {
   automationDesignerOutputSchema,
   dashboardDesignerOutputSchema,
   opsPulseOutputSchema,
+  implementationSequencerOutputSchema,
   templateOutputSchemas,
 } from "../lib/agents/schemas";
 
@@ -194,13 +195,121 @@ test("opsPulseOutputSchema rejects invalid priority values", () => {
   assert.equal(result.success, false);
 });
 
-test("templateOutputSchemas maps all 5 template keys", () => {
+test("implementationSequencerOutputSchema accepts valid output", () => {
+  const valid = {
+    phases: [
+      {
+        week: 1,
+        title: "Foundation & Data Setup",
+        tasks: [
+          {
+            task: "Audit current tenant application spreadsheet — document all fields, identify missing data, and flag duplicates.",
+            effort: "large",
+            owner_role: "Property Manager",
+          },
+          {
+            task: "Set up Zapier account (free tier) and connect to Gmail + Google Sheets for automation testing.",
+            effort: "small",
+            owner_role: "Operations Coordinator",
+          },
+        ],
+        dependencies: ["None — this is the first phase"],
+        risks: [
+          "Spreadsheet data may be messier than expected — budget an extra day for cleanup if needed",
+        ],
+        quick_wins: [
+          "Auto-confirm receipt of new applications via email within first 2 hours",
+        ],
+      },
+      {
+        week: 2,
+        title: "Core Workflow Implementation",
+        tasks: [
+          {
+            task: "Create standardized intake form using Google Forms with all required fields from workflow analysis.",
+            effort: "medium",
+            owner_role: "Operations Coordinator",
+          },
+        ],
+        dependencies: ["Week 1 data audit complete"],
+        risks: [
+          "Staff may resist changing from email to form intake — schedule a 15-minute demo to show benefits",
+        ],
+        quick_wins: [
+          "Create a shared status view so everyone can see pending applications without asking",
+        ],
+      },
+      {
+        week: 3,
+        title: "Go-Live & Monitoring",
+        tasks: [
+          {
+            task: "Deploy monitoring dashboards and run 1-week parallel with manual backup process active.",
+            effort: "medium",
+            owner_role: "Operations Lead",
+          },
+        ],
+        dependencies: ["Week 2 form build complete and tested"],
+        risks: [
+          "Parallel run may surface edge cases not caught during testing — keep manual fallback active for 1 week",
+        ],
+        quick_wins: [],
+      },
+    ],
+    critical_path: "Data audit & cleanup → Intake form build → Automation triggers configured → 1-week parallel run → Go-live",
+    total_estimated_weeks: 3,
+  };
+  const result = implementationSequencerOutputSchema.safeParse(valid);
+  assert.ok(result.success);
+});
+
+test("implementationSequencerOutputSchema rejects invalid effort values", () => {
+  const invalid = {
+    phases: [
+      {
+        week: 1,
+        title: "Foundation & Data Setup",
+        tasks: [
+          {
+            task: "Audit current spreadsheet and document all fields.",
+            effort: "huge",
+            owner_role: "Property Manager",
+          },
+        ],
+        dependencies: [],
+        risks: ["Data may be messy requiring extra cleanup time"],
+        quick_wins: [],
+      },
+      {
+        week: 2,
+        title: "Build Phase",
+        tasks: [
+          {
+            task: "Create intake form with required fields.",
+            effort: "medium",
+            owner_role: "Coordinator",
+          },
+        ],
+        dependencies: ["Week 1 complete"],
+        risks: ["Team resistance to process changes"],
+        quick_wins: [],
+      },
+    ],
+    critical_path: "Data audit → Form build → Go-live",
+    total_estimated_weeks: 2,
+  };
+  const result = implementationSequencerOutputSchema.safeParse(invalid);
+  assert.equal(result.success, false);
+});
+
+test("templateOutputSchemas maps all 6 template keys", () => {
   const expected = [
     "intake_agent",
     "workflow_mapper",
     "automation_designer",
     "dashboard_designer",
     "ops_pulse_writer",
+    "implementation_sequencer",
   ];
   for (const key of expected) {
     assert.ok(templateOutputSchemas[key], `Missing schema for: ${key}`);

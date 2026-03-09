@@ -22,3 +22,17 @@ export const getPublishedTestimonials = unstable_cache(
   ["published-testimonials"],
   { revalidate: 60, tags: ["testimonials"] }
 );
+
+export async function getAllTestimonialsForPreview(): Promise<Testimonial[]> {
+  try {
+    const db = getAdminDb();
+    const snap = await db
+      .collection("testimonials")
+      .orderBy("sort_order", "asc")
+      .get();
+    return snap.docs.map((doc) => serializeDoc<Testimonial>(doc));
+  } catch (err) {
+    console.error("[firestore] getAllTestimonialsForPreview failed:", err);
+    return [];
+  }
+}

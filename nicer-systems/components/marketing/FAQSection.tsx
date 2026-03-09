@@ -1,16 +1,19 @@
 import { getPublishedFAQs } from "@/lib/firestore/faqs";
 import { FAQAccordion } from "./FAQAccordion";
+import type { FAQ } from "@/types/faq";
 
 export async function FAQSection({
   eyebrow = "FAQ",
   title = "Common questions",
   description = "",
+  faqsData,
 }: {
   eyebrow?: string;
   title?: string;
   description?: string;
+  faqsData?: FAQ[];
 } = {}) {
-  const faqs = await getPublishedFAQs();
+  const faqs = faqsData ?? await getPublishedFAQs();
   if (faqs.length === 0) {
     return null;
   }

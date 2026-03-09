@@ -66,6 +66,20 @@ export function getRelatedCaseStudies(
     .map((s) => s.cs);
 }
 
+export async function getAllCaseStudiesForPreview(): Promise<CaseStudy[]> {
+  try {
+    const db = getAdminDb();
+    const snap = await db
+      .collection("case_studies")
+      .orderBy("sort_order", "asc")
+      .get();
+    return snap.docs.map((doc) => serializeDoc<CaseStudy>(doc));
+  } catch (err) {
+    console.error("[firestore] getAllCaseStudiesForPreview failed:", err);
+    return [];
+  }
+}
+
 export function getIndustries(caseStudies: CaseStudy[]): string[] {
   const industries = new Set(caseStudies.map((cs) => cs.industry));
   return Array.from(industries).sort();
