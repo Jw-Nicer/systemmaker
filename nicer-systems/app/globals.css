@@ -26,11 +26,15 @@
   --cream-card: #f8f4ea;
   --cream-warm: #f7f2e8;
   --cream-muted: #f2ede2;
+  --tag-green: #e7efe4;
+  --tag-warm: #f1ebdf;
 
   /* Borders */
   --border-light: #d9d1c3;
   --border-card: #ddd5c7;
   --border-subtle: #d7d0c0;
+  --tag-green-border: #c8d9c4;
+  --tag-warm-border: #e2dace;
 
   /* Text */
   --text-heading: #1d2318;

@@ -114,6 +114,31 @@ export const opsPulseOutputSchema = z.object({
   questions: z.array(z.string().min(10).max(1000)).min(1).max(10),
 });
 
+// --- Implementation Sequencer ---
+
+const effortEnum = z.enum(["small", "medium", "large"]);
+
+export const implementationSequencerOutputSchema = z.object({
+  phases: z.array(
+    z.object({
+      week: z.number().min(1).max(12),
+      title: z.string().min(5).max(500),
+      tasks: z.array(
+        z.object({
+          task: z.string().min(10).max(2000),
+          effort: effortEnum,
+          owner_role: z.string().min(3).max(200),
+        })
+      ).min(1).max(10),
+      dependencies: z.array(z.string().max(500)).min(0).max(10),
+      risks: z.array(z.string().min(10).max(500)).min(1).max(5),
+      quick_wins: z.array(z.string().min(5).max(500)).min(0).max(5),
+    })
+  ).min(2).max(8),
+  critical_path: z.string().min(10).max(2000),
+  total_estimated_weeks: z.number().min(2).max(12),
+});
+
 // --- Registry: template key → output schema ---
 
 export const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
@@ -122,4 +147,5 @@ export const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
   automation_designer: automationDesignerOutputSchema,
   dashboard_designer: dashboardDesignerOutputSchema,
   ops_pulse_writer: opsPulseOutputSchema,
+  implementation_sequencer: implementationSequencerOutputSchema,
 };

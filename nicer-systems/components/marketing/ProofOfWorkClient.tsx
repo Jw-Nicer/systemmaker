@@ -75,7 +75,7 @@ export function ProofOfWorkClient({
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeFilter === industry
                   ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
-                  : "border border-[#3f4a37]/25 text-[var(--text-accent)] hover:border-[#3f4a37]/50 hover:text-[var(--text-heading)]"
+                  : "border border-[var(--green-accent)]/25 text-[var(--text-accent)] hover:border-[var(--green-accent)]/50 hover:text-[var(--text-heading)]"
               }`}
             >
               {industry}
@@ -101,7 +101,7 @@ export function ProofOfWorkClient({
                     title: cs.title,
                   })
                 }
-                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)]/96 shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
                 {/* Thumbnail */}
                 <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
@@ -115,7 +115,7 @@ export function ProofOfWorkClient({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="text-[#1d2318]/10 text-5xl font-[var(--font-editorial)]">
+                    <div className="text-[var(--text-heading)]/10 text-5xl font-[var(--font-editorial)]">
                       {cs.industry.charAt(0)}
                     </div>
                   )}
@@ -124,13 +124,13 @@ export function ProofOfWorkClient({
                 <div className="p-5">
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[var(--tag-green)] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
                         {cs.industry}
                       </span>
                     {cs.tools.slice(0, 2).map((tool) => (
                       <span
                         key={tool}
-                        className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)]"
+                        className="px-2.5 py-0.5 rounded-full bg-[var(--tag-warm)] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)]"
                       >
                         {tool}
                       </span>

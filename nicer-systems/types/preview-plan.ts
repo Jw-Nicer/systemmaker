@@ -66,6 +66,27 @@ export interface OpsPulseOutput {
   questions: string[];
 }
 
+export interface ImplementationTask {
+  task: string;
+  effort: "small" | "medium" | "large";
+  owner_role: string;
+}
+
+export interface ImplementationPhase {
+  week: number;
+  title: string;
+  tasks: ImplementationTask[];
+  dependencies: string[];
+  risks: string[];
+  quick_wins: string[];
+}
+
+export interface ImplementationSequencerOutput {
+  phases: ImplementationPhase[];
+  critical_path: string;
+  total_estimated_weeks: number;
+}
+
 /** Validation warnings from cross-section consistency checks. */
 export interface PlanWarning {
   section: string;
@@ -78,6 +99,8 @@ export interface PreviewPlan {
   automation: AutomationDesignerOutput;
   dashboard: DashboardDesignerOutput;
   ops_pulse: OpsPulseOutput;
+  /** Implementation roadmap (optional — 6th stage, runs in parallel with ops_pulse). */
+  roadmap?: ImplementationSequencerOutput;
   /** Cross-section consistency warnings (populated after validation pass). */
   warnings?: PlanWarning[];
 }

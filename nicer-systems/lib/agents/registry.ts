@@ -11,6 +11,7 @@ import {
   automationDesignerOutputSchema,
   dashboardDesignerOutputSchema,
   opsPulseOutputSchema,
+  implementationSequencerOutputSchema,
 } from "./schemas";
 
 // ---------------------------------------------------------------------------
@@ -23,7 +24,8 @@ export type AgentStep =
   | "workflow"
   | "automation"
   | "dashboard"
-  | "ops_pulse";
+  | "ops_pulse"
+  | "implementation_sequencer";
 
 /** Configuration for a single pipeline stage. */
 export interface AgentStageConfig {
@@ -84,6 +86,14 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     label: "Writing ops pulse...",
     completeLabel: "Ops pulse complete",
     outputSchema: opsPulseOutputSchema,
+    dependencies: ["automation", "dashboard"],
+  },
+  {
+    key: "implementation_sequencer",
+    templateKey: "implementation_sequencer",
+    label: "Building implementation roadmap...",
+    completeLabel: "Implementation roadmap complete",
+    outputSchema: implementationSequencerOutputSchema,
     dependencies: ["automation", "dashboard"],
   },
 ];

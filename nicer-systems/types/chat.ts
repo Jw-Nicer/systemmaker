@@ -32,7 +32,8 @@ export type PlanSectionType =
   | "workflow"
   | "automation"
   | "dashboard"
-  | "ops_pulse";
+  | "ops_pulse"
+  | "implementation_sequencer";
 
 // --- Conversation state ---
 

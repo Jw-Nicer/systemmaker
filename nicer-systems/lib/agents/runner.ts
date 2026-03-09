@@ -13,6 +13,7 @@ import type {
   AutomationDesignerOutput,
   DashboardDesignerOutput,
   OpsPulseOutput,
+  ImplementationSequencerOutput,
 } from "@/types/preview-plan";
 
 const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
@@ -27,6 +28,7 @@ const STAGE_TIMEOUTS: Record<string, number> = {
   automation_designer: 30_000,
   dashboard_designer: 30_000,
   ops_pulse_writer: 25_000,
+  implementation_sequencer: 30_000,
 };
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -313,19 +315,38 @@ export async function runAgentChain(
     dashboardPromise,
   ]);
 
-  // Step 5: Ops Pulse Writer
+  // Steps 5 & 6 in parallel — both depend on automation + dashboard
   onStep?.("ops_pulse");
-  const ops_pulse = await runAgentWithTemplate<OpsPulseOutput>(
-    "ops_pulse_writer",
-    getTemplate("ops_pulse_writer"),
-    {
-      kpis: dashboard.kpis,
-      dashboards: dashboard.dashboards,
-      failure_modes: workflow.failure_modes,
-    }
-  );
+  onStep?.("implementation_sequencer");
 
-  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse };
+  const [ops_pulse, roadmap] = await Promise.all([
+    runAgentWithTemplate<OpsPulseOutput>(
+      "ops_pulse_writer",
+      getTemplate("ops_pulse_writer"),
+      {
+        kpis: dashboard.kpis,
+        dashboards: dashboard.dashboards,
+        failure_modes: workflow.failure_modes,
+      }
+    ),
+    runAgentWithTemplate<ImplementationSequencerOutput>(
+      "implementation_sequencer",
+      getTemplate("implementation_sequencer"),
+      {
+        clarified_problem: intake.clarified_problem,
+        assumptions: intake.assumptions,
+        constraints: intake.constraints,
+        suggested_scope: intake.suggested_scope,
+        stages: workflow.stages,
+        automations: automation.automations,
+        alerts: automation.alerts,
+        dashboards: dashboard.dashboards,
+        kpis: dashboard.kpis,
+      }
+    ).catch(() => undefined),
+  ]);
+
+  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse, roadmap };
   plan.warnings = validatePlanConsistency(plan);
   return plan;
 }
