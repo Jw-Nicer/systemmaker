@@ -9,11 +9,11 @@ import {
 import { saveThemeSettings } from "./actions";
 
 const GRADIENT_PRESETS = [
-  { value: "dark-navy", label: "Dark Navy" },
-  { value: "midnight-purple", label: "Midnight Purple" },
-  { value: "deep-ocean", label: "Deep Ocean" },
-  { value: "charcoal", label: "Charcoal" },
-  { value: "obsidian", label: "Obsidian" },
+  { value: "cream-natural", label: "Cream Natural" },
+  { value: "sage-mist", label: "Sage Mist" },
+  { value: "warm-sand", label: "Warm Sand" },
+  { value: "ivory-blush", label: "Ivory Blush" },
+  { value: "stone-moss", label: "Stone Moss" },
 ];
 
 const BRUSH_STYLES = [
@@ -219,7 +219,7 @@ export default function ThemeCustomizer({
             ...cssVars,
             background:
               GRADIENT_PRESET_BACKGROUNDS[settings.gradient_preset] ??
-              GRADIENT_PRESET_BACKGROUNDS["dark-navy"],
+              GRADIENT_PRESET_BACKGROUNDS["cream-natural"],
           }}
         >
           {/* Mini hero preview */}
@@ -231,7 +231,7 @@ export default function ThemeCustomizer({
               >
                 Nicer Systems
               </h3>
-              <p className="text-sm" style={{ color: "#e8eaf0" }}>
+              <p className="text-sm" style={{ color: "#50584b" }}>
                 Tell us the problem. We&apos;ll build the system.
               </p>
             </div>
@@ -264,7 +264,7 @@ export default function ThemeCustomizer({
             </div>
 
             {/* Color swatch bar */}
-            <div className="flex gap-2 pt-4 border-t border-white/10">
+            <div className="flex gap-2 pt-4 border-t border-black/10">
               <div
                 className="w-8 h-8 rounded-md"
                 style={{ backgroundColor: settings.theme_primary }}
@@ -285,8 +285,8 @@ export default function ThemeCustomizer({
             </div>
 
             {/* Glow demo */}
-            <div className="pt-4 border-t border-white/10">
-              <p className="text-xs text-white/50 mb-2">
+            <div className="pt-4 border-t border-black/10">
+              <p className="text-xs text-black/50 mb-2">
                 Glow: {settings.glow_intensity}% · Motion:{" "}
                 {MOTION_LABELS[settings.motion_intensity]} · Brush:{" "}
                 {settings.brush_style}

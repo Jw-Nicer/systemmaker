@@ -32,7 +32,7 @@ async function seed() {
     await settingsRef.set({
       theme_primary: "#00d4ff",
       theme_secondary: "#7c3aed",
-      gradient_preset: "dark-navy",
+      gradient_preset: "cream-natural",
       glow_intensity: 60,
       motion_intensity: 2,
       brush_style: "soft",

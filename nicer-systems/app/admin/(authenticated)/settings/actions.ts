@@ -7,11 +7,11 @@ import type { ThemeSettings } from "@/lib/theme";
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 const GRADIENT_PRESETS = [
-  "dark-navy",
-  "midnight-purple",
-  "deep-ocean",
-  "charcoal",
-  "obsidian",
+  "cream-natural",
+  "sage-mist",
+  "warm-sand",
+  "ivory-blush",
+  "stone-moss",
 ];
 const BRUSH_STYLES = ["soft", "hard", "spray"];
 

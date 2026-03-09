@@ -12,7 +12,7 @@
   --theme-glow-intensity: 60%;
   --theme-motion-intensity: 2;
   --theme-glow-radius: 40px;
-  --theme-page-background: linear-gradient(135deg, #0a0e1a 0%, #1a1e3a 50%, #0a0e1a 100%);
+  --theme-page-background: linear-gradient(135deg, #f4efe5 0%, #f8f4ea 50%, #f4efe5 100%);
   --theme-brush-overlay-opacity: 0.82;
   --theme-brush-overlay-blur: 0px;
   --surface: #111827;
@@ -109,7 +109,7 @@
 }
 
 body {
-  background: var(--cream-bg);
+  background: var(--theme-page-background, var(--cream-bg));
   color: var(--text-heading);
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }

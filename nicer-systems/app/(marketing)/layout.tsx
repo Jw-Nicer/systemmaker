@@ -47,7 +47,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[var(--cream-bg)] text-[var(--text-heading)]">
+    <div className="min-h-screen bg-[var(--theme-page-background,var(--cream-bg))] text-[var(--text-heading)]">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--green-dark)] focus:px-4 focus:py-2 focus:text-sm focus:text-[var(--cream-warm)] focus:outline-none focus:ring-2 focus:ring-[var(--green-accent)]"

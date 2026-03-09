@@ -1,23 +1,23 @@
 export const DEFAULT_THEME = {
   primary: "#00d4ff",
   secondary: "#7c3aed",
-  gradientPreset: "dark-navy",
+  gradientPreset: "cream-natural",
   glowIntensity: 60,
   motionIntensity: 2,
   brushStyle: "soft" as "soft" | "hard" | "spray",
 } as const;
 
 export const GRADIENT_PRESET_BACKGROUNDS: Record<string, string> = {
-  "dark-navy":
-    "linear-gradient(135deg, #0a0e1a 0%, #1a1e3a 50%, #0a0e1a 100%)",
-  "midnight-purple":
-    "linear-gradient(135deg, #0f0a1a 0%, #2d1b4e 50%, #0f0a1a 100%)",
-  "deep-ocean":
-    "linear-gradient(135deg, #0a1a1a 0%, #0d2b3e 50%, #0a1a1a 100%)",
-  charcoal:
-    "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)",
-  obsidian:
-    "linear-gradient(135deg, #050505 0%, #1a1a1a 50%, #050505 100%)",
+  "cream-natural":
+    "linear-gradient(135deg, #f4efe5 0%, #f8f4ea 50%, #f4efe5 100%)",
+  "sage-mist":
+    "linear-gradient(135deg, #eef3eb 0%, #e4ede0 50%, #eef3eb 100%)",
+  "warm-sand":
+    "linear-gradient(135deg, #f5ede0 0%, #f0e5d3 50%, #f5ede0 100%)",
+  "ivory-blush":
+    "linear-gradient(135deg, #f5efe8 0%, #f2e8e3 50%, #f5efe8 100%)",
+  "stone-moss":
+    "linear-gradient(135deg, #e8e5de 0%, #dddad0 50%, #e8e5de 100%)",
 };
 
 const BRUSH_STYLE_VARS: Record<string, { opacity: string; blur: string }> = {
