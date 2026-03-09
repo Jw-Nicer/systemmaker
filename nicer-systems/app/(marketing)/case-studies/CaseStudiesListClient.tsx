@@ -19,13 +19,19 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
       : caseStudies.filter((cs) => cs.industry === activeFilter);
 
   return (
-    <section className="py-16 sm:py-24">
+    <section className="border-b border-[var(--border-light)] py-16 sm:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <h1 className="font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-6xl">
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
+          Proof of work
+        </p>
+        <h1 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-7xl">
           Case Studies
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
           Real implementations. Real metrics. Real outcomes.
+        </p>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
+          {caseStudies.length} case {caseStudies.length === 1 ? "study" : "studies"}
         </p>
 
         {/* Filter chips */}
@@ -37,7 +43,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeFilter === filter
                   ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
-                  : "border border-[#3f4a37]/25 text-[var(--text-accent)] hover:border-[#3f4a37]/50 hover:text-[var(--text-heading)]"
+                  : "border border-[var(--green-accent)]/25 text-[var(--text-accent)] hover:border-[var(--green-accent)]/50 hover:text-[var(--text-heading)]"
               }`}
             >
               {filter}
@@ -55,7 +61,7 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
               <Link
                 key={cs.id}
                 href={`/case-studies/${cs.slug}`}
-                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)]/96 shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
                 {/* Thumbnail */}
                 <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
@@ -77,13 +83,13 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
 
                 <div className="p-5">
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[var(--tag-green)] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
                       {cs.industry}
                     </span>
                     {cs.tools.slice(0, 2).map((tool) => (
                       <span
                         key={tool}
-                        className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)]"
+                        className="px-2.5 py-0.5 rounded-full bg-[var(--tag-warm)] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)]"
                       >
                         {tool}
                       </span>

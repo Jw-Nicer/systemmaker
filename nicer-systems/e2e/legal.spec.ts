@@ -1,55 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
-
-function encodeSSE(
-  type: "message" | "phase_change" | "done",
-  data: Record<string, unknown>
-) {
-  return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
-async function mockPreviewPlanCompletion(page: Page) {
-  await page.route("**/api/agent/chat", async (route) => {
-    const body = [
-      encodeSSE("phase_change", { from: "gathering", to: "complete" }),
-      encodeSSE("message", {
-        content:
-          "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
-        email_capture: true,
-      }),
-      encodeSSE("done", {}),
-    ].join("");
-
-    await route.fulfill({
-      status: 200,
-      contentType: "text/event-stream",
-      headers: {
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-      body,
-    });
-  });
-}
-
-async function dismissConsentBanner(page: Page) {
-  const declineButton = page.getByRole("button", { name: "Decline" });
-
-  if (await declineButton.isVisible().catch(() => false)) {
-    await declineButton.click();
-    await expect(declineButton).toBeHidden();
-  }
-}
-
-async function clickAndWaitForUrl(
-  page: Page,
-  locator: ReturnType<Page["locator"]>,
-  pattern: RegExp
-) {
-  await Promise.all([
-    page.waitForURL(pattern, { timeout: 15_000 }),
-    locator.click(),
-  ]);
-}
+import { expect, test } from "@playwright/test";
+import { dismissConsentBanner } from "./helpers/consent";
+import { clickAndWaitForUrl } from "./helpers/navigation";
+import { mockPreviewPlanCompletion } from "./helpers/sse";
 
 test("privacy page renders legal content and links to terms", async ({ page }) => {
   await page.goto("/privacy");
@@ -100,16 +52,24 @@ test("footer legal links route correctly from the homepage", async ({ page }) =>
   await page.goto("/");
   await dismissConsentBanner(page);
 
+  // Scroll footer into view first
+  const footer = page.getByRole("contentinfo");
+  await footer.scrollIntoViewIfNeeded();
+
   await clickAndWaitForUrl(
     page,
-    page.getByRole("contentinfo").getByRole("link", { name: "Privacy Policy" }),
+    footer.getByRole("link", { name: "Privacy Policy" }),
     /\/privacy$/
   );
 
   await page.goto("/");
+  await dismissConsentBanner(page);
+  const footer2 = page.getByRole("contentinfo");
+  await footer2.scrollIntoViewIfNeeded();
+
   await clickAndWaitForUrl(
     page,
-    page.getByRole("contentinfo").getByRole("link", { name: "Terms" }),
+    footer2.getByRole("link", { name: "Terms" }),
     /\/terms$/
   );
 });

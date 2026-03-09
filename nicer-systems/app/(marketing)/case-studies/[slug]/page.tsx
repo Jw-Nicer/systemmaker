@@ -57,13 +57,16 @@ export default async function CaseStudyDetailPage({ params }: Props) {
   };
 
   return (
-    <section className="py-16 sm:py-24">
+    <section className="py-16 sm:py-24 bg-[radial-gradient(ellipse_at_top,rgba(212,221,205,0.3),transparent_60%)]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        {/* Breadcrumb */}
+        {/* Eyebrow + Breadcrumb */}
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em] mb-3">
+          Case Study
+        </p>
         <nav className="mb-8 text-sm text-[var(--text-muted)]">
           <Link href="/case-studies" className="hover:text-[var(--text-heading)] transition-colors">
             Case Studies
@@ -75,19 +78,19 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Header */}
         <div className="mb-12">
           <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium border border-[#c8d9c4]">
+            <span className="px-2.5 py-0.5 rounded-full bg-[var(--tag-green)] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium border border-[var(--tag-green-border)]">
               {cs.industry}
             </span>
             {cs.tools.map((tool) => (
               <span
                 key={tool}
-                className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)] border border-[#e2dace]"
+                className="px-2.5 py-0.5 rounded-full bg-[var(--tag-warm)] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)] border border-[var(--tag-warm-border)]"
               >
                 {tool}
               </span>
             ))}
           </div>
-          <h1 className="font-[var(--font-editorial)] text-3xl leading-[1.05] tracking-[-0.03em] text-[var(--text-heading)] sm:text-4xl md:text-5xl">
+          <h1 className="font-[var(--font-editorial)] text-3xl leading-[1.05] tracking-[-0.03em] text-[var(--text-heading)] sm:text-4xl md:text-6xl">
             {cs.title}
           </h1>
           {cs.client_name && (
@@ -126,7 +129,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Metrics Before/After */}
         {cs.metrics.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4 text-[var(--green-accent)] border-l-2 border-l-[#a3b88c]/40 pl-6">Results</h2>
+            <h2 className="text-xl font-semibold mb-4 text-[var(--green-accent)] border-l-2 border-l-[var(--green-accent)]/40 pl-6">Results</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {cs.metrics.map((m) => (
                 <div
@@ -164,13 +167,16 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Related Case Studies */}
         {related.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4 text-[var(--text-heading)]">Related Case Studies</h2>
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
+              Related
+            </p>
+            <h2 className="mt-3 text-xl font-semibold mb-4 text-[var(--text-heading)]">More case studies</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {related.map((r) => (
                 <Link
                   key={r.id}
                   href={`/case-studies/${r.slug}`}
-                  className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)]/96 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(77,63,43,0.08)]"
+                  className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(77,63,43,0.08)]"
                 >
                   {r.thumbnail_url && (
                     <Image
@@ -183,7 +189,7 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                     />
                   )}
                   <div className="p-4">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[var(--tag-green)] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
                       {r.industry}
                     </span>
                     <h3 className="font-medium text-[var(--text-heading)] mt-2 line-clamp-2 group-hover:text-[var(--green-accent)] transition-colors duration-300">
@@ -197,14 +203,16 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         )}
 
         {/* Divider */}
-        <hr className="border-[var(--border-light)] mb-12" />
+        <div className="my-16 flex justify-center" aria-hidden="true">
+          <div className="h-px w-24 bg-gradient-to-r from-transparent via-[var(--border-light)] to-transparent" />
+        </div>
 
         {/* CTA */}
         <div className="rounded-[var(--radius-card-lg)] bg-[var(--green-dark)] p-8 text-center overflow-hidden">
           <h3 className="text-xl font-bold mb-2 text-[var(--cream-warm)]">
             Ready to get results like these?
           </h3>
-          <p className="text-[#c2cac0] mb-6 max-w-lg mx-auto">
+          <p className="text-[var(--border-light)] mb-6 max-w-lg mx-auto">
             Tell us the problem. We&apos;ll build the system.
           </p>
           <Link
