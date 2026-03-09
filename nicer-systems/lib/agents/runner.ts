@@ -457,19 +457,26 @@ export async function runAgentChainStreaming(
     dashboards: [], kpis: [], views: [],
   };
 
-  // Step 5: Ops Pulse Writer — skip if both automation AND dashboard failed
+  // Steps 5 & 6: Ops Pulse + Implementation Sequencer — in parallel
+  // Both depend on automation + dashboard. Sequencer is non-critical.
   let ops_pulse: OpsPulseOutput;
+  let roadmap: ImplementationSequencerOutput | undefined;
+
   if (!automationResult && !dashboardResult) {
     failedStages.push("ops_pulse");
+    failedStages.push("implementation_sequencer");
     onSectionFailed?.("ops_pulse", "Skipped: depends on automation and dashboard which both failed");
+    onSectionFailed?.("implementation_sequencer", "Skipped: depends on automation and dashboard which both failed");
     ops_pulse = {
       executive_summary: { problem: "", solution: "", impact: "", next_step: "" },
       sections: [], scorecard: [], actions: [], questions: [],
     };
   } else {
     onSection("ops_pulse", "Writing ops pulse...", null);
-    try {
-      ops_pulse = await runAgentWithTemplate<OpsPulseOutput>(
+    onSection("implementation_sequencer", "Building implementation roadmap...", null);
+
+    const [opsPulseResult, roadmapResult] = await Promise.all([
+      runAgentWithTemplate<OpsPulseOutput>(
         "ops_pulse_writer",
         getTemplate("ops_pulse_writer"),
         {
@@ -477,21 +484,50 @@ export async function runAgentChainStreaming(
           dashboards: dashboard.dashboards,
           failure_modes: workflow.failure_modes,
         }
-      );
-      onSection("ops_pulse", "Ops pulse complete", ops_pulse);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Ops pulse failed";
-      console.error("Ops pulse stage failed:", msg);
-      failedStages.push("ops_pulse");
-      onSectionFailed?.("ops_pulse", msg);
-      ops_pulse = {
-        executive_summary: { problem: "", solution: "", impact: "", next_step: "" },
-        sections: [], scorecard: [], actions: [], questions: [],
-      };
-    }
+      ).then((result) => {
+        onSection("ops_pulse", "Ops pulse complete", result);
+        return result;
+      }).catch((err) => {
+        const msg = err instanceof Error ? err.message : "Ops pulse failed";
+        console.error("Ops pulse stage failed:", msg);
+        failedStages.push("ops_pulse");
+        onSectionFailed?.("ops_pulse", msg);
+        return null;
+      }),
+      runAgentWithTemplate<ImplementationSequencerOutput>(
+        "implementation_sequencer",
+        getTemplate("implementation_sequencer"),
+        {
+          clarified_problem: intake.clarified_problem,
+          assumptions: intake.assumptions,
+          constraints: intake.constraints,
+          suggested_scope: intake.suggested_scope,
+          stages: workflow.stages,
+          automations: automation.automations,
+          alerts: automation.alerts,
+          dashboards: dashboard.dashboards,
+          kpis: dashboard.kpis,
+        }
+      ).then((result) => {
+        onSection("implementation_sequencer", "Implementation roadmap complete", result);
+        return result;
+      }).catch((err) => {
+        const msg = err instanceof Error ? err.message : "Implementation sequencer failed";
+        console.error("Implementation sequencer stage failed:", msg);
+        failedStages.push("implementation_sequencer");
+        onSectionFailed?.("implementation_sequencer", msg);
+        return null;
+      }),
+    ]);
+
+    ops_pulse = opsPulseResult ?? {
+      executive_summary: { problem: "", solution: "", impact: "", next_step: "" },
+      sections: [], scorecard: [], actions: [], questions: [],
+    };
+    roadmap = roadmapResult ?? undefined;
   }
 
-  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse };
+  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse, roadmap };
   if (failedStages.length > 0) {
     plan.warnings = [
       ...failedStages.map((step) => ({
