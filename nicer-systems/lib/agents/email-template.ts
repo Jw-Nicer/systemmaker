@@ -46,6 +46,24 @@ export function renderPreviewPlanHTML(
     )
     .join("");
 
+  const roadmapHTML = plan.roadmap?.phases
+    .map(
+      (p) => `
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
+        <p style="margin:0 0 8px;"><strong style="color:#00d4ff;">Week ${p.week}:</strong> <strong>${esc(p.title)}</strong></p>
+        <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;">
+          ${p.tasks
+            .map(
+              (t) =>
+                `<li style="margin-bottom:4px;"><span style="background:${t.effort === "large" ? "#fef2f2" : t.effort === "medium" ? "#fffbeb" : "#f0fdf4"};color:${t.effort === "large" ? "#dc2626" : t.effort === "medium" ? "#d97706" : "#16a34a"};padding:1px 6px;border-radius:8px;font-size:11px;">${esc(t.effort)}</span> ${esc(t.task)} <span style="color:#6b7280;font-size:13px;">(${esc(t.owner_role)})</span></li>`
+            )
+            .join("")}
+        </ul>
+        ${p.quick_wins.length > 0 ? `<p style="margin:8px 0 0;font-size:13px;color:#16a34a;">Quick wins: ${p.quick_wins.map((w) => esc(w)).join("; ")}</p>` : ""}
+      </div>`
+    )
+    .join("") ?? "";
+
   const actionsHTML = plan.ops_pulse.actions
     .map(
       (a) => `
@@ -123,6 +141,16 @@ export function renderPreviewPlanHTML(
     </thead>
     <tbody>${actionsHTML}</tbody>
   </table>
+
+  ${plan.roadmap ? `
+  <!-- Roadmap -->
+  <h2 style="color:#00d4ff;font-size:18px;margin-top:24px;">Implementation Roadmap</h2>
+  <p style="color:#6b7280;font-size:14px;margin-bottom:12px;">Estimated timeline: <strong>${plan.roadmap.total_estimated_weeks} weeks</strong></p>
+  ${roadmapHTML}
+  <div style="background:#f0fdfa;border:1px solid #00d4ff33;border-radius:8px;padding:12px;margin-top:8px;">
+    <p style="margin:0;font-size:13px;color:#6b7280;"><strong style="color:#00d4ff;">Critical Path:</strong> ${esc(plan.roadmap.critical_path)}</p>
+  </div>
+  ` : ''}
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
 
