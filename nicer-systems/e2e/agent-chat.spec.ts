@@ -81,8 +81,16 @@ test.describe("Agent chat", () => {
   });
 
   test("email capture form submits successfully", async ({ page }) => {
+    let emailSent = false;
     await mockAgentChatSequence(page, [buildFullPlanSSE()]);
-    await mockSendEmailAPI(page);
+    await page.route("**/api/agent/send-email", async (route) => {
+      emailSent = true;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true }),
+      });
+    });
     await mockEventsAPI(page);
 
     await page.goto("/");
@@ -92,21 +100,20 @@ test.describe("Agent chat", () => {
     await page.getByPlaceholder("Type your answer...").fill("Manual logistics intake.");
     await page.getByRole("button", { name: "Send message" }).click();
 
-    // Wait for email capture button — may need to scroll within chat
+    // Wait for email capture button
     const emailButton = page.getByRole("button", { name: "Email me the preview plan" });
     await expect(emailButton).toBeVisible({ timeout: 10_000 });
 
     // Fill email capture form
-    const nameInput = page.getByPlaceholder("Your name");
-    const emailInput = page.getByPlaceholder("you@company.com");
-    await nameInput.fill("Test User");
-    await emailInput.fill("test@example.com");
+    await page.getByPlaceholder("Your name").fill("Test User");
+    await page.getByPlaceholder("you@company.com").fill("test@example.com");
     await emailButton.click();
 
-    // Should show success — "Preview plan sent to your inbox."
-    await expect(page.getByText(/preview plan sent to your inbox/i)).toBeVisible({
-      timeout: 5_000,
-    });
+    // Email capture form disappears after successful send
+    await expect(emailButton).toBeHidden({ timeout: 5_000 });
+
+    // Verify the API was called
+    expect(emailSent).toBe(true);
   });
 
   test("chat input is disabled during building phase", async ({ page }) => {
