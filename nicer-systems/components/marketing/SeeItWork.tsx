@@ -9,8 +9,13 @@ const AgentChat = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[380px] items-center justify-center px-4 text-center text-sm text-[#7e7b70] sm:h-[520px]">
-        Initializing agent...
+      <div className="flex h-[380px] flex-col items-center justify-center gap-3 px-4 text-center sm:h-[520px]">
+        <div className="flex gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[var(--green-accent)]/40 animate-[typing-bounce_1.4s_ease-in-out_infinite]" />
+          <span className="h-2 w-2 rounded-full bg-[var(--green-accent)]/40 animate-[typing-bounce_1.4s_ease-in-out_0.2s_infinite]" style={{ animationDelay: '0.2s' }} />
+          <span className="h-2 w-2 rounded-full bg-[var(--green-accent)]/40 animate-[typing-bounce_1.4s_ease-in-out_0.4s_infinite]" style={{ animationDelay: '0.4s' }} />
+        </div>
+        <span className="text-sm text-[var(--text-muted)]">Initializing agent...</span>
       </div>
     ),
   }
@@ -28,7 +33,7 @@ export function SeeItWork({
   const reducedMotion = useReducedMotion();
 
   return (
-    <section id="see-it-work" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+    <section id="see-it-work" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,13 +42,13 @@ export function SeeItWork({
           transition={reducedMotion ? { duration: 0.3 } : { type: "spring", stiffness: 80, damping: 20 }}
           className="mb-10"
         >
-          <p className="text-[11px] uppercase tracking-[0.22em] sm:tracking-[0.3em] text-[#7e7b70]">
+          <p className="text-xs uppercase tracking-[0.22em] sm:tracking-[0.3em] text-[var(--text-muted)]">
             {eyebrow}
           </p>
-          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-7xl">
             {title}
           </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
             {description}
           </p>
         </motion.div>
@@ -54,7 +59,7 @@ export function SeeItWork({
           viewport={{ once: true, margin: "-60px" }}
           transition={reducedMotion ? { duration: 0.3, delay: 0.1 } : { type: "spring", stiffness: 80, damping: 20, delay: 0.15 }}
         >
-          <div className="relative overflow-hidden rounded-[30px] border border-[#cfd1c2] bg-[linear-gradient(180deg,#f8f4ea,#eee6d8)] shadow-[0_28px_84px_rgba(66,57,39,0.14)]">
+          <div className="relative overflow-hidden rounded-[var(--radius-card-lg)] border border-[#cfd1c2] bg-[linear-gradient(180deg,#f8f4ea,#eee6d8)] shadow-[var(--shadow-elevated)]">
             {/* Status header */}
             <div className="flex flex-col gap-3 border-b border-[#d0c8ba] bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(242,234,220,0.92))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
               <div className="relative flex flex-wrap items-center gap-3">

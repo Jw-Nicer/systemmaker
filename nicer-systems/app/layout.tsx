@@ -46,7 +46,7 @@ export default async function RootLayout({
   const themeVars = themeToCSSVariables(settings);
 
   return (
-    <html lang="en" style={themeVars as React.CSSProperties}>
+    <html lang="en" data-scroll-behavior="smooth" style={themeVars as React.CSSProperties}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

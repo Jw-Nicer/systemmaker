@@ -7,7 +7,7 @@
 2. "See it work" (Mini Agent form + SSE streaming chat)
 3. Proof of Work (gallery row + 3 featured cases with filter chips)
 4. How It Works (4-step timeline with scroll animation)
-5. Pricing/Offer (3 tiers from Firestore)
+5. Pricing (3 tiers from Firestore)
 6. FAQ (accordion from Firestore)
 7. CTA (book / contact)
 

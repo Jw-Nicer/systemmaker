@@ -96,11 +96,11 @@ export function MobileNav({ links }: MobileNavProps) {
         aria-expanded={isOpen}
         aria-controls="mobile-nav-drawer"
         aria-label={isOpen ? "Close menu" : "Open menu"}
-        className="relative flex h-10 w-10 items-center justify-center rounded-lg md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2"
+        className="relative flex h-10 w-10 items-center justify-center rounded-lg md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2"
       >
         <div className="flex h-4 w-5 flex-col justify-between">
           <motion.span
-            className="block h-0.5 w-full origin-center rounded-full bg-[#1d2318]"
+            className="block h-0.5 w-full origin-center rounded-full bg-[var(--text-heading)]"
             animate={
               isOpen
                 ? { rotate: 45, y: 7, transition: spring }
@@ -108,12 +108,12 @@ export function MobileNav({ links }: MobileNavProps) {
             }
           />
           <motion.span
-            className="block h-0.5 w-full rounded-full bg-[#1d2318]"
+            className="block h-0.5 w-full rounded-full bg-[var(--text-heading)]"
             animate={{ opacity: isOpen ? 0 : 1 }}
             transition={{ duration: 0.1 }}
           />
           <motion.span
-            className="block h-0.5 w-full origin-center rounded-full bg-[#1d2318]"
+            className="block h-0.5 w-full origin-center rounded-full bg-[var(--text-heading)]"
             animate={
               isOpen
                 ? { rotate: -45, y: -7, transition: spring }
@@ -144,18 +144,18 @@ export function MobileNav({ links }: MobileNavProps) {
               role="dialog"
               aria-modal="true"
               aria-label="Mobile navigation"
-              className="fixed bottom-0 right-0 top-0 z-[70] flex w-72 flex-col bg-[#f4efe5] shadow-[-8px_0_30px_rgba(0,0,0,0.1)]"
+              className="fixed bottom-0 right-0 top-0 z-[70] flex w-72 flex-col bg-[var(--cream-bg)] shadow-[-8px_0_30px_rgba(0,0,0,0.1)]"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={spring}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-end border-b border-[#d9d1c3]/80 p-4">
+              <div className="flex items-center justify-end border-b border-[var(--border-light)]/80 p-4">
                 <button
                   onClick={close}
                   aria-label="Close menu"
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[#46523a] hover:text-[#11150d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-accent)] hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2"
                 >
                   <svg
                     width="20"
@@ -178,18 +178,18 @@ export function MobileNav({ links }: MobileNavProps) {
                     key={link.href}
                     href={link.href}
                     onClick={handleLinkClick}
-                    className="rounded-xl px-4 py-3 text-base text-[#46523a] transition-colors hover:bg-[#ebe6da] hover:text-[#11150d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941]"
+                    className="rounded-xl px-4 py-3 text-base text-[var(--text-accent)] transition-colors hover:bg-[var(--cream-muted)] hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)]"
                   >
                     {link.label}
                   </Link>
                 ))}
               </div>
 
-              <div className="border-t border-[#d9d1c3]/80 p-4">
+              <div className="border-t border-[var(--border-light)]/80 p-4">
                 <Link
                   href="/contact"
                   onClick={handleLinkClick}
-                  className="block w-full rounded-full bg-[#171d13] px-5 py-3 text-center text-sm font-medium text-[#f7f2e8] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2"
+                  className="block w-full rounded-full bg-[var(--green-dark)] px-5 py-3 text-center text-sm font-medium text-[var(--cream-warm)] transition-all duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2"
                 >
                   Book a Scoping Call
                 </Link>

@@ -30,12 +30,14 @@ export function PrivacyPreferencesButton({
 }
 
 export function AnalyticsConsentBanner() {
-  const [consent, setConsent] = useState<AnalyticsConsentStatus>(() =>
-    getAnalyticsConsentStatus()
-  );
-  const [isOpen, setIsOpen] = useState(
-    () => getAnalyticsConsentStatus() === "unset"
-  );
+  const [consent, setConsent] = useState<AnalyticsConsentStatus>("unset");
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const status = getAnalyticsConsentStatus();
+    setConsent(status);
+    setIsOpen(status === "unset");
+  }, []);
 
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);

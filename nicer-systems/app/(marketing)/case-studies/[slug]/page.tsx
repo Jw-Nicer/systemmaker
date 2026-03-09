@@ -3,9 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { getCaseStudyBySlug, getRelatedCaseStudies, getPublishedCaseStudies } from "@/lib/firestore/case-studies";
-import { Badge } from "@/components/ui/Badge";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { WaveDivider } from "@/components/ui/GlowLine";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -60,38 +57,47 @@ export default async function CaseStudyDetailPage({ params }: Props) {
   };
 
   return (
-    <section className="py-24">
+    <section className="py-16 sm:py-24">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         {/* Breadcrumb */}
-        <nav className="mb-8 text-sm text-muted">
-          <Link href="/case-studies" className="hover:text-primary transition-colors">
-            Proof of Work
+        <nav className="mb-8 text-sm text-[var(--text-muted)]">
+          <Link href="/case-studies" className="hover:text-[var(--text-heading)] transition-colors">
+            Case Studies
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-foreground">{cs.title}</span>
+          <span className="text-[var(--text-heading)]">{cs.title}</span>
         </nav>
 
         {/* Header */}
         <div className="mb-12">
           <div className="flex flex-wrap gap-2 mb-4">
-            <Badge variant="primary">{cs.industry}</Badge>
+            <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium border border-[#c8d9c4]">
+              {cs.industry}
+            </span>
             {cs.tools.map((tool) => (
-              <Badge key={tool} variant="muted">{tool}</Badge>
+              <span
+                key={tool}
+                className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)] border border-[#e2dace]"
+              >
+                {tool}
+              </span>
             ))}
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-soft-glow">{cs.title}</h1>
+          <h1 className="font-[var(--font-editorial)] text-3xl leading-[1.05] tracking-[-0.03em] text-[var(--text-heading)] sm:text-4xl md:text-5xl">
+            {cs.title}
+          </h1>
           {cs.client_name && (
-            <p className="text-muted">{cs.client_name}</p>
+            <p className="mt-2 text-[var(--text-muted)]">{cs.client_name}</p>
           )}
         </div>
 
         {/* Thumbnail */}
         {cs.thumbnail_url && (
-          <div className="rounded-[var(--radius-lg)] overflow-hidden border border-glass-border mb-12">
+          <div className="rounded-[var(--radius-card)] overflow-hidden border border-[var(--border-card)] mb-12">
             <Image
               src={cs.thumbnail_url}
               alt={cs.title}
@@ -104,36 +110,39 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         )}
 
         {/* Challenge */}
-        <div className="mb-10 border-l-2 border-l-primary/40 pl-6">
-          <h2 className="text-xl font-semibold mb-3 text-primary">The Challenge</h2>
-          <p className="text-muted leading-relaxed">{cs.challenge}</p>
+        <div className="mb-10 border-l-2 border-l-[var(--green-accent)]/40 pl-6">
+          <h2 className="text-xl font-semibold mb-3 text-[var(--green-accent)]">The Challenge</h2>
+          <p className="text-[var(--text-body)] leading-relaxed">{cs.challenge}</p>
         </div>
 
         {/* Solution */}
         {cs.solution && (
-          <div className="mb-10 border-l-2 border-l-secondary/40 pl-6">
-            <h2 className="text-xl font-semibold mb-3 text-secondary">The Solution</h2>
-            <p className="text-muted leading-relaxed">{cs.solution}</p>
+          <div className="mb-10 border-l-2 border-l-[var(--text-muted)]/40 pl-6">
+            <h2 className="text-xl font-semibold mb-3 text-[var(--text-accent)]">The Solution</h2>
+            <p className="text-[var(--text-body)] leading-relaxed">{cs.solution}</p>
           </div>
         )}
 
         {/* Metrics Before/After */}
         {cs.metrics.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-xl font-semibold mb-4 text-primary border-l-2 border-l-tertiary/40 pl-6">Results</h2>
+          <div className="mb-12">
+            <h2 className="text-xl font-semibold mb-4 text-[var(--green-accent)] border-l-2 border-l-[#a3b88c]/40 pl-6">Results</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {cs.metrics.map((m) => (
-                <GlassCard key={m.label} hover className="p-5">
-                  <p className="text-sm text-muted mb-3 font-medium">{m.label}</p>
+                <div
+                  key={m.label}
+                  className="rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(77,63,43,0.08)]"
+                >
+                  <p className="text-sm text-[var(--text-muted)] mb-3 font-medium">{m.label}</p>
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="text-xs text-muted uppercase mb-0.5">Before</p>
-                      <p className="text-lg font-semibold text-red-400 line-through">
+                      <p className="text-xs text-[var(--text-muted)] uppercase mb-0.5">Before</p>
+                      <p className="text-lg font-semibold text-red-500/70 line-through">
                         {m.before}
                       </p>
                     </div>
                     <svg
-                      className="w-5 h-5 text-muted shrink-0"
+                      className="w-5 h-5 text-[var(--border-light)] shrink-0"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -142,25 +151,11 @@ export default async function CaseStudyDetailPage({ params }: Props) {
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
                     <div>
-                      <p className="text-xs text-muted uppercase mb-0.5">After</p>
-                      <p className="text-lg font-semibold text-primary">{m.after}</p>
+                      <p className="text-xs text-[var(--text-muted)] uppercase mb-0.5">After</p>
+                      <p className="text-lg font-semibold text-[var(--green-accent)]">{m.after}</p>
                     </div>
                   </div>
-                </GlassCard>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tools Used */}
-        {cs.tools.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4 text-primary border-l-2 border-l-primary/40 pl-6">Tools Used</h2>
-            <div className="flex flex-wrap gap-2">
-              {cs.tools.map((tool) => (
-                <GlassCard key={tool} className="px-4 py-2 text-sm">
-                  {tool}
-                </GlassCard>
+                </div>
               ))}
             </div>
           </div>
@@ -169,54 +164,56 @@ export default async function CaseStudyDetailPage({ params }: Props) {
         {/* Related Case Studies */}
         {related.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-xl font-semibold mb-4">Related Case Studies</h2>
+            <h2 className="text-xl font-semibold mb-4 text-[var(--text-heading)]">Related Case Studies</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {related.map((r) => (
                 <Link
                   key={r.id}
                   href={`/case-studies/${r.slug}`}
+                  className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)]/96 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(77,63,43,0.08)]"
                 >
-                  <GlassCard hover className="p-5">
-                    {r.thumbnail_url && (
-                      <Image
-                        src={r.thumbnail_url}
-                        alt={r.title}
-                        width={480}
-                        height={256}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="w-full h-32 object-cover rounded-[var(--radius-sm)] mb-3"
-                      />
-                    )}
-                    <Badge variant="primary" className="mb-1">{r.industry}</Badge>
-                    <h3 className="font-semibold mt-1 line-clamp-2">{r.title}</h3>
-                  </GlassCard>
+                  {r.thumbnail_url && (
+                    <Image
+                      src={r.thumbnail_url}
+                      alt={r.title}
+                      width={480}
+                      height={256}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="w-full h-32 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
+                      {r.industry}
+                    </span>
+                    <h3 className="font-medium text-[var(--text-heading)] mt-2 line-clamp-2 group-hover:text-[var(--green-accent)] transition-colors duration-300">
+                      {r.title}
+                    </h3>
+                  </div>
                 </Link>
               ))}
             </div>
           </div>
         )}
 
-        <WaveDivider className="mb-12" />
+        {/* Divider */}
+        <hr className="border-[var(--border-light)] mb-12" />
 
         {/* CTA */}
-        <GlassCard hover className="p-8 text-center relative overflow-hidden">
-          {/* Organic mesh bg */}
-          <div className="absolute inset-0 organic-mesh pointer-events-none" aria-hidden="true" />
-          <div className="relative z-[1]">
-            <h3 className="text-xl font-bold mb-2 text-soft-glow">
-              Ready to get results like these?
-            </h3>
-            <p className="text-muted mb-6 max-w-lg mx-auto">
-              Tell us the problem. We&apos;ll build the system.
-            </p>
-            <Link
-              href="/contact"
-              className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-background font-medium hover:shadow-[var(--shadow-soft-md)] active:scale-[0.97] transition-all"
-            >
-              Book a Scoping Call
-            </Link>
-          </div>
-        </GlassCard>
+        <div className="rounded-[var(--radius-card-lg)] bg-[var(--green-dark)] p-8 text-center overflow-hidden">
+          <h3 className="text-xl font-bold mb-2 text-[var(--cream-warm)]">
+            Ready to get results like these?
+          </h3>
+          <p className="text-[#c2cac0] mb-6 max-w-lg mx-auto">
+            Tell us the problem. We&apos;ll build the system.
+          </p>
+          <Link
+            href="/contact"
+            className="inline-block px-6 py-3 rounded-full bg-[var(--cream-warm)] text-[var(--green-dark)] font-medium hover:bg-white active:scale-[0.97] transition-all"
+          >
+            Book a Scoping Call
+          </Link>
+        </div>
       </div>
     </section>
   );

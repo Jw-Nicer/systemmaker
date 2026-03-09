@@ -18,16 +18,16 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
         return (
           <div
             key={faq.id}
-            className={`relative rounded-[20px] border overflow-hidden transition-all duration-300 ${
+            className={`relative rounded-[var(--radius-card)] border overflow-hidden transition-all duration-300 ${
               isOpen
-                ? "bg-[#f8f4ea] border-[#b5ad9e] shadow-[0_8px_30px_rgba(77,63,43,0.06)]"
-                : "bg-[#f8f4ea]/70 border-[#d7d0c0] hover:border-[#b5ad9e] hover:shadow-[0_8px_30px_rgba(77,63,43,0.06)]"
+                ? "bg-[var(--cream-card)] border-[var(--border-light)] shadow-[var(--shadow-card)]"
+                : "bg-[var(--cream-card)]/70 border-[var(--border-subtle)] hover:border-[var(--border-light)] hover:shadow-[var(--shadow-card)]"
             }`}
           >
             {/* Accent bar */}
             <div
-              className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-full transition-opacity duration-300 bg-[#3f5a37] ${
-                isOpen ? "opacity-100" : "opacity-0"
+              className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-full transition-opacity duration-300 bg-[var(--green-accent)] ${
+                isOpen ? "opacity-100" : "opacity-20"
               }`}
             />
 
@@ -35,7 +35,7 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
               onClick={() => setOpenId(isOpen ? null : faq.id)}
               className="relative flex w-full items-start justify-between gap-3 px-4 py-4 text-left transition-colors sm:px-6"
             >
-              <span className="pr-2 font-medium text-[#1d2318] sm:pr-4">
+              <span className="pr-2 font-medium text-[var(--text-heading)] sm:pr-4">
                 {faq.question}
               </span>
               <motion.svg
@@ -46,7 +46,7 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
                 stroke="currentColor"
                 strokeWidth="2"
                 className={`shrink-0 transition-colors duration-300 ${
-                  isOpen ? "text-[#1d2318]" : "text-[#7e7b70]"
+                  isOpen ? "text-[var(--text-heading)]" : "text-[var(--text-muted)]"
                 }`}
                 animate={{ rotate: isOpen ? 180 : 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -63,7 +63,7 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 25 }}
                 >
-                  <div className="rounded-b-[20px] bg-[#f2ede2] px-4 pb-4 text-sm leading-relaxed text-[#50584b] sm:px-6">
+                  <div className="rounded-b-[20px] bg-[var(--cream-muted)] px-4 pb-4 text-sm leading-relaxed text-[var(--text-body)] sm:px-6">
                     {faq.answer}
                   </div>
                 </motion.div>

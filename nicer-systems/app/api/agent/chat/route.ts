@@ -266,6 +266,13 @@ export async function POST(request: Request) {
             label,
             content: data ? JSON.stringify(data) : null,
           });
+        },
+        (step: AgentStep, errorMsg: string) => {
+          write("error", {
+            message: `Section "${step}" failed to generate. The rest of your plan is still available.`,
+            section: step,
+            recoverable: true,
+          });
         }
       );
 

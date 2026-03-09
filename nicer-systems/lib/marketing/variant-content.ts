@@ -32,28 +32,28 @@ export const DEFAULT_FEATURE_ITEMS: LandingFeatureItem[] = [
     title: "Workflow mapping built around your existing process",
     description:
       "We start from the bottleneck you already have. No generic automation pitch — we map your actual workflow, identify the handoff gaps, and scope a concrete fix.",
-    visual: "end-to-end process map with handoff points highlighted",
+    visual: "Workflow map with stages, owners, and handoff points",
   },
   {
     id: "02",
     title: "KPI and dashboard recommendations",
     description:
       "Each preview plan defines the KPIs and dashboard views that should exist for the workflow before implementation starts.",
-    visual: "dashboard specification showing cycle time, stuck items, and throughput",
+    visual: "Cycle time, stuck items, throughput, and SLA metrics",
   },
   {
     id: "03",
     title: "Alerts and next actions before problems escalate",
     description:
       "The plan includes alert recommendations and ownership so the output ends with decisions and next steps, not just a diagram.",
-    visual: "alert recommendation tied to a stuck handoff and owner",
+    visual: "Alert triggers, escalation owners, and next actions",
   },
   {
     id: "04",
     title: "Shareable plan output",
     description:
       "Completed preview plans can be shared by URL, printed to PDF, and refined section by section as the recommendation evolves.",
-    visual: "public preview plan link with section refinement controls",
+    visual: "Shareable link with section-by-section refinement",
   },
 ];
 
@@ -61,7 +61,7 @@ export const DEFAULT_VARIANT_SECTIONS: LandingVariantSections = {
   hero: {
     headline: "Tell us the problem.\nWe'll build the system.",
     subheadline:
-      "Turn a messy operational bottleneck into a concrete preview plan. We map the workflow, define the KPIs, outline the alerts, and show the next actions before implementation starts.",
+      "Turn a messy operational bottleneck into an actionable preview plan. We map the workflow, define the KPIs, outline the alerts, and show the next actions before implementation starts.",
     cta_text: "Book a Scoping Call",
     proof_line:
       "Get a shareable preview plan with workflow, KPI, and alert recommendations.",
@@ -105,7 +105,7 @@ export const DEFAULT_VARIANT_SECTIONS: LandingVariantSections = {
     title: "Put the workflow\nin focus",
     description:
       "Start with a scoping conversation, generate a preview plan, and use it to align the workflow, metrics, alerts, and implementation scope before any build work starts.",
-    cta_text: "Start the Scoping Call",
+    cta_text: "Book a Scoping Call",
   },
 };
 

@@ -42,7 +42,7 @@ An **Ops Visibility Layer**: **system of record + dashboards + alerts + weekly O
 
 ## What We Need From You
 - A workflow owner (single point of contact)
-- Access to current tools (ClickUp/Airtable/Google/Email/Slack)
+- Access to current tools (ClickUp/Airtable/Google Sheets/Email/Slack)
 - Agreement to use one system of record daily
 
 ## Next Step

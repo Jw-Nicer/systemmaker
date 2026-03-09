@@ -182,7 +182,7 @@ function ContactForm() {
               Option 1
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
-              Book a scoping call
+              Book a Scoping Call
             </h2>
             <p className="mt-3 text-sm leading-6 text-[#556052]">
               Best if you already know the workflow and want to decide the next move fast.
@@ -206,7 +206,7 @@ function ContactForm() {
               Option 2
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
-              Get a preview plan first
+              Get a Preview Plan first
             </h2>
             <p className="mt-3 text-sm leading-6 text-[#556052]">
               Best if you want to see the workflow map, KPI ideas, and next actions before a call.
@@ -235,7 +235,7 @@ function ContactForm() {
               Send the basics and we&apos;ll guide you.
             </h2>
             <p className="mt-3 text-sm leading-6 text-[#556052]">
-              Required fields are enough. Add the bottleneck if you want us to review context before we reply.
+              The required fields are all we need. Add the bottleneck if you want us to review context before we reply.
             </p>
           </div>
 

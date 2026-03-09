@@ -29,21 +29,21 @@ export async function FAQSection({
   };
 
   return (
-    <section id="faq" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+    <section id="faq" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mb-10 sm:mb-12">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
             {eyebrow}
           </p>
-          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-6xl">
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-6xl">
             {title}
           </h2>
           {description ? (
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
               {description}
             </p>
           ) : null}

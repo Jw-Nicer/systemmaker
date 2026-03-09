@@ -1,37 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRefineSection } from "@/hooks/useRefineSection";
 import type { RefineSectionKey } from "@/lib/plans/refinement";
+import { mapRefineSectionKeyToPlanSection } from "@/lib/plans/refinement";
+import { getSectionSuggestions } from "@/lib/agents/refinement";
+import type { PreviewPlan } from "@/types/preview-plan";
 
 interface SectionRefinerProps {
   sectionKey: RefineSectionKey;
   planId: string;
   /** The current content of the section being refined */
   originalContent: string;
+  /** The full plan — used to generate contextual suggestions */
+  plan?: PreviewPlan;
   /** Called when refinement produces new content */
   onRefined: (sectionKey: RefineSectionKey, newContent: string) => void;
   /** Called to close the refiner */
   onClose: () => void;
 }
 
-const SUGGESTION_CHIPS = [
-  "Add more detail",
-  "What about edge cases?",
-  "Focus on cost savings",
-  "Make it simpler",
+const FALLBACK_CHIPS = [
+  { label: "Add more detail", feedback: "Add more detail" },
+  { label: "What about edge cases?", feedback: "What about edge cases?" },
+  { label: "Focus on cost savings", feedback: "Focus on cost savings" },
+  { label: "Make it simpler", feedback: "Make it simpler" },
 ];
 
 export function SectionRefiner({
   sectionKey,
   planId,
   originalContent,
+  plan,
   onRefined,
   onClose,
 }: SectionRefinerProps) {
   const reduced = useReducedMotion();
+
+  const suggestions = useMemo(() => {
+    if (!plan) return FALLBACK_CHIPS;
+    const planSection = mapRefineSectionKeyToPlanSection(sectionKey);
+    const contextual = getSectionSuggestions(plan, planSection);
+    return contextual.length > 0 ? contextual : FALLBACK_CHIPS;
+  }, [plan, sectionKey]);
+
   const [messages, setMessages] = useState<
     { role: "user" | "agent"; content: string }[]
   >([]);
@@ -116,14 +130,15 @@ export function SectionRefiner({
 
           {/* Suggestion chips */}
           <div className="flex flex-wrap gap-1.5">
-            {SUGGESTION_CHIPS.map((chip) => (
+            {suggestions.map((chip) => (
               <button
-                key={chip}
-                onClick={() => sendRefinement(chip)}
+                key={chip.label}
+                onClick={() => sendRefinement(chip.feedback)}
                 disabled={isRefining}
+                title={chip.feedback}
                 className="text-xs px-2.5 py-1 rounded-full border border-border bg-surface hover:bg-surface-light transition-colors disabled:opacity-50"
               >
-                {chip}
+                {chip.label}
               </button>
             ))}
           </div>

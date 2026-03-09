@@ -41,6 +41,7 @@ export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
             sectionKey={refiningSection}
             planId={planId}
             originalContent={getSectionContent(currentPlan, refiningSection)}
+            plan={currentPlan}
             onRefined={handleRefined}
             onClose={() => setRefiningSection(null)}
           />

@@ -73,6 +73,17 @@ export function renderPreviewPlanHTML(
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
 
+  <!-- Executive Summary -->
+  ${plan.ops_pulse.executive_summary?.problem ? `
+  <div style="background:#f0fdfa;border:2px solid #00d4ff33;border-radius:12px;padding:20px;margin-bottom:24px;">
+    <p style="color:#00d4ff;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin:0 0 12px;">Executive Summary</p>
+    <p style="margin:0 0 8px;"><strong>Problem:</strong> ${esc(plan.ops_pulse.executive_summary.problem)}</p>
+    <p style="margin:0 0 8px;"><strong>Solution:</strong> ${esc(plan.ops_pulse.executive_summary.solution)}</p>
+    <p style="margin:0 0 8px;"><strong>Expected Impact:</strong> ${esc(plan.ops_pulse.executive_summary.impact)}</p>
+    <p style="margin:0;color:#00d4ff;"><strong>Next Step:</strong> ${esc(plan.ops_pulse.executive_summary.next_step)}</p>
+  </div>
+  ` : ''}
+
   <!-- Scope -->
   <h2 style="color:#00d4ff;font-size:18px;">Suggested Scope</h2>
   <p><strong>${esc(plan.intake.suggested_scope)}</strong></p>

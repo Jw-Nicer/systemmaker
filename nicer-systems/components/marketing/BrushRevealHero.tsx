@@ -22,7 +22,7 @@ const queryCards = [
   },
   {
     id: "03",
-    label: "/alerts",
+    label: "/automate",
     prompt:
       "Recommend the first automation pass for our current tool stack without replacing everything.",
   },
@@ -64,15 +64,15 @@ export function BrushRevealHero({
   const heroHeadline = headline ?? "Tell us the problem.\nWe'll build the system.";
   const heroSubheadline =
     subheadline ??
-    "Turn a messy operational bottleneck into a concrete preview plan. We map the workflow, define the KPIs, outline the alerts, and show the next actions before implementation starts.";
+    "Turn a messy operational bottleneck into an actionable preview plan. We map the workflow, define the KPIs, outline the alerts, and show the next actions before implementation starts.";
   const heroProofLine =
     proofLine ??
     "Get a shareable preview plan with workflow, KPI, and alert recommendations.";
 
   return (
     <section
-      id="about"
-      className="computer-hero relative overflow-hidden border-b border-[#d9d1c3] bg-[#f4efe5]"
+      id="hero"
+      className="computer-hero relative overflow-hidden border-b border-[var(--border-light)] bg-[var(--cream-bg)]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(164,141,108,0.22),transparent_28%),linear-gradient(180deg,rgba(248,243,232,0)_0%,rgba(235,226,210,0.85)_78%,rgba(228,220,204,1)_100%)]" />
       <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.55),transparent_62%)]" />
@@ -84,14 +84,14 @@ export function BrushRevealHero({
             animate={{ opacity: 1, y: 0 }}
             transition={{
               type: reducedMotion ? "tween" : "spring",
-              stiffness: 70,
-              damping: 18,
+              stiffness: 80,
+              damping: 20,
               delay: 0.05,
             }}
-            className="max-w-[44rem] rounded-[28px] border border-white/70 bg-[#f7f2e8]/88 p-5 shadow-[0_28px_80px_rgba(74,60,38,0.10)] backdrop-blur-md sm:rounded-[36px] sm:p-8 lg:p-9"
+            className="max-w-[44rem] rounded-[var(--radius-card)] border border-white/70 bg-[var(--cream-warm)]/88 p-5 shadow-[var(--shadow-elevated)] backdrop-blur-md sm:rounded-[var(--radius-card-lg)] sm:p-8 lg:p-9"
           >
             <Logo size="sm" variant="minimal" className="mb-4 opacity-70" />
-            <h1 className="mt-5 max-w-[11ch] font-[var(--font-editorial)] text-[clamp(2.35rem,10vw,5.1rem)] leading-[0.95] tracking-[-0.05em] text-[#191d15]">
+            <h1 className="mt-5 max-w-[11ch] font-[var(--font-editorial)] text-[clamp(2.35rem,10vw,5.1rem)] leading-[0.95] tracking-[-0.05em] text-[var(--text-heading)]">
               {heroHeadline.split("\n").map((line, index, arr) => (
                 <span key={line}>
                   {line}
@@ -99,7 +99,7 @@ export function BrushRevealHero({
                 </span>
               ))}
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-[#394336] sm:text-lg sm:leading-8">
+            <p className="mt-6 max-w-xl text-base leading-7 text-[var(--text-body)] sm:text-lg sm:leading-8">
               {heroSubheadline}
             </p>
 
@@ -107,20 +107,20 @@ export function BrushRevealHero({
               <TrackedLink
                 href="/contact"
                 eventName={EVENTS.CTA_CLICK_BOOK}
-                className="rounded-full bg-[#161b12] px-7 py-3.5 text-center text-sm font-medium text-[#f5f0e5] shadow-[0_8px_30px_rgba(22,27,18,0.3)] transition-transform hover:scale-[1.02]"
+                className="rounded-full bg-[var(--green-dark)] px-7 py-3.5 text-center text-sm font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-transform hover:scale-[1.02]"
               >
                 {ctaText ?? "Book a Scoping Call"}
               </TrackedLink>
               <a
                 href="#see-it-work"
                 onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}
-                className="rounded-full border border-[#465240]/18 bg-white/50 px-7 py-3.5 text-center text-sm font-medium text-[#20261b] transition-colors hover:bg-white/72"
+                className="rounded-full border border-[#465240]/18 bg-white/50 px-7 py-3.5 text-center text-sm font-medium text-[var(--text-heading)] transition-colors hover:bg-white/72"
               >
                 Get a Preview Plan
               </a>
             </div>
 
-            <p className="mt-5 text-sm font-medium text-[#41503f]">{heroProofLine}</p>
+            <p className="mt-5 text-sm font-medium text-[var(--text-accent)]">{heroProofLine}</p>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {queryCards.map((card, index) => (
@@ -134,31 +134,31 @@ export function BrushRevealHero({
                     damping: 20,
                     delay: 0.14 + index * 0.08,
                   }}
-                  className="rounded-[24px] border border-[#cad9c8] bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(244,240,231,0.82))] p-4 shadow-[0_10px_28px_rgba(39,63,34,0.08)]"
+                  className="rounded-[var(--radius-card)] border border-[#cad9c8] bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(244,240,231,0.82))] p-4 shadow-[var(--shadow-card)]"
                 >
-                  <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.12em] text-[#5a6656]">
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     <span>{card.id}</span>
                     <span className="rounded-full border border-[#b9cab6] bg-[#edf4ea] px-2.5 py-1 text-[#40603f]">
                       {card.label}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm font-medium leading-6 text-[#243021]">
+                  <p className="mt-3 text-sm font-medium leading-6 text-[var(--text-heading)]">
                     {card.prompt}
                   </p>
                 </motion.div>
               ))}
             </div>
 
-            <div className="mt-7 flex flex-col gap-4 text-sm text-[#596053] sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
+            <div className="mt-7 flex flex-col gap-4 text-sm text-[var(--text-body)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[#6a685d]">
+                <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   Output
                 </p>
                 <p className="mt-1">Workflow, KPIs, alerts, actions</p>
               </div>
               <div className="hidden h-8 w-px bg-[#d7d0c2] sm:block" />
               <div>
-                <p className="text-[11px] uppercase tracking-[0.12em] text-[#6a685d]">
+                <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   Format
                 </p>
                 <p className="mt-1">Shareable preview plan</p>
@@ -173,19 +173,19 @@ export function BrushRevealHero({
             animate={{ opacity: 1, y: 0 }}
             transition={{
               type: reducedMotion ? "tween" : "spring",
-              stiffness: 70,
-              damping: 18,
+              stiffness: 80,
+              damping: 20,
                 delay: 0.12,
               }}
-            className="relative overflow-hidden rounded-[30px] border border-[#efe6d6] bg-[#ece3d0] p-3 shadow-[0_34px_96px_rgba(45,65,36,0.20)] sm:rounded-[40px] sm:p-4"
+            className="relative overflow-hidden rounded-[var(--radius-card-lg)] border border-[#efe6d6] bg-[#ece3d0] p-3 shadow-[var(--shadow-elevated)] sm:rounded-[var(--radius-card-lg)] sm:p-4"
           >
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.02))]" />
             <div className="relative flex flex-col gap-3 px-3 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#556250]">
+                <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
                   Preview Plan Interface
                 </p>
-                <p className="mt-1 max-w-xs text-sm font-medium text-[#364033]">
+                <p className="mt-1 max-w-xs text-sm font-medium text-[var(--text-heading)]">
                   Example outputs the agent can generate.
                 </p>
               </div>
@@ -222,23 +222,23 @@ export function BrushRevealHero({
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.30),transparent_26%),linear-gradient(180deg,rgba(244,239,229,0.05),rgba(244,239,229,0.30)_78%,rgba(244,239,229,0.58)_100%)]" />
 
                 <div className="absolute inset-x-3 bottom-3 rounded-[24px] border border-white/40 bg-[rgba(247,242,232,0.82)] p-4 backdrop-blur-md sm:inset-x-6 sm:bottom-6 sm:rounded-[28px] sm:p-6">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#5b6157]">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
                     Typical deliverable
                   </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[20px] border border-[#ddd5c7] bg-white/62 p-4 shadow-[0_8px_24px_rgba(50,63,41,0.06)]">
-                      <p className="text-sm font-semibold text-[#1f241b]">
+                    <div className="rounded-[var(--radius-card)] border border-[#ddd5c7] bg-white/62 p-4 shadow-[var(--shadow-card)]">
+                      <p className="text-sm font-semibold text-[var(--text-heading)]">
                         Workflow map
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[#445042]">
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-body)]">
                         Stage-by-stage handoffs, failure points, and owners.
                       </p>
                     </div>
-                    <div className="rounded-[20px] border border-[#ddd5c7] bg-white/62 p-4 shadow-[0_8px_24px_rgba(50,63,41,0.06)]">
-                      <p className="text-sm font-semibold text-[#1f241b]">
+                    <div className="rounded-[var(--radius-card)] border border-[#ddd5c7] bg-white/62 p-4 shadow-[var(--shadow-card)]">
+                      <p className="text-sm font-semibold text-[var(--text-heading)]">
                         KPI and alert layer
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[#445042]">
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-body)]">
                         The metrics, triggers, and next actions to review before implementation.
                       </p>
                     </div>

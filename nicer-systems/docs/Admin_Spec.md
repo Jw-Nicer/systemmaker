@@ -63,6 +63,7 @@ All content pages share common patterns:
 - Gradient preset selector
 - Glow intensity slider (0–100)
 - Motion intensity slider (0–3)
+- Brush style selector (soft, hard, spray)
 - Live preview
 - Saves to `site_settings/default` doc, applies site-wide via CSS variables
 

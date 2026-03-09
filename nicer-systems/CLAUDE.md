@@ -32,7 +32,7 @@ app/
     case-studies/page.tsx            # Case study listing
     case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
     case-studies/CaseStudiesListClient.tsx # Client-side case studies filter/grid
-    [industry]/page.tsx  # Industry variant landing pages (dynamic, SSG)
+    [industry]/page.tsx  # Industry variant landing pages (dynamic, SSR)
     plan/[id]/page.tsx   # Shareable preview plan (public link)
     privacy/page.tsx
     terms/page.tsx
@@ -168,20 +168,20 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - **Fallback data**: ProofOfWork and FAQ sections render hardcoded fallbacks when Firestore is empty
 
 ## Firestore Collections
-| Collection | Public Read | Auth Write | Key Fields |
-|------------|------------|------------|------------|
-| `site_settings` | all | auth | theme_primary, theme_secondary, gradient_preset, glow_intensity, motion_intensity |
-| `case_studies` | is_published=true | auth | title, slug, industry, tools[], challenge, solution, metrics[], thumbnail_url, sort_order |
-| `testimonials` | is_published=true | auth | name, role, company, quote, avatar |
-| `offers` | is_published=true | auth | (pricing tiers) |
-| `faqs` | is_published=true | auth | question, answer, sort_order |
-| `leads` | create only | auth | name, email, company, bottleneck, tools, urgency, utm_*, score, follow_up_at, nurture_enrolled |
-| `leads/{id}/activity` | none | auth | type (status_change/note_added/email_sent), timestamp, admin_email, details |
-| `events` | create only | auth | event tracking |
-| `agent_templates` | none | auth | key, markdown (agent prompt specs) |
-| `variants` | is_published=true | auth | slug, industry, headline, subheadline, cta_text, featured_industries[] |
-| `experiments` | status=running | auth | name, target, variants[], status, winner |
-| `plans` | is_public=true | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
+| Collection | Public Read | Public Write | Auth Write | Key Fields |
+|------------|------------|-------------|------------|------------|
+| `site_settings` | all | none | auth | theme_primary, theme_secondary, gradient_preset, glow_intensity, motion_intensity |
+| `case_studies` | is_published=true | none | auth | title, slug, industry, tools[], challenge, solution, metrics[], thumbnail_url, sort_order |
+| `testimonials` | is_published=true | none | auth | name, role, company, quote, avatar |
+| `offers` | is_published=true | none | auth | (pricing tiers) |
+| `faqs` | is_published=true | none | auth | question, answer, sort_order |
+| `leads` | none | create only | auth | name, email, company, bottleneck, tools, urgency, utm_*, score, follow_up_at, nurture_enrolled |
+| `leads/{id}/activity` | none | none | auth | type (status_change/note_added/email_sent), timestamp, admin_email, details |
+| `events` | none | create only | auth | event tracking |
+| `agent_templates` | none | none | auth | key, markdown (agent prompt specs) |
+| `variants` | is_published=true | none | auth | slug, industry, headline, subheadline, cta_text, featured_industries[] |
+| `experiments` | status=running | none | auth | name, target, variants[], status, winner |
+| `plans` | is_public=true | none | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)

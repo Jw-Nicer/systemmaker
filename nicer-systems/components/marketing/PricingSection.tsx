@@ -19,13 +19,13 @@ export async function PricingSection({
   }
 
   return (
-    <section id="pricing" className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+    <section id="pricing" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mb-12 max-w-3xl sm:mb-16">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
             {eyebrow}
           </p>
-          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-7xl">
             {title.split("\n").map((line, index, arr) => (
               <span key={`${line}-${index}`}>
                 {line}
@@ -33,7 +33,7 @@ export async function PricingSection({
               </span>
             ))}
           </h2>
-          <p className="mt-4 text-base leading-7 text-[#50584b]">
+          <p className="mt-4 text-base leading-7 text-[var(--text-body)]">
             {description}
           </p>
         </div>
@@ -49,13 +49,13 @@ export async function PricingSection({
               key={tier.name}
               className={`relative flex flex-col overflow-hidden p-5 transition-all duration-300 sm:p-6 ${
                 isHighlighted
-                  ? "rounded-[32px] border border-[#274332]/25 bg-[linear-gradient(180deg,#22402f,#162d21)] text-[#f2ebdc] shadow-[0_30px_100px_rgba(5,10,7,0.32)] md:-mt-2 md:mb-[-0.5rem]"
-                  : "bg-[#f8f4ea] text-[#1d2318] rounded-[32px] border border-white/60 shadow-[0_24px_70px_rgba(78,63,42,0.08)]"
+                  ? "rounded-[var(--radius-card-lg)] border border-[#274332]/25 bg-[linear-gradient(180deg,#22402f,#162d21)] text-[#f2ebdc] shadow-[var(--shadow-elevated)] md:-mt-2 md:mb-[-0.5rem]"
+                  : "bg-[var(--cream-card)] text-[var(--text-heading)] rounded-[var(--radius-card-lg)] border border-white/60 shadow-[var(--shadow-card)]"
               }`}
             >
               {isHighlighted && (
                 <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                  <span className="inline-block rounded-b-full bg-[#f8f4ea] px-4 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[#173220]">
+                  <span className="inline-block rounded-b-full bg-[#f8f4ea] px-4 py-1 text-xs font-medium uppercase tracking-[0.14em] text-[#173220]">
                     Most Popular
                   </span>
                 </div>
@@ -64,14 +64,14 @@ export async function PricingSection({
               <h3 className="text-xl font-bold mb-1 mt-2">{tier.name}</h3>
               <p
                 className={`font-[var(--font-editorial)] text-2xl mb-1 ${
-                  isHighlighted ? "text-[#bcd8bb]" : "text-[#3f5a37]"
+                  isHighlighted ? "text-[#bcd8bb]" : "text-[var(--green-accent)]"
                 }`}
               >
                 {tier.price}
               </p>
               <p
                 className={`text-sm mb-6 ${
-                  isHighlighted ? "text-[#c2d0c0]" : "text-[#50584b]"
+                  isHighlighted ? "text-[#c2d0c0]" : "text-[var(--text-body)]"
                 }`}
               >
                 {tier.description}
@@ -82,12 +82,12 @@ export async function PricingSection({
                   <li
                     key={feature}
                     className={`flex items-start gap-2 text-sm ${
-                      isHighlighted ? "text-[#d2dbce]" : "text-[#50584b]"
+                      isHighlighted ? "text-[#d2dbce]" : "text-[var(--text-body)]"
                     }`}
                   >
                     <svg
                       className={`w-4 h-4 mt-0.5 shrink-0 ${
-                        isHighlighted ? "text-[#b6c9b4]" : "text-[#46523a]"
+                        isHighlighted ? "text-[#b6c9b4]" : "text-[var(--text-accent)]"
                       }`}
                       viewBox="0 0 24 24"
                       fill="none"

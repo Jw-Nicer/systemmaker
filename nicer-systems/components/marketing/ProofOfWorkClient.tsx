@@ -36,7 +36,7 @@ export function ProofOfWorkClient({
     : { type: "spring" as const, stiffness: 80, damping: 20 };
 
   return (
-    <section className="border-b border-[#d9d1c3] bg-[#f4efe5] py-16 sm:py-24">
+    <section className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -44,13 +44,13 @@ export function ProofOfWorkClient({
           viewport={{ once: true, margin: "-80px" }}
           transition={springTransition}
         >
-          <p className="text-[11px] uppercase tracking-[0.22em] text-[#7e7b70] sm:tracking-[0.3em]">
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
             {eyebrow}
           </p>
-          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-7xl">
             {title}
           </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-[#50584b]">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
             {description}
           </p>
         </motion.div>
@@ -74,8 +74,8 @@ export function ProofOfWorkClient({
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeFilter === industry
-                  ? "bg-[#161b12] text-[#f5f0e5] shadow-[0_4px_16px_rgba(22,27,18,0.2)]"
-                  : "border border-[#3f4a37]/25 text-[#46523a] hover:border-[#3f4a37]/50 hover:text-[#1d2318]"
+                  ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
+                  : "border border-[#3f4a37]/25 text-[var(--text-accent)] hover:border-[#3f4a37]/50 hover:text-[var(--text-heading)]"
               }`}
             >
               {industry}
@@ -101,7 +101,7 @@ export function ProofOfWorkClient({
                     title: cs.title,
                   })
                 }
-                className="group block rounded-[28px] border border-[#ddd5c7] bg-[#f8f4ea]/96 shadow-[0_18px_50px_rgba(77,63,43,0.08)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(78,63,42,0.12)]"
+                className="group block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)]/96 shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
                 {/* Thumbnail */}
                 <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
@@ -124,39 +124,39 @@ export function ProofOfWorkClient({
                 <div className="p-5">
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-[11px] uppercase tracking-[0.10em] text-[#46523a] font-medium">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#e7efe4] text-xs uppercase tracking-[0.10em] text-[var(--text-accent)] font-medium">
                         {cs.industry}
                       </span>
                     {cs.tools.slice(0, 2).map((tool) => (
                       <span
                         key={tool}
-                        className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-[11px] uppercase tracking-[0.10em] text-[#7e7b70]"
+                        className="px-2.5 py-0.5 rounded-full bg-[#f1ebdf] text-xs uppercase tracking-[0.10em] text-[var(--text-muted)]"
                       >
                         {tool}
                       </span>
                     ))}
                   </div>
 
-                  <h3 className="font-medium text-[#1d2318] mb-2 group-hover:text-[#3f5a37] transition-colors duration-300">
+                  <h3 className="font-medium text-[var(--text-heading)] mb-2 group-hover:text-[var(--green-accent)] transition-colors duration-300">
                     {cs.title}
                   </h3>
-                  <p className="text-sm text-[#50584b] line-clamp-2 leading-relaxed">
+                  <p className="text-sm text-[var(--text-body)] line-clamp-2 leading-relaxed">
                     {cs.challenge}
                   </p>
 
                   {/* Metrics */}
                   {cs.metrics.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-[#d7d0c0]">
+                    <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
                       {cs.metrics.slice(0, 1).map((m) => (
                         <div
                           key={m.label}
                           className="flex items-center gap-2 text-xs"
                         >
-                          <span className="text-[#7e7b70]">{m.label}:</span>
-                          <span className="text-red-500/60 line-through">
+                          <span className="text-[var(--text-muted)]">{m.label}:</span>
+                          <span className="text-[var(--text-muted)] line-through decoration-[var(--border-subtle)]">
                             {m.before}
                           </span>
-                          <span className="text-[#3f5a37] font-medium">
+                          <span className="font-medium text-[var(--green-accent)]">
                             {m.after}
                           </span>
                         </div>
@@ -178,7 +178,7 @@ export function ProofOfWorkClient({
         >
           <Link
             href="/case-studies"
-            className="inline-block text-sm text-[#46523a] hover:text-[#1d2318] transition-colors"
+            className="inline-block text-sm text-[var(--text-accent)] hover:text-[var(--text-heading)] transition-colors"
           >
             View all case studies &rarr;
           </Link>

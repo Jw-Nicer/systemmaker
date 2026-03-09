@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Experiment } from "@/types/experiment";
 import { track, EVENTS } from "@/lib/analytics";
 import { BrushRevealHero } from "@/components/marketing/BrushRevealHero";
@@ -46,30 +46,38 @@ function useHomepageAssignments(experiments: Experiment[]) {
     return next;
   }, [experiments]);
 
+  const getServerSnapshot = useCallback(() => EMPTY_ASSIGNMENTS, []);
+
   const assignments = useSyncExternalStore<Record<string, string>>(
     subscribeToAssignments,
     getSnapshot,
-    () => EMPTY_ASSIGNMENTS
+    getServerSnapshot
   );
 
+  const [hydrated, setHydrated] = useState(false);
+
   useEffect(() => {
-    if (typeof window === "undefined" || experiments.length === 0) return;
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || experiments.length === 0) return;
     const changed =
       ensureAssignments(experiments) ||
       syncExperimentAssignmentMetadata(experiments, getStoredAssignments(experiments));
     if (changed) {
       window.dispatchEvent(new Event("ns-exp-updated"));
     }
-  }, [experiments]);
+  }, [experiments, hydrated]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || experiments.length === 0) return;
+    if (!hydrated || experiments.length === 0) return;
     if (syncExperimentAssignmentMetadata(experiments, assignments)) {
       window.dispatchEvent(new Event("ns-exp-updated"));
     }
-  }, [assignments, experiments]);
+  }, [assignments, experiments, hydrated]);
 
-  return assignments;
+  return hydrated ? assignments : EMPTY_ASSIGNMENTS;
 }
 
 function getExperimentValue(

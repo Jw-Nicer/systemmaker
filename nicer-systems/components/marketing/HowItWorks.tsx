@@ -136,15 +136,15 @@ export function HowItWorks({
   return (
     <section
       id="how-it-works"
-      className="relative overflow-hidden border-b border-[#d9d1c3] bg-[#f4efe5] py-16 text-[#1d2318] sm:py-20"
+      className="relative overflow-hidden border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 text-[var(--text-heading)] sm:py-24"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(28,54,42,0.20),transparent_20%),radial-gradient(circle_at_20%_50%,rgba(28,54,42,0.10),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(207,188,154,0.14),transparent_30%)]" />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
         <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#7b7c6f] sm:tracking-[0.18em]">
+          <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)] sm:tracking-[0.18em]">
             {eyebrow}
           </p>
-          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.95] tracking-[-0.04em] text-[#1d2318] sm:text-5xl md:text-7xl">
+          <h2 className="mt-4 font-[var(--font-editorial)] text-4xl leading-[0.95] tracking-[-0.04em] text-[var(--text-heading)] sm:text-5xl md:text-7xl">
             {title.split("\n").map((line, index, arr) => (
               <span key={`${line}-${index}`}>
                 {line}
@@ -160,19 +160,19 @@ export function HowItWorks({
               key={step.id}
               className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-start lg:gap-8"
             >
-              <div className="rounded-[24px] border border-[#d8d0c2] bg-[#f8f4ea] p-6 text-[#1e2419] shadow-[0_22px_70px_rgba(40,66,38,0.10)] sm:rounded-[30px] sm:p-8">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[#7c7c72]">
+              <div className="rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] p-6 text-[var(--text-heading)] shadow-[var(--shadow-card)] sm:rounded-[var(--radius-card-lg)] sm:p-8">
+                <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   {step.id}
                 </p>
                 <h3 className="mt-4 font-[var(--font-editorial)] text-3xl leading-tight sm:mt-5 sm:text-4xl">
                   {step.title}
                 </h3>
-                <p className="mt-4 text-base leading-7 text-[#4c5648]">
+                <p className="mt-4 text-base leading-7 text-[var(--text-body)]">
                   {step.description}
                 </p>
               </div>
 
-              <div className="rounded-[28px] border border-[#2f4c37]/20 bg-[linear-gradient(180deg,rgba(28,54,42,0.98),rgba(20,36,27,0.96))] p-4 text-[#edf2e8] shadow-[0_30px_90px_rgba(13,24,18,0.28)] sm:rounded-[34px] sm:p-5">
+              <div className="rounded-[var(--radius-card-lg)] border border-[#2f4c37]/20 bg-[linear-gradient(180deg,rgba(28,54,42,0.98),rgba(20,36,27,0.96))] p-4 text-[#edf2e8] shadow-[var(--shadow-elevated)] sm:rounded-[var(--radius-card-lg)] sm:p-5">
                 {defaultPanels[index] ?? defaultPanels[defaultPanels.length - 1]}
               </div>
             </div>

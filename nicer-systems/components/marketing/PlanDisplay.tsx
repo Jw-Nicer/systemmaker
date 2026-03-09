@@ -37,6 +37,37 @@ export function PlanDisplay({
 
   return (
     <div className="space-y-4 print:space-y-6">
+      {/* Executive Summary */}
+      {plan.ops_pulse.executive_summary && plan.ops_pulse.executive_summary.problem && (
+        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-5 print:border-gray-300">
+          <p className="text-xs text-primary uppercase tracking-wide font-medium mb-3">
+            Executive Summary
+          </p>
+          <div className="space-y-2 text-sm">
+            <p><span className="font-medium text-foreground">Problem:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.problem}</span></p>
+            <p><span className="font-medium text-foreground">Solution:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.solution}</span></p>
+            <p><span className="font-medium text-foreground">Expected Impact:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.impact}</span></p>
+            <p><span className="font-medium text-primary">Next Step:</span> <span className="text-foreground">{plan.ops_pulse.executive_summary.next_step}</span></p>
+          </div>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {plan.warnings && plan.warnings.length > 0 && (
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 print:hidden">
+          <p className="text-xs text-yellow-400 uppercase tracking-wide font-medium mb-2">
+            Consistency Notes
+          </p>
+          <ul className="text-xs text-muted space-y-1">
+            {plan.warnings.map((w, i) => (
+              <li key={i}>
+                <span className="text-yellow-400">{w.section}:</span> {w.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Share bar */}
       {showShare && planId && (
         <div className="flex items-center justify-between print:hidden">

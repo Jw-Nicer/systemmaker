@@ -43,7 +43,6 @@ Implementation: `lib/agents/refinement.ts`
 - bottleneck (string)
 - current_tools (string)
 - volume (optional string)
-- stakeholders (optional string)
 
 ## Outputs schema (PreviewPlan)
 - intake: { industry, bottleneck_summary, current_tools, goals }

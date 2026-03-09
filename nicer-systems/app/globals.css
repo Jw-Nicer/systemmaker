@@ -20,6 +20,39 @@
   --border: #2a3344;
   --muted: #7b8494;
 
+  /* ===== Marketing Light Theme Tokens ===== */
+  /* Backgrounds */
+  --cream-bg: #f4efe5;
+  --cream-card: #f8f4ea;
+  --cream-warm: #f7f2e8;
+  --cream-muted: #f2ede2;
+
+  /* Borders */
+  --border-light: #d9d1c3;
+  --border-card: #ddd5c7;
+  --border-subtle: #d7d0c0;
+
+  /* Text */
+  --text-heading: #1d2318;
+  --text-body: #50584b;
+  --text-muted: #7e7b70;
+  --text-accent: #46523a;
+
+  /* Brand greens */
+  --green-dark: #161b12;
+  --green-deep: #21402f;
+  --green-accent: #3f5a37;
+
+  /* Shadows (3 levels) */
+  --shadow-card: 0 18px 50px rgba(77, 63, 43, 0.08);
+  --shadow-card-hover: 0 24px 70px rgba(78, 63, 42, 0.12);
+  --shadow-elevated: 0 28px 84px rgba(66, 57, 39, 0.14);
+
+  /* Border radius (3 levels) */
+  --radius-card: 24px;
+  --radius-card-lg: 32px;
+  --radius-pill: 9999px;
+
   /* Organic shadow system (replaces glow system) */
   --shadow-soft-sm: 0 4px 20px rgba(34, 211, 238, 0.08);
   --shadow-soft-md: 0 8px 40px rgba(34, 211, 238, 0.1), 0 4px 20px rgba(167, 139, 250, 0.06);
@@ -54,25 +87,26 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--theme-primary);
+  /* Light marketing theme — maps Tailwind utilities to the cream/organic palette */
+  --color-background: var(--cream-bg);
+  --color-foreground: var(--text-heading);
+  --color-primary: var(--green-accent);
   --color-secondary: var(--theme-secondary);
   --color-tertiary: var(--theme-tertiary);
   --color-warm: var(--theme-warm);
-  --color-surface: var(--surface);
-  --color-surface-light: var(--surface-light);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-glass-bg: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
+  --color-surface: var(--cream-card);
+  --color-surface-light: var(--cream-warm);
+  --color-border: var(--border-light);
+  --color-muted: var(--text-muted);
+  --color-glass-bg: rgba(248, 244, 234, 0.85);
+  --color-glass-border: rgba(217, 209, 195, 0.5);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--theme-page-background, var(--background));
-  color: var(--foreground);
+  background: var(--cream-bg);
+  color: var(--text-heading);
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
 
@@ -103,12 +137,12 @@ html {
 /* ========== Organic Effects ========== */
 
 .text-soft-glow {
-  text-shadow: 0 0 var(--theme-glow-radius) color-mix(in srgb, var(--theme-primary) 22%, transparent);
+  text-shadow: 0 0 var(--theme-glow-radius) color-mix(in srgb, var(--green-accent) 22%, transparent);
 }
 
 .focus-organic:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--theme-primary), var(--shadow-soft-sm);
+  box-shadow: 0 0 0 2px var(--cream-bg), 0 0 0 4px var(--green-accent), var(--shadow-soft-sm);
 }
 
 /* ========== Organic Border (hover reveal) ========== */

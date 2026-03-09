@@ -89,7 +89,7 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
 
 ## 7. Functional Requirements
 ### 7.1 Marketing Landing (Public)
-- Sections: Hero, Interactive Differentiator, Proof, How it Works, Offer/Pricing, FAQ, CTA/Footer
+- Sections: Hero, Interactive Differentiator, Proof, How it Works, Pricing, FAQ, CTA/Footer
 - SEO: metadata, schema markup for Organization/FAQ, open graph
 - Performance: lazy-load heavy effects, strong Core Web Vitals
 
@@ -128,7 +128,8 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
   - Testimonials
   - Offers/Pricing
   - FAQs
-  - Homepage section toggles + ordering
+  - Landing variants (industry pages)
+  - A/B experiments
 - Theme:
   - primary/secondary color
   - background gradient preset
@@ -139,9 +140,10 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
 
 ### 7.6 Contact / Booking
 - Contact page with:
-  - form (name, email, company, workflow, tools, urgency)
+  - form (name, email, company, bottleneck, tools, urgency)
   - scheduler link/embed
-- Confirmation email (Phase 2+): “Next steps + what to bring”
+- Admin notification email on new lead submission
+- 5-email nurture sequence (see 7.9)
 
 ### 7.7 Analytics / Funnel
 - Capture UTMs on first visit and persist through lead capture
@@ -155,6 +157,52 @@ A conversion-first marketing site with a **signature interaction** (Brush Reveal
   - lead_submit
   - booking_click
 - Admin analytics dashboard (Phase 2+)
+- Additional events (Phase 3-4):
+  - brush_reveal_complete
+  - agent_chat_start, agent_chat_plan_start, agent_chat_plan_complete
+  - proof_gallery_filter_used
+  - cta_click_preview_plan, preview_plan_email_capture
+  - plan_view_shared, plan_shared_copy_link, plan_shared_email, plan_shared_linkedin
+  - plan_refine_start, plan_refine_complete, plan_refine_view_diff
+
+### 7.8 Lead Scoring & Activity Timeline (Phase 3)
+- Pure scoring function (0–75 points) based on form completeness, urgency, bottleneck detail, and tool stack
+- Score stored on lead document at creation
+- Activity timeline subcollection on each lead: status changes, notes, email logs
+- Follow-up reminders with date and note per lead
+- Admin dashboard widget for overdue/upcoming follow-ups
+
+### 7.9 Email Nurture Sequences (Phase 3)
+- 5-email automated sequence triggered on lead creation via Resend scheduledAt
+- Emails spaced over time: welcome, workflow tip, automation nudge, case study, final nudge
+- Admin notification email on new lead submission
+- Nurture enrollment tracked on lead document
+
+### 7.10 Industry Variant Landing Pages (Phase 3)
+- Admin CRUD for landing page variants keyed to industry slug
+- Dynamic route at /[industry] renders customized hero, demo, proof, features, pricing, and CTA sections
+- Variants can override headline, subheadline, CTA text, featured industries, and section content
+- A/B testing framework: experiments admin, useExperiment hook, cookie-based bucketing
+
+### 7.11 SSE Streaming Agent Chat (Phase 4)
+- Multi-phase conversation: gathering → confirming → building → complete → follow_up
+- SSE streaming delivers each plan section as it completes
+- Chat UI: message list, typing indicators, inline plan preview cards
+- Safety layer: prompt injection detection, credential request blocking, scope guardrails
+- Phase transitions managed server-side based on conversation state
+
+### 7.12 Shareable Preview Plans (Phase 4)
+- Plans stored in Firestore with public URLs at /plan/[id]
+- View count tracking on each plan visit
+- Social share buttons (copy link, email, LinkedIn)
+- Open Graph image generation per plan
+- PDF print support via browser print
+
+### 7.13 Plan Section Refinement & Version History (Phase 4)
+- Visitors can refine individual plan sections with free-text feedback
+- Refinement sent to Gemini with original plan context + feedback
+- Updated section replaces original; previous version stored in versions array
+- Side-by-side diff comparison between plan versions
 
 ## 8. Non-Functional Requirements
 - Accessibility: keyboard navigation, ARIA, reduced motion support
@@ -182,3 +230,10 @@ See:
 - `docs/Data_Model.md`
 - `docs/Analytics_Funnel.md`
 - `docs/Admin_Spec.md`
+- `docs/API_Spec.md`
+- `docs/Agents_Spec.md`
+- `docs/Phased_Implementation_Plan.md`
+- `docs/Security_Privacy_Performance.md`
+- `docs/Sitemap_Routes.md`
+- `docs/User_Flows.md`
+- `docs/Backlog.md`

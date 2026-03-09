@@ -70,6 +70,12 @@ export function createPreviewPlan(): PreviewPlan {
       ],
     },
     ops_pulse: {
+      executive_summary: {
+        problem: "Manual intake is slow and error-prone, causing delays in service delivery.",
+        solution: "Automated intake validation and task creation with real-time alerting.",
+        impact: "Expected to reduce cycle time by 60% and eliminate missed requests.",
+        next_step: "Set up automated validation rules for the top 3 request types.",
+      },
       sections: [
         {
           title: "Weekly summary",

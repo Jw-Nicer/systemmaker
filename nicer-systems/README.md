@@ -138,6 +138,13 @@ Detailed product specs are in the `docs/` directory:
 - `API_Spec.md` — API endpoints
 - `Agents_Spec.md` — AI agent specifications
 - `Phased_Implementation_Plan.md` — Build phases and status
+- `Admin_Spec.md` — Admin panel specification
+- `UI_UX_Spec.md` — UI/UX design specification
+- `Analytics_Funnel.md` — Analytics and funnel tracking
+- `Security_Privacy_Performance.md` — Security, privacy, and performance
+- `Sitemap_Routes.md` — Sitemap and route definitions
+- `User_Flows.md` — User flow diagrams
+- `Backlog.md` — Prioritized backlog
 
 AI assistant context files:
 - `CLAUDE.md` — Shared context for Claude

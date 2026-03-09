@@ -2,6 +2,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { buildPrompt } from "./prompts";
 import { assertSafeAgentObject } from "./safety";
 import { templateOutputSchemas } from "./schemas";
+import { validatePlanConsistency } from "./validation";
 import type { AgentStep } from "./registry";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AgentTemplate } from "@/types/agent-template";
@@ -17,8 +18,17 @@ import type {
 const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 const MAX_RETRIES_PER_MODEL = 2;
 const BASE_RETRY_DELAY_MS = 300;
-const GEMINI_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_BYTES = 512 * 1024; // 512KB max per Gemini response
+
+/** Per-stage timeout overrides — critical stages get less time, complex ones get more. */
+const STAGE_TIMEOUTS: Record<string, number> = {
+  intake_agent: 15_000,
+  workflow_mapper: 25_000,
+  automation_designer: 30_000,
+  dashboard_designer: 30_000,
+  ops_pulse_writer: 25_000,
+};
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 // Singleton Gemini client — avoids re-instantiation per call
 let _geminiClient: GoogleGenerativeAI | null = null;
@@ -87,9 +97,10 @@ function getRetryDelayMs(attempt: number): number {
   return backoff + jitter;
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(prompt: string, timeoutMs?: number): Promise<string> {
   const client = getGeminiClient();
   const models = getModelCandidates();
+  const timeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let lastError: Error | null = null;
 
   for (let i = 0; i < models.length; i++) {
@@ -104,7 +115,7 @@ async function callGemini(prompt: string): Promise<string> {
         const result = await Promise.race([
           geminiModel.generateContent(prompt),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Gemini request timed out")), GEMINI_TIMEOUT_MS)
+            setTimeout(() => reject(new Error("Gemini request timed out")), timeout)
           ),
         ]);
         const text = result.response.text()?.trim();
@@ -171,7 +182,7 @@ async function runAgentWithTemplate<T>(
   context: Record<string, unknown>
 ): Promise<T> {
   const prompt = buildPrompt(template, context);
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, STAGE_TIMEOUTS[templateKey]);
 
   // Strip markdown code fences if present
   const cleaned = text
@@ -314,19 +325,27 @@ export async function runAgentChain(
     }
   );
 
-  return { intake, workflow, automation, dashboard, ops_pulse };
+  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse };
+  plan.warnings = validatePlanConsistency(plan);
+  return plan;
 }
 
 /**
  * Streaming variant of runAgentChain — calls onSection with the step key,
  * label, and parsed section data as each stage completes.
  * Used by the SSE chat endpoint to stream plan sections to the client.
+ *
+ * Supports graceful degradation: if automation, dashboard, or ops_pulse fail,
+ * the plan is returned with available sections. Intake and workflow are
+ * critical — their failure still throws.
  */
 export async function runAgentChainStreaming(
   input: AgentRunInput,
-  onSection: (step: AgentStep, label: string, data: unknown) => void
+  onSection: (step: AgentStep, label: string, data: unknown) => void,
+  onSectionFailed?: (step: AgentStep, error: string) => void,
 ): Promise<PreviewPlan> {
   const templates = await getAllTemplates();
+  const failedStages: AgentStep[] = [];
 
   function getTemplate(key: string): string {
     const t = templates.get(key);
@@ -334,7 +353,7 @@ export async function runAgentChainStreaming(
     return t;
   }
 
-  // Step 1: Intake
+  // Step 1: Intake (critical — cannot proceed without it)
   onSection("intake", "Analyzing your bottleneck...", null);
   const intake = await runAgentWithTemplate<IntakeOutput>(
     "intake_agent",
@@ -349,7 +368,7 @@ export async function runAgentChainStreaming(
   );
   onSection("intake", "Bottleneck analysis complete", intake);
 
-  // Step 2: Workflow Mapper
+  // Step 2: Workflow Mapper (critical — automation/dashboard depend on it)
   onSection("workflow", "Mapping workflow stages...", null);
   const workflow = await runAgentWithTemplate<WorkflowMapperOutput>(
     "workflow_mapper",
@@ -364,11 +383,11 @@ export async function runAgentChainStreaming(
   );
   onSection("workflow", "Workflow mapping complete", workflow);
 
-  // Steps 3 & 4 in parallel
+  // Steps 3 & 4 in parallel — graceful degradation: catch individual failures
   onSection("automation", "Designing automations...", null);
   onSection("dashboard", "Building dashboard KPIs...", null);
 
-  const [automation, dashboard] = await Promise.all([
+  const [automationResult, dashboardResult] = await Promise.all([
     runAgentWithTemplate<AutomationDesignerOutput>(
       "automation_designer",
       getTemplate("automation_designer"),
@@ -381,6 +400,12 @@ export async function runAgentChainStreaming(
     ).then((result) => {
       onSection("automation", "Automation design complete", result);
       return result;
+    }).catch((err) => {
+      const msg = err instanceof Error ? err.message : "Automation design failed";
+      console.error("Automation stage failed:", msg);
+      failedStages.push("automation");
+      onSectionFailed?.("automation", msg);
+      return null;
     }),
     runAgentWithTemplate<DashboardDesignerOutput>(
       "dashboard_designer",
@@ -394,23 +419,70 @@ export async function runAgentChainStreaming(
     ).then((result) => {
       onSection("dashboard", "Dashboard KPIs complete", result);
       return result;
+    }).catch((err) => {
+      const msg = err instanceof Error ? err.message : "Dashboard design failed";
+      console.error("Dashboard stage failed:", msg);
+      failedStages.push("dashboard");
+      onSectionFailed?.("dashboard", msg);
+      return null;
     }),
   ]);
 
-  // Step 5: Ops Pulse Writer
-  onSection("ops_pulse", "Writing ops pulse...", null);
-  const ops_pulse = await runAgentWithTemplate<OpsPulseOutput>(
-    "ops_pulse_writer",
-    getTemplate("ops_pulse_writer"),
-    {
-      kpis: dashboard.kpis,
-      dashboards: dashboard.dashboards,
-      failure_modes: workflow.failure_modes,
-    }
-  );
-  onSection("ops_pulse", "Ops pulse complete", ops_pulse);
+  // Provide fallback empty sections for failed stages
+  const automation: AutomationDesignerOutput = automationResult ?? {
+    automations: [], alerts: [], logging_plan: [],
+  };
+  const dashboard: DashboardDesignerOutput = dashboardResult ?? {
+    dashboards: [], kpis: [], views: [],
+  };
 
-  return { intake, workflow, automation, dashboard, ops_pulse };
+  // Step 5: Ops Pulse Writer — skip if both automation AND dashboard failed
+  let ops_pulse: OpsPulseOutput;
+  if (!automationResult && !dashboardResult) {
+    failedStages.push("ops_pulse");
+    onSectionFailed?.("ops_pulse", "Skipped: depends on automation and dashboard which both failed");
+    ops_pulse = {
+      executive_summary: { problem: "", solution: "", impact: "", next_step: "" },
+      sections: [], scorecard: [], actions: [], questions: [],
+    };
+  } else {
+    onSection("ops_pulse", "Writing ops pulse...", null);
+    try {
+      ops_pulse = await runAgentWithTemplate<OpsPulseOutput>(
+        "ops_pulse_writer",
+        getTemplate("ops_pulse_writer"),
+        {
+          kpis: dashboard.kpis,
+          dashboards: dashboard.dashboards,
+          failure_modes: workflow.failure_modes,
+        }
+      );
+      onSection("ops_pulse", "Ops pulse complete", ops_pulse);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ops pulse failed";
+      console.error("Ops pulse stage failed:", msg);
+      failedStages.push("ops_pulse");
+      onSectionFailed?.("ops_pulse", msg);
+      ops_pulse = {
+        executive_summary: { problem: "", solution: "", impact: "", next_step: "" },
+        sections: [], scorecard: [], actions: [], questions: [],
+      };
+    }
+  }
+
+  const plan: PreviewPlan = { intake, workflow, automation, dashboard, ops_pulse };
+  if (failedStages.length > 0) {
+    plan.warnings = [
+      ...failedStages.map((step) => ({
+        section: step,
+        message: `This section failed to generate and contains placeholder data. You can try refining it with feedback.`,
+      })),
+      ...validatePlanConsistency(plan),
+    ];
+  } else {
+    plan.warnings = validatePlanConsistency(plan);
+  }
+  return plan;
 }
 
 /**

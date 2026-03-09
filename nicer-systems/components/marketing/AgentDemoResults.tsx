@@ -188,8 +188,8 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
 
       {/* Disclaimer */}
       <p className="text-xs text-muted/60 italic text-center pt-2">
-        This is a draft preview — not a final recommendation. Assumptions may
-        not match your exact setup.
+        This is a draft preview &mdash; not a final recommendation. Assumptions
+        may not match your exact setup.
       </p>
 
       {/* Email CTA */}

@@ -15,3 +15,10 @@ One (1) workflow including:
 - Additional workflows
 - Custom software development
 - 24/7 support
+
+## Boundaries
+- **Timeline:** [Sprint count and calendar commitment]
+- **Revision limits:** [Number of revision rounds included]
+- **Communication cadence:** [Standup/async check-in frequency]
+- **IP ownership:** [Client owns all deliverables upon payment]
+- **Escalation path:** [Primary contact + escalation contact]

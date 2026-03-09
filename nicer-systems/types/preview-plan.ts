@@ -51,11 +51,25 @@ export interface DashboardDesignerOutput {
   views: { name: string; filter: string; columns: string[] }[];
 }
 
+export interface ExecutiveSummary {
+  problem: string;
+  solution: string;
+  impact: string;
+  next_step: string;
+}
+
 export interface OpsPulseOutput {
+  executive_summary: ExecutiveSummary;
   sections: { title: string; bullets: string[] }[];
   scorecard: string[];
-  actions: { priority: string; owner_role: string; action: string }[];
+  actions: { priority: "high" | "medium" | "low"; owner_role: string; action: string }[];
   questions: string[];
+}
+
+/** Validation warnings from cross-section consistency checks. */
+export interface PlanWarning {
+  section: string;
+  message: string;
 }
 
 export interface PreviewPlan {
@@ -64,4 +78,6 @@ export interface PreviewPlan {
   automation: AutomationDesignerOutput;
   dashboard: DashboardDesignerOutput;
   ops_pulse: OpsPulseOutput;
+  /** Cross-section consistency warnings (populated after validation pass). */
+  warnings?: PlanWarning[];
 }

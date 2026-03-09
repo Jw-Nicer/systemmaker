@@ -48,6 +48,7 @@
 - highlight (boolean)
 - is_published (boolean)
 - sort_order (number)
+- created_at, updated_at (timestamp)
 
 ### faqs
 - id (auto-generated doc ID)
@@ -55,6 +56,7 @@
 - answer (string)
 - sort_order (number)
 - is_published (boolean)
+- created_at, updated_at (timestamp)
 
 ### leads
 - id (auto-generated doc ID)

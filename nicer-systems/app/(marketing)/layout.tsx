@@ -47,15 +47,15 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#f4efe5] text-[#1d2318]">
+    <div className="min-h-screen bg-[var(--cream-bg)] text-[var(--text-heading)]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[#171d13] focus:px-4 focus:py-2 focus:text-sm focus:text-[#f7f2e8] focus:outline-none focus:ring-2 focus:ring-[#758941]"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--green-dark)] focus:px-4 focus:py-2 focus:text-sm focus:text-[var(--cream-warm)] focus:outline-none focus:ring-2 focus:ring-[var(--green-accent)]"
       >
         Skip to main content
       </a>
 
-      <header className="sticky top-0 z-50 border-b border-[#d9d1c3]/80 bg-[#f4efe5]/95 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-[var(--border-light)]/80 bg-[var(--cream-bg)]/95 backdrop-blur-md">
         <nav
           aria-label="Main navigation"
           className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:h-18 sm:px-6 lg:px-10"
@@ -72,7 +72,7 @@ export default function MarketingLayout({
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm text-[#46523a] transition-colors hover:text-[#11150d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2 focus-visible:rounded-sm"
+                className="text-sm text-[var(--text-accent)] transition-colors hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2 focus-visible:rounded-sm"
               >
                 {link.label}
               </a>
@@ -83,7 +83,7 @@ export default function MarketingLayout({
             <MobileNav links={navLinks} />
             <Link
               href="/contact"
-              className="shrink-0 rounded-full bg-[#171d13] px-3 py-2 text-xs font-medium text-[#f7f2e8] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#758941] focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm"
+              className="shrink-0 rounded-full bg-[var(--green-dark)] px-3 py-2 text-xs font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm"
             >
               <span className="sm:hidden">Book Call</span>
               <span className="hidden sm:inline">Book a Scoping Call</span>

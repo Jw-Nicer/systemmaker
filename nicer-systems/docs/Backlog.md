@@ -28,7 +28,7 @@
 - ✅ Admin email notifications on new leads
 - ❌ CRM sync — **deferred**
 
-## P3 (Phase 4) ✅ COMPLETE (partial)
+## P3 (Phase 4) ✅ DELIVERED (with deferrals)
 - ✅ SSE streaming agent chat (multi-phase conversation)
 - ✅ Shareable preview plans (public URLs)
 - ✅ Plan section refinement with version history
@@ -44,3 +44,6 @@
 - Account-based follow-ups
 - Full client portal
 - Multi-tenant enterprise RBAC
+- Homepage section toggles + ordering (from original PRD)
+- Confirmation email ("Next steps + what to bring")
+- Preview mode for admin (view draft content before publish)
