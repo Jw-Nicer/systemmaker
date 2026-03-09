@@ -6,6 +6,7 @@ import type {
   DashboardDesignerOutput,
   AutomationDesignerOutput,
   OpsPulseOutput,
+  ImplementationSequencerOutput,
 } from "@/types/preview-plan";
 
 export type RefineSectionKey =
@@ -13,7 +14,8 @@ export type RefineSectionKey =
   | "workflow"
   | "kpis"
   | "alerts"
-  | "actions";
+  | "actions"
+  | "roadmap";
 
 export function mapRefineSectionKeyToPlanSection(
   sectionKey: RefineSectionKey
@@ -29,6 +31,8 @@ export function mapRefineSectionKeyToPlanSection(
       return "automation";
     case "actions":
       return "ops_pulse";
+    case "roadmap":
+      return "implementation_sequencer";
     default: {
       const _exhaustive: never = sectionKey;
       throw new Error(`Unknown refine section key: ${_exhaustive}`);
@@ -52,6 +56,8 @@ export function applyRefinedSection(
       return { ...plan, automation: refined as AutomationDesignerOutput };
     case "ops_pulse":
       return { ...plan, ops_pulse: refined as OpsPulseOutput };
+    case "implementation_sequencer":
+      return { ...plan, roadmap: refined as ImplementationSequencerOutput };
     default: {
       const _exhaustive: never = section;
       throw new Error(`Unknown plan section: ${_exhaustive}`);

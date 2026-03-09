@@ -35,9 +35,11 @@ const SECTION_LABELS: Record<PlanSectionType, string> = {
   automation: "Automations & Alerts",
   dashboard: "Dashboard KPIs",
   ops_pulse: "Ops Pulse & Actions",
+  implementation_sequencer: "Implementation Roadmap",
 };
 
 function getSectionData(plan: PreviewPlan, section: PlanSectionType): unknown {
+  if (section === "implementation_sequencer") return plan.roadmap;
   return plan[section];
 }
 
