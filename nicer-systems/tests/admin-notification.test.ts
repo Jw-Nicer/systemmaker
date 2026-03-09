@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 // Mock Resend before importing the module
 const mockSend = vi.fn().mockResolvedValue({ id: "mock-id" });
-vi.mock("resend", () => ({
-  Resend: vi.fn().mockImplementation(() => ({
-    emails: { send: mockSend },
-  })),
-}));
+vi.mock("resend", () => {
+  return {
+    Resend: class MockResend {
+      emails = { send: mockSend };
+    },
+  };
+});
 
 // Must import after mock setup
 const { sendAdminNotification } = await import(
@@ -102,15 +104,13 @@ describe("sendAdminNotification", () => {
       bottleneck: undefined,
     });
     const call = mockSend.mock.calls[0][0];
-    // The template uses "—" for missing values
-    assert.ok(call.html.includes("—"));
+    assert.ok(call.html.includes("\u2014")); // em-dash
     delete process.env.RESEND_API_KEY;
   });
 
   test("does not throw on Resend API error", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
     mockSend.mockRejectedValueOnce(new Error("API error"));
-    // Should not throw
     await sendAdminNotification(baseLead);
     delete process.env.RESEND_API_KEY;
   });
