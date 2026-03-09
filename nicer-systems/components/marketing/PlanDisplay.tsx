@@ -29,6 +29,7 @@ export function PlanDisplay({
     kpis: true,
     alerts: true,
     actions: true,
+    roadmap: true,
   });
 
   function toggle(key: string) {
