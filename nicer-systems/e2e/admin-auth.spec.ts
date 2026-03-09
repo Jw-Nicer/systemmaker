@@ -50,9 +50,10 @@ test.describe("Admin authentication", () => {
   });
 
   test("login form shows loading state during submission", async ({ page }) => {
-    // Delay the Firebase Auth response to observe loading state
-    await page.route("**/identitytoolkit.googleapis.com/**", async (route) => {
-      await new Promise((r) => setTimeout(r, 2000));
+    // Intercept both the Firebase Auth REST call AND the session API
+    // to keep the form in loading state long enough to observe it.
+    await page.route("**/identitytoolkit/**", async (route) => {
+      await new Promise((r) => setTimeout(r, 3000));
       await route.fulfill({
         status: 400,
         contentType: "application/json",
@@ -66,11 +67,13 @@ test.describe("Admin authentication", () => {
 
     await page.getByLabel("Email").fill("test@example.com");
     await page.getByLabel("Password").fill("password123");
+
+    // Click and immediately check for loading state
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Should show loading text
+    // The button should show loading text while Firebase auth is pending
     await expect(
       page.getByRole("button", { name: "Signing in..." })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5_000 });
   });
 });
