@@ -33,6 +33,8 @@ function ContactFormSkeleton() {
   );
 }
 
+const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL;
+
 function ContactForm() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -132,26 +134,33 @@ function ContactForm() {
             Request received
           </p>
           <h1 className="mt-4 font-[var(--font-editorial)] text-5xl leading-[0.96] tracking-[-0.04em] text-[#1d2318] md:text-6xl">
-            We&apos;ll follow up with the right next step.
+            Thanks for reaching out!
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#50584b]">
-            We&apos;ll review the workflow details and reply within one business day.
+            We&apos;ll respond within 24 hours.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <a
-              href={process.env.NEXT_PUBLIC_BOOKING_URL || "mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"}
-              {...(process.env.NEXT_PUBLIC_BOOKING_URL ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              onClick={() => track(EVENTS.BOOKING_CLICK)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Schedule a 45-minute call
-            </a>
+            {BOOKING_URL ? (
+              <a
+                href={BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track(EVENTS.BOOKING_CLICK)}
+                className="inline-flex items-center gap-2 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                Schedule a 45-minute call
+              </a>
+            ) : (
+              <span className="text-sm text-[#50584b]">
+                We&apos;ll include scheduling options in our reply.
+              </span>
+            )}
             <Link
               href="/#see-it-work"
               onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}
@@ -199,20 +208,35 @@ function ContactForm() {
               <p>One workflow</p>
               <p>Clear next step</p>
             </div>
-            <a
-              href={process.env.NEXT_PUBLIC_BOOKING_URL || "mailto:johnwilnicer@gmail.com?subject=Scoping%20Call%20Request"}
-              {...(process.env.NEXT_PUBLIC_BOOKING_URL ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              onClick={() => track(EVENTS.BOOKING_CLICK)}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Schedule a 45-minute call
-            </a>
+            {BOOKING_URL ? (
+              <a
+                href={BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track(EVENTS.BOOKING_CLICK)}
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                Schedule a 45-minute call
+              </a>
+            ) : (
+              <div className="mt-6 rounded-[18px] border border-[#d5cdbd] bg-[#fbf7ef] p-4">
+                <p className="text-sm font-medium text-[#1d2318]">
+                  Send your details below and we&apos;ll reply with scheduling options.
+                </p>
+                <p className="mt-1 text-xs text-[#76806e]">
+                  Or email us directly at{" "}
+                  <span className="select-all font-medium text-[#2d4a2a]">
+                    johnwilnicer@gmail.com
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-[30px] border border-[#d7d0c1] bg-[linear-gradient(180deg,#faf7ef,#f0e8db)] p-7 shadow-[0_18px_56px_rgba(70,58,40,0.08)]">

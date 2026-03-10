@@ -12,6 +12,7 @@ export const EVENTS = {
   CASE_STUDY_VIEW: "case_study_view",
   CTA_CLICK_BOOK: "cta_click_book",
   CTA_CLICK_PREVIEW_PLAN: "cta_click_preview_plan",
+  CTA_CLICK_DEMO: "cta_click_demo",
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
   PREVIEW_PLAN_EMAIL_CAPTURE: "preview_plan_email_capture",

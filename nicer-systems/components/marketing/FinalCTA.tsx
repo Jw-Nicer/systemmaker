@@ -1,6 +1,5 @@
 import { TrackedLink } from "@/components/marketing/TrackedLink";
 import { EVENTS } from "@/lib/analytics";
-import Link from "next/link";
 
 const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL;
 
@@ -53,12 +52,13 @@ export function FinalCTA({
           >
             {ctaText ?? (bookingUrl ? "Schedule a 45-minute call" : "Book a Scoping Call")}
           </TrackedLink>
-          <Link
-            href="/audit"
+          <TrackedLink
+            href="/#see-it-work"
+            eventName={EVENTS.CTA_CLICK_DEMO}
             className="inline-flex rounded-full border border-[#cad0bb] bg-transparent px-6 py-3 text-sm font-medium text-[#f2eadb] transition-colors duration-300 hover:bg-white/8 sm:px-7"
           >
-            Run Guided Audit
-          </Link>
+            Try the Demo
+          </TrackedLink>
         </div>
       </div>
     </section>

@@ -30,30 +30,57 @@ export function CaseStudiesListClient({ caseStudies, industries }: Props) {
         <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
           Real implementations. Real metrics. Real outcomes.
         </p>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">
-          {caseStudies.length} case {caseStudies.length === 1 ? "study" : "studies"}
-        </p>
+        {caseStudies.length > 0 && (
+          <>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {caseStudies.length} case {caseStudies.length === 1 ? "study" : "studies"}
+            </p>
 
-        {/* Filter chips */}
-        <div className="flex flex-wrap gap-2 mt-8 mb-10 sm:mt-10 sm:mb-12">
-          {["All", ...industries].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                activeFilter === filter
-                  ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
-                  : "border border-[var(--green-accent)]/25 text-[var(--text-accent)] hover:border-[var(--green-accent)]/50 hover:text-[var(--text-heading)]"
-              }`}
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2 mt-8 mb-10 sm:mt-10 sm:mb-12">
+              {["All", ...industries].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                    activeFilter === filter
+                      ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
+                      : "border border-[var(--green-accent)]/25 text-[var(--text-accent)] hover:border-[var(--green-accent)]/50 hover:text-[var(--text-heading)]"
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {caseStudies.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-lg font-medium text-[var(--text-heading)]">
+              Case studies coming soon
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-muted)] max-w-md mx-auto">
+              We&apos;re documenting real automation results. In the meantime, see what a preview plan looks like for your business.
+            </p>
+            <a
+              href="/#see-it-work"
+              className="mt-6 inline-block rounded-full bg-[var(--green-dark)] px-6 py-2.5 text-sm font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[var(--shadow-card-hover)]"
             >
-              {filter}
-            </button>
-          ))}
-        </div>
-
-        {filtered.length === 0 ? (
+              See a live preview plan
+            </a>
+            <div className="mt-6">
+              <Link
+                href="/"
+                className="text-sm text-[var(--text-accent)] hover:text-[var(--text-heading)] transition-colors"
+              >
+                &larr; Back to homepage
+              </Link>
+            </div>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-24 text-[var(--text-muted)]">
-            No case studies published yet. Check back soon.
+            No case studies match this filter.
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

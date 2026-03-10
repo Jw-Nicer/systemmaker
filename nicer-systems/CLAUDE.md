@@ -125,6 +125,9 @@ docs/                    # PRD, Architecture, Data Model, API Spec, etc.
   ADR/                   # Architecture Decision Records — see ADR/README.md for index
   CI_CD.md               # Deployment checklist, rollback procedure, future CI/CD plan
   Scaling_Playbook.md    # Roadmap: solo founder → VA/contractor → client portal → SaaS
+  SOP_Founder_Operations.md  # Daily/weekly/monthly ops checklist, automation vs manual matrix
+  Weekly_Review_Template.md  # Fillable Friday review template (pipeline, wins, stuck, priorities)
+  Triage_Process.md          # Bug/feature/content triage with priority SLAs and GitHub Issue templates
 scripts/
   seed-firestore.ts          # Seeds site_settings/default
   seed-agent-templates.ts    # Seeds agent templates into Firestore
@@ -143,7 +146,9 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `AgentDemoResults.tsx` | client | Agent output results display |
 | `ProofOfWork.tsx` | server | Fetches case studies from Firestore |
 | `ProofOfWorkClient.tsx` | client | Filter chips + card grid |
+| `IsThisForYou.tsx` | client | Persona cards (Ops Owner, Founder/GM, Operator) with scenarios |
 | `HowItWorks.tsx` | client | 4-step timeline with scroll animation |
+| `WhyNotDIY.tsx` | client | Comparison grid: DIY vs Consultant vs Nicer Systems |
 | `PricingSection.tsx` | server | Fetches offers from Firestore (3 tiers) |
 | `FAQSection.tsx` | server | Fetches FAQs from Firestore |
 | `FAQAccordion.tsx` | client | Accordion with AnimatePresence |

@@ -5,47 +5,53 @@ import {
   PrivacyPreferencesButton,
 } from "@/components/ui/AnalyticsConsentControls";
 import { MobileNav } from "@/components/marketing/MobileNav";
+import { getPublishedCaseStudies } from "@/lib/firestore/case-studies";
 
-const navLinks = [
-  { href: "/#see-it-work", label: "Demo" },
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#pricing", label: "Pricing" },
-  { href: "/case-studies", label: "Case Studies" },
-];
+export interface NavLink {
+  href: string;
+  label: string;
+  badge?: string;
+}
+
+function buildNavLinks(hasCaseStudies: boolean): NavLink[] {
+  return [
+    { href: "/#see-it-work", label: "Demo" },
+    { href: "/#how-it-works", label: "How it works" },
+    { href: "/#pricing", label: "Pricing" },
+    {
+      href: "/case-studies",
+      label: "Case Studies",
+      ...(!hasCaseStudies && { badge: "Soon" }),
+    },
+  ];
+}
 
 const footerColumns = [
   {
     title: "Company",
     links: [
-      { label: "Case Studies", href: "/case-studies" },
       { label: "Contact", href: "/contact" },
+      { label: "Case Studies", href: "/case-studies" },
+      { label: "FAQ", href: "/#faq" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
     ],
   },
-  {
-    title: "Explore",
-    links: [
-      { label: "Live Demo", href: "/#see-it-work" },
-      { label: "How It Works", href: "/#how-it-works" },
-      { label: "Pricing", href: "/#pricing" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { label: "Get a Preview Plan", href: "/#see-it-work" },
-      { label: "FAQ", href: "/#faq" },
-      { label: "Book a Scoping Call", href: "/contact" },
-    ],
-  },
 ];
 
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const caseStudies = await getPublishedCaseStudies();
+  const navLinks = buildNavLinks(caseStudies.length > 0);
+
   return (
     <div className="min-h-screen bg-[var(--theme-page-background,var(--cream-bg))] text-[var(--text-heading)]">
       <a
@@ -75,6 +81,11 @@ export default function MarketingLayout({
                 className="text-sm text-[var(--text-accent)] transition-colors hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2 focus-visible:rounded-sm"
               >
                 {link.label}
+                {link.badge && (
+                  <span className="ml-1.5 inline-block rounded-full bg-[var(--tag-warm)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                    {link.badge}
+                  </span>
+                )}
               </a>
             ))}
           </div>
@@ -96,7 +107,7 @@ export default function MarketingLayout({
 
       <footer className="border-t border-[#224131]/20 bg-[linear-gradient(180deg,#163122,#193126)] text-[#e7e0cf]" role="contentinfo">
         <div className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
-          <div className="grid gap-10 pt-2 md:grid-cols-[1.3fr_repeat(3,1fr)]">
+          <div className="grid gap-10 pt-2 md:grid-cols-[1.5fr_1fr_1fr]">
             <div>
               <Logo size="lg" variant="dark" className="mb-4" />
               <p className="mt-3 max-w-sm text-sm leading-6 text-[#c2cac0]">
@@ -107,6 +118,12 @@ export default function MarketingLayout({
               <p className="mt-4 text-xs text-[#a4b1a0]">
                 Tell us the problem. We&apos;ll build the system.
               </p>
+              <Link
+                href="/#see-it-work"
+                className="mt-5 inline-flex rounded-full bg-[#f2eadb] px-5 py-2.5 text-sm font-medium text-[#132015] transition-all duration-300 hover:scale-[1.02]"
+              >
+                Get Started
+              </Link>
             </div>
 
             {footerColumns.map((column) => (
@@ -120,7 +137,7 @@ export default function MarketingLayout({
                       {link.label}
                     </Link>
                   ))}
-                  {column.title === "Company" ? <PrivacyPreferencesButton /> : null}
+                  {column.title === "Legal" ? <PrivacyPreferencesButton /> : null}
                 </div>
               </div>
             ))}

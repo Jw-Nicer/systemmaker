@@ -36,7 +36,11 @@ export function AnalyticsConsentBanner() {
   useEffect(() => {
     const status = getAnalyticsConsentStatus();
     setConsent(status);
-    setIsOpen(status === "unset");
+
+    if (status === "unset") {
+      const timer = setTimeout(() => setIsOpen(true), 5000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   useEffect(() => {
@@ -76,8 +80,8 @@ export function AnalyticsConsentBanner() {
               {isUpdate ? "Update analytics preference" : "Allow analytics tracking?"}
             </h2>
             <p className="mt-2 text-[13px] leading-5 text-[#50584b] sm:mt-3 sm:text-sm sm:leading-6">
-              We use analytics to understand performance, feature usage, and
-              which calls to action are working. Declining keeps analytics off.
+              We use analytics to improve your experience and understand how
+              the site is used. Declining keeps analytics off.
               Read the{" "}
               <Link
                 href="/privacy"

@@ -8,6 +8,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 interface NavLink {
   href: string;
   label: string;
+  badge?: string;
 }
 
 interface MobileNavProps {
@@ -178,9 +179,14 @@ export function MobileNav({ links }: MobileNavProps) {
                     key={link.href}
                     href={link.href}
                     onClick={handleLinkClick}
-                    className="rounded-xl px-4 py-3 text-base text-[var(--text-accent)] transition-colors hover:bg-[var(--cream-muted)] hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)]"
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 text-base text-[var(--text-accent)] transition-colors hover:bg-[var(--cream-muted)] hover:text-[var(--text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)]"
                   >
                     {link.label}
+                    {link.badge && (
+                      <span className="rounded-full bg-[var(--tag-warm)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                        {link.badge}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>
