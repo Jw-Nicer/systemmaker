@@ -6,6 +6,8 @@ import { ComputerFeatures } from "@/components/marketing/ComputerFeatures";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { FAQSection } from "@/components/marketing/FAQSection";
 import { TestimonialsSection } from "@/components/marketing/TestimonialsSection";
+import { IsThisForYou } from "@/components/marketing/IsThisForYou";
+import { WhyNotDIY } from "@/components/marketing/WhyNotDIY";
 import { LandingViewTracker } from "@/components/marketing/LandingViewTracker";
 import {
   HomepageExperimentFinalCTA,
@@ -61,8 +63,10 @@ export default async function LandingPage() {
       <HomepageExperimentHero experiments={homepageExperiments} />
       <SeeItWork />
       <ProofOfWork />
+      <IsThisForYou />
       <TestimonialsSection />
       <HowItWorks />
+      <WhyNotDIY />
       <ComputerFeatures />
       <PricingSection />
       <FAQSection />
