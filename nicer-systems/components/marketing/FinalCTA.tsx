@@ -1,5 +1,6 @@
 import { TrackedLink } from "@/components/marketing/TrackedLink";
 import { EVENTS } from "@/lib/analytics";
+import Link from "next/link";
 
 interface FinalCTAProps {
   eyebrow?: string;
@@ -41,13 +42,21 @@ export function FinalCTA({
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#c6d0c3]">
           {description}
         </p>
-        <TrackedLink
-          href="/contact"
-          eventName={EVENTS.CTA_CLICK_BOOK}
-          className="mt-9 inline-flex rounded-full bg-[#f2eadb] px-6 py-3 text-sm font-medium text-[#132015] transition-all duration-300 hover:scale-[1.02] sm:px-7"
-        >
-          {ctaText ?? "Book a Scoping Call"}
-        </TrackedLink>
+        <div className="mt-9 flex flex-wrap justify-center gap-3">
+          <TrackedLink
+            href="/contact"
+            eventName={EVENTS.CTA_CLICK_BOOK}
+            className="inline-flex rounded-full bg-[#f2eadb] px-6 py-3 text-sm font-medium text-[#132015] transition-all duration-300 hover:scale-[1.02] sm:px-7"
+          >
+            {ctaText ?? "Book a Scoping Call"}
+          </TrackedLink>
+          <Link
+            href="/audit"
+            className="inline-flex rounded-full border border-[#cad0bb] bg-transparent px-6 py-3 text-sm font-medium text-[#f2eadb] transition-colors duration-300 hover:bg-white/8 sm:px-7"
+          >
+            Run Guided Audit
+          </Link>
+        </div>
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/firebase/auth";
 import { buildLeadsCSV, filterLeadsForExport } from "@/lib/leads/export";
 import { revalidatePath } from "next/cache";
 import type { ExperimentAssignment } from "@/types/experiment";
+import type { GuidedAuditResponses } from "@/types/audit";
 import type { ActionResult } from "./types";
 import type { Lead, LeadExportFilters } from "@/types/lead";
 export type { Lead, LeadExportFilters } from "@/types/lead";
@@ -42,6 +43,8 @@ function serializeLead(id: string, data: Record<string, unknown>): Lead {
     experiment_assignments: Array.isArray(data.experiment_assignments)
       ? (data.experiment_assignments as ExperimentAssignment[])
       : undefined,
+    audit_summary: data.audit_summary as string | undefined,
+    audit_responses: data.audit_responses as GuidedAuditResponses | undefined,
     created_at: toISOOrPassthrough(data.created_at) ?? new Date().toISOString(),
   };
 }

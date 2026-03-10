@@ -43,6 +43,8 @@ export interface ExtractedIntake {
   current_tools?: string;
   urgency?: "low" | "medium" | "high" | "urgent";
   volume?: string;
+  email?: string;
+  name?: string;
 }
 
 export interface ConversationState {
@@ -95,6 +97,7 @@ export interface SSEPlanCompleteData {
   plan_id: string;
   lead_id?: string;
   share_url: string;
+  email_auto_sent?: boolean;
 }
 
 export interface SSEErrorData {

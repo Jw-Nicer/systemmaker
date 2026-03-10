@@ -26,7 +26,7 @@ type ChatAction =
   | { type: "UPDATE_EXTRACTED"; extracted: ExtractedIntake }
   | { type: "PHASE_CHANGE"; from: ConversationPhase; to: ConversationPhase }
   | { type: "PLAN_SECTION"; section: string; label: string; content: string | null }
-  | { type: "PLAN_COMPLETE"; plan_id: string; lead_id?: string; share_url: string }
+  | { type: "PLAN_COMPLETE"; plan_id: string; lead_id?: string; share_url: string; email_auto_sent?: boolean }
   | { type: "SET_PLAN"; plan: PreviewPlan }
   | { type: "STREAM_DONE" }
   | { type: "ERROR"; message: string }
@@ -39,6 +39,7 @@ interface ChatState extends ConversationState {
   streamingContent: string;
   share_url: string | null;
   streamedPlan: Partial<PreviewPlan>;
+  email_auto_sent: boolean;
 }
 
 export function isPreviewPlanComplete(
@@ -76,6 +77,7 @@ const initialState: ChatState = {
   streamingContent: "",
   share_url: null,
   streamedPlan: {},
+  email_auto_sent: false,
 };
 
 export function createInitialChatState(): ChatState {
@@ -173,6 +175,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         plan_id: action.plan_id,
         lead_id: action.lead_id,
         share_url: action.share_url,
+        email_auto_sent: action.email_auto_sent ?? false,
         plan: isPreviewPlanComplete(state.streamedPlan)
           ? state.streamedPlan
           : state.plan,
@@ -409,6 +412,7 @@ export function useSSEChat() {
                     plan_id: completeData.plan_id,
                     lead_id: completeData.lead_id,
                     share_url: completeData.share_url,
+                    email_auto_sent: completeData.email_auto_sent,
                   });
                   track(EVENTS.AGENT_CHAT_PLAN_COMPLETE);
                   break;
@@ -477,6 +481,7 @@ export function useSSEChat() {
     plan_id: state.plan_id,
     lead_id: state.lead_id,
     share_url: state.share_url,
+    email_auto_sent: state.email_auto_sent,
 
     // Actions
     sendMessage,

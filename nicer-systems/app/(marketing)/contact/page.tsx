@@ -206,22 +206,22 @@ function ContactForm() {
               Option 2
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#1d2318]">
-              Get a Preview Plan first
+              Run a Guided Audit first
             </h2>
             <p className="mt-3 text-sm leading-6 text-[#556052]">
-              Best if you want to see the workflow map, KPI ideas, and next actions before a call.
+              Best if you want to structure the workflow problem before you review the draft plan.
             </p>
             <div className="mt-5 space-y-2 text-sm text-[#50584b]">
-              <p>See the draft output</p>
-              <p>Review the scope</p>
+              <p>Map the breakpoints</p>
+              <p>Generate the draft output</p>
               <p>Come to the call sharper</p>
             </div>
             <Link
-              href="/#see-it-work"
+              href="/audit"
               onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}
               className="mt-6 inline-flex rounded-full border border-[#d0c8b8] bg-[#fbf7ef] px-5 py-3 text-sm font-semibold text-[#27311f] transition-colors hover:bg-white"
             >
-              Get a Preview Plan
+              Run the Guided Audit
             </Link>
           </div>
         </div>

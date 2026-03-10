@@ -35,6 +35,7 @@ const ACTIVITY_COLORS: Record<string, string> = {
 function getLeadSourceLabel(source: string | undefined) {
   if (source === "agent_demo") return "Agent Demo";
   if (source === "agent_chat") return "Agent Chat";
+  if (source === "guided_audit") return "Guided Audit";
   return "Contact Form";
 }
 
@@ -295,6 +296,15 @@ export default function LeadDetail({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {lead.audit_summary && (
+          <div className="mt-6 border-t border-[#ddd5c7] pt-5">
+            <h3 className="text-sm font-semibold text-[#1d2318]">Audit Summary</h3>
+            <p className="mt-2 text-sm leading-6 text-[#596351]">
+              {lead.audit_summary}
+            </p>
           </div>
         )}
       </AdminPanel>

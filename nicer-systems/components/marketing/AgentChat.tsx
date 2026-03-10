@@ -86,9 +86,11 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
     emailCapture: msg.email_capture,
   }));
 
-  // Add email capture flag to the last assistant message in complete phase
+  // Show email capture in complete or follow_up phases, unless email was auto-sent
   const showEmailCapture =
-    chat.phase === "complete" && !emailForm.status.startsWith("sent");
+    (chat.phase === "complete" || chat.phase === "follow_up") &&
+    !chat.email_auto_sent &&
+    emailForm.status !== "sent";
 
   return (
     <div className="flex h-[380px] min-h-0 flex-col sm:h-[460px]">

@@ -4,21 +4,21 @@ import type { LandingHowItWorksStep } from "@/types/variant";
 const defaultSteps: LandingHowItWorksStep[] = [
   {
     id: "01",
-    title: "Describe the bottleneck",
+    title: "Tell us the problem",
     description:
-      "Share the workflow that keeps breaking down. The agent gathers the industry, bottleneck, tool stack, urgency, and volume before it builds anything.",
+      "Describe the workflow that causes delays, errors, or extra hours. We ask a few short questions to understand the context \u2014 your industry, the process, and the tools you already use.",
   },
   {
     id: "02",
-    title: "Generate the preview plan",
+    title: "Get your preview plan",
     description:
-      "The backend runs the planning pipeline and streams each section back as it is completed, so you can review the plan while it is still being assembled.",
+      "We map the workflow end to end, define the metrics that matter, and outline the alerts and automations that fix the bottleneck. The full plan is ready in under a minute.",
   },
   {
     id: "03",
-    title: "Share, refine, and follow up",
+    title: "Decide with clarity",
     description:
-      "Once the plan is generated, you can share the public plan URL, print it to PDF, refine individual sections, or ask follow-up questions about the recommendation.",
+      "Share the plan with your team, refine any section with feedback, and use it to align everyone on the fix \u2014 before any build work starts.",
   },
 ];
 
@@ -35,52 +35,40 @@ const defaultPanels: ReactNode[] = [
         </div>
       </div>
       {[
-        ["Captured", "Industry and workflow context", "intake"],
-        ["Captured", "Current tools and constraints", "tool-stack"],
-        ["Captured", "Urgency and operating volume", "priority"],
-      ].map(([status, task, file]) => (
+        ["Captured", "Your industry and workflow"],
+        ["Captured", "Tools you already use"],
+        ["Captured", "Timeline and scale"],
+      ].map(([status, task]) => (
         <div
           key={task}
-          className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm sm:grid-cols-[auto_1fr_auto] sm:gap-4"
+          className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-[20px] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm"
         >
           <span className="rounded-full border border-[#59725b]/30 bg-[#27392a] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#dce7d9]">
             {status}
           </span>
           <span className="text-[#eef2ea]">{task}</span>
-          <span className="col-span-2 font-mono text-[#97aa97] sm:col-span-1">
-            {file}
-          </span>
         </div>
       ))}
     </div>
   ),
   (
     <div className="space-y-4" key="step-panel-02">
-      <div className="grid gap-3 md:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[24px] border border-white/8 bg-black/18 p-4 text-sm text-[#dce4d8]">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-[#92a792]">
-            Output
-          </p>
-          <ul className="mt-3 space-y-2">
-            <li>• Clarified workflow scope and assumptions</li>
-            <li>• KPI and dashboard recommendations</li>
-            <li>• Alerts and recommended next actions</li>
-          </ul>
-        </div>
-        <div className="rounded-[24px] border border-white/8 bg-[#102016] p-4 font-mono text-xs text-[#ccd7c8]">
-          <p>phase: building</p>
-          <p>emit: intake</p>
-          <p>emit: workflow</p>
-          <p className="mt-3 text-[#8ea48d]">
-            persisting preview plan and share link
-          </p>
-        </div>
+      <div className="rounded-[24px] border border-white/8 bg-black/18 p-4 text-sm text-[#dce4d8]">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-[#92a792]">
+          Your plan includes
+        </p>
+        <ul className="mt-3 space-y-2">
+          <li>• Workflow map — 5 stages with owners and handoffs</li>
+          <li>• Dashboard KPIs — 6 metrics with targets</li>
+          <li>• Smart alerts — 4 triggers with escalation rules</li>
+          <li>• Next actions — prioritised recommendations</li>
+        </ul>
       </div>
       <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-4">
         <div className="flex flex-col gap-3 text-sm text-[#eef2ea] sm:flex-row sm:items-center sm:justify-between">
           <span>Build preview plan for dispatch workflow</span>
           <span className="rounded-full border border-[#6e866f]/30 bg-[#203026] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#aec2ad]">
-            streaming
+            Ready in under a minute
           </span>
         </div>
       </div>
@@ -95,30 +83,31 @@ const defaultPanels: ReactNode[] = [
         <table className="min-w-[420px] w-full text-left text-sm text-[#dde5da]">
         <thead className="border-b border-white/8 bg-black/18 text-[11px] uppercase tracking-[0.14em] text-[#96aa95]">
           <tr>
-            <th className="px-4 py-3">Section</th>
-            <th className="px-4 py-3">Count</th>
-            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3">What you get</th>
+            <th className="px-4 py-3">Details</th>
+            <th className="px-4 py-3">Included</th>
           </tr>
         </thead>
         <tbody>
           {[
-            ["Suggested scope", "1", "Ready"],
-            ["Workflow map", "5", "Ready"],
-            ["Dashboard KPIs", "6", "Ready"],
-            ["Alerts", "4", "Ready"],
-          ].map(([name, count, status]) => (
+            ["Suggested scope", "Clarified problem and assumptions", "Yes"],
+            ["Workflow map", "5 stages with owners and handoffs", "Yes"],
+            ["Dashboard KPIs", "6 metrics with targets", "Yes"],
+            ["Smart alerts", "4 triggers with escalation rules", "Yes"],
+            ["Next actions", "Prioritised recommendations", "Yes"],
+          ].map(([name, details, included]) => (
             <tr key={name} className="border-b border-white/6 last:border-b-0">
               <td className="px-4 py-3">{name}</td>
-              <td className="px-4 py-3">{count}</td>
-              <td className="px-4 py-3 text-[#a9c1a8]">{status}</td>
+              <td className="px-4 py-3">{details}</td>
+              <td className="px-4 py-3 text-[#a9c1a8]">{included}</td>
             </tr>
           ))}
         </tbody>
         </table>
       </div>
       <p className="px-4 py-3 text-xs text-[#8fa08f]">
-        Shared plans remain available through a public plan URL when the saved
-        plan is marked public.
+        Share with your team via link or PDF. Refine any section and get an
+        updated plan instantly.
       </p>
     </div>
   ),
@@ -126,7 +115,7 @@ const defaultPanels: ReactNode[] = [
 
 export function HowItWorks({
   eyebrow = "How it works",
-  title = "From bottleneck\nto preview plan",
+  title = "From bottleneck\nto action plan",
   steps = defaultSteps,
 }: {
   eyebrow?: string;

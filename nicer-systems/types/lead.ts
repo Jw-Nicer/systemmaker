@@ -1,4 +1,5 @@
 import type { ExperimentAssignment } from "@/types/experiment";
+import type { GuidedAuditResponses } from "@/types/audit";
 
 export interface Lead {
   id: string;
@@ -21,6 +22,8 @@ export interface Lead {
   utm_campaign?: string;
   landing_path?: string;
   experiment_assignments?: ExperimentAssignment[];
+  audit_summary?: string;
+  audit_responses?: GuidedAuditResponses;
   created_at: string;
 }
 

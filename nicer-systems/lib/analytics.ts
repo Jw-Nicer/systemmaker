@@ -15,6 +15,8 @@ export const EVENTS = {
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
   PREVIEW_PLAN_EMAIL_CAPTURE: "preview_plan_email_capture",
+  GUIDED_AUDIT_START: "guided_audit_start",
+  GUIDED_AUDIT_COMPLETE: "guided_audit_complete",
 
   // Phase 4A: Agent Chat
   AGENT_CHAT_START: "agent_chat_start",

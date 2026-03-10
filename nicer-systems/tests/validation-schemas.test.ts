@@ -6,6 +6,7 @@ import {
   agentRunSchema,
   experimentConfigSchema,
   experimentVariantSchema,
+  guidedAuditSchema,
   variantSchema,
 } from "../lib/validation";
 
@@ -271,4 +272,40 @@ test("agentChatSchema accepts experiment attribution context", () => {
   });
 
   assert.ok(result.success);
+});
+
+test("guidedAuditSchema accepts structured audit input", () => {
+  const result = guidedAuditSchema.safeParse({
+    industry: "Logistics",
+    workflow_type: "Dispatch",
+    bottleneck: "Dispatchers manually reconcile route changes all day.",
+    current_tools: ["Excel", "Slack"],
+    team_size: "4-10",
+    stack_maturity: "Some automation",
+    manual_steps: "Dispatchers copy driver updates from texts into spreadsheets.",
+    handoff_breaks: "Operations, dispatch, and customer support all maintain separate queues.",
+    visibility_gap: "No live view of exceptions or overdue stops.",
+    desired_outcome: "One shared queue with automated exception alerts and clean ownership.",
+    urgency: "high",
+    volume: "300 deliveries/week",
+  });
+
+  assert.ok(result.success);
+});
+
+test("guidedAuditSchema rejects empty tool selection", () => {
+  const result = guidedAuditSchema.safeParse({
+    industry: "Logistics",
+    workflow_type: "Dispatch",
+    bottleneck: "Manual work",
+    current_tools: [],
+    team_size: "4-10",
+    stack_maturity: "Some automation",
+    manual_steps: "Manual step",
+    handoff_breaks: "Breaks here",
+    visibility_gap: "No visibility",
+    desired_outcome: "Better queue",
+  });
+
+  assert.equal(result.success, false);
 });

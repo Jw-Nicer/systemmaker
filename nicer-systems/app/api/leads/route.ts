@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { leadSchema } from "@/lib/validation";
 import { computeLeadScore } from "@/lib/leads/scoring";
+import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
 import { enrollInNurture } from "@/lib/email/nurture-sequence";
 import {
@@ -32,26 +33,54 @@ export async function POST(request: Request) {
       );
     }
 
+    const email = normalizeEmail(parsed.data.email);
+
     const score = computeLeadScore({
-      email: parsed.data.email,
+      email,
       company: parsed.data.company,
       bottleneck: parsed.data.bottleneck,
       urgency: parsed.data.urgency,
       utm_source: parsed.data.utm_source,
     });
 
-    const docRef = await getAdminDb().collection("leads").add({
-      ...parsed.data,
-      score,
-      status: "new",
-      source: "contact",
-      created_at: new Date(),
-    });
+    // Dedup: check for existing lead with same email
+    const existing = await findLeadByEmail(email);
+    let leadId: string;
+
+    if (existing) {
+      const db = getAdminDb();
+      await db.collection("leads").doc(existing.id).update({
+        name: parsed.data.name,
+        email,
+        company: parsed.data.company,
+        bottleneck: parsed.data.bottleneck || existing.data.bottleneck,
+        tools: parsed.data.tools || existing.data.tools,
+        urgency: parsed.data.urgency || existing.data.urgency,
+        score: Math.max(score, (existing.data.score as number) || 0),
+        updated_at: new Date(),
+      });
+      db.collection("leads").doc(existing.id).collection("activity").add({
+        type: "lead_merged",
+        content: "Duplicate contact form submission merged",
+        created_at: new Date(),
+      }).catch(() => {});
+      leadId = existing.id;
+    } else {
+      const docRef = await getAdminDb().collection("leads").add({
+        ...parsed.data,
+        email,
+        score,
+        status: "new",
+        source: "contact",
+        created_at: new Date(),
+      });
+      leadId = docRef.id;
+    }
 
     // Fire-and-forget admin notification
     sendAdminNotification({
       name: parsed.data.name,
-      email: parsed.data.email,
+      email,
       company: parsed.data.company,
       industry: undefined,
       bottleneck: parsed.data.bottleneck,
@@ -61,13 +90,16 @@ export async function POST(request: Request) {
 
     // Fire-and-forget nurture sequence enrollment
     enrollInNurture({
-      lead_id: docRef.id,
+      lead_id: leadId,
       name: parsed.data.name,
-      email: parsed.data.email,
+      email,
       bottleneck: parsed.data.bottleneck,
     }).catch(() => {});
 
-    return NextResponse.json({ lead_id: docRef.id }, { status: 201 });
+    return NextResponse.json(
+      { lead_id: leadId },
+      { status: existing ? 200 : 201 }
+    );
   } catch (err) {
     console.error("Lead insert error:", err);
     return NextResponse.json(

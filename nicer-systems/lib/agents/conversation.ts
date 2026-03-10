@@ -66,6 +66,8 @@ function mergeExtractedIntake(
     current_tools: incoming.current_tools ? cleanField(incoming.current_tools, 500) : existing.current_tools,
     urgency: incoming.urgency ?? existing.urgency,
     volume: incoming.volume ? cleanField(incoming.volume, 200) : existing.volume,
+    email: incoming.email ? cleanField(incoming.email, 200) : existing.email,
+    name: incoming.name ? cleanField(incoming.name, 100) : existing.name,
   };
 }
 
@@ -141,6 +143,11 @@ function inferBottleneck(message: string): string | undefined {
   return undefined;
 }
 
+function inferEmail(message: string): string | undefined {
+  const match = message.match(/\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/);
+  return match ? match[1].toLowerCase().trim() : undefined;
+}
+
 export function extractHeuristicIntakeData(message: string): Partial<ExtractedIntake> {
   return {
     industry: inferIndustry(message),
@@ -148,6 +155,7 @@ export function extractHeuristicIntakeData(message: string): Partial<ExtractedIn
     current_tools: inferCurrentTools(message),
     urgency: inferUrgency(message),
     volume: inferVolume(message),
+    email: inferEmail(message),
   };
 }
 
@@ -245,7 +253,8 @@ Visitor: ${userMessage}
 3. Be conversational — don't list all questions at once.
 4. If they give multiple pieces of info in one message, acknowledge all of them.
 5. Once you have industry, bottleneck, and current_tools, DON'T ask more — the system will handle the transition.
-6. Respond ONLY with your next conversational message. No JSON, no markdown headers.`;
+6. If the visitor shares their email or name at any point, acknowledge it naturally.
+7. Respond ONLY with your next conversational message. No JSON, no markdown headers.`;
 }
 
 function buildConfirmingPrompt(
@@ -327,6 +336,8 @@ Fields:
 - current_tools (string | null): Software/tools they currently use
 - urgency ("low" | "medium" | "high" | "urgent" | null): How urgent this is
 - volume (string | null): Scale/volume context
+- email (string | null): Their email address if they shared one
+- name (string | null): Their name if they shared it
 
 Respond ONLY with the JSON object. No explanation, no markdown fences.`;
 
@@ -393,6 +404,12 @@ Visitor: ${userMessage}`;
     }
     if (typeof parsed.volume === "string" && parsed.volume.trim()) {
       updated.volume = parsed.volume.trim();
+    }
+    if (typeof parsed.email === "string" && parsed.email.trim()) {
+      updated.email = parsed.email.trim().toLowerCase();
+    }
+    if (typeof parsed.name === "string" && parsed.name.trim()) {
+      updated.name = parsed.name.trim();
     }
 
     return mergeExtractedIntake(existing, updated);

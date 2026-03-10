@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { EXPERIMENT_TARGETS } from "@/lib/constants/experiments";
+import {
+  AUDIT_STACK_MATURITY,
+  AUDIT_TEAM_SIZES,
+  AUDIT_WORKFLOW_TYPES,
+} from "@/types/audit";
 
 const experimentAssignmentSchema = z.object({
   experiment_id: z.string().min(1).max(128),
@@ -102,6 +107,36 @@ export const agentRunSchema = z.object({
 
 export type AgentRunInput = z.infer<typeof agentRunSchema>;
 
+export const guidedAuditSchema = z.object({
+  industry: z.string().min(1, "Industry is required").max(100),
+  workflow_type: z.enum(AUDIT_WORKFLOW_TYPES, {
+    message: "Workflow type is required",
+  }),
+  bottleneck: z.string().min(1, "Bottleneck is required").max(2000),
+  current_tools: z
+    .array(z.string().min(1).max(100))
+    .min(1, "Select at least one tool")
+    .max(10, "Too many tools selected"),
+  urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  volume: z.string().max(200).optional(),
+  team_size: z.enum(AUDIT_TEAM_SIZES, {
+    message: "Team size is required",
+  }),
+  stack_maturity: z.enum(AUDIT_STACK_MATURITY, {
+    message: "Stack maturity is required",
+  }),
+  manual_steps: z.string().min(1, "Manual work detail is required").max(1500),
+  handoff_breaks: z.string().min(1, "Handoff detail is required").max(1500),
+  visibility_gap: z.string().min(1, "Visibility detail is required").max(1500),
+  desired_outcome: z.string().min(1, "Desired outcome is required").max(1500),
+  time_lost_per_week: z.string().max(100).optional(),
+  compliance_notes: z.string().max(500).optional(),
+  landing_path: z.string().max(500).optional(),
+  experiment_assignments: z.array(experimentAssignmentSchema).max(10).optional(),
+});
+
+export type GuidedAuditInput = z.infer<typeof guidedAuditSchema>;
+
 export const sendEmailSchema = z.object({
   email: z.string().email("Valid email is required"),
   name: z.string().min(1, "Name is required").max(100),
@@ -164,6 +199,8 @@ export const agentChatSchema = z.object({
     current_tools: z.string().max(500).optional(),
     urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
     volume: z.string().max(200).optional(),
+    email: z.string().email().max(200).optional(),
+    name: z.string().max(100).optional(),
   }),
   /** Plan data passed by client for follow_up phase context */
   plan: z.record(z.string(), z.unknown()).optional(),

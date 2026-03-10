@@ -12,12 +12,18 @@ import {
   buildPlanSummary,
 } from "@/lib/agents/conversation";
 import { computeLeadScore } from "@/lib/leads/scoring";
+import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
+import { renderPreviewPlanHTML } from "@/lib/agents/email-template";
+import { sendAdminNotification } from "@/lib/email/admin-notification";
+import { enrollInNurture } from "@/lib/email/nurture-sequence";
+import { Resend } from "resend";
 import type {
   ConversationPhase,
   ChatMessage,
   ExtractedIntake,
   SSEEventType,
 } from "@/types/chat";
+import type { PreviewPlan } from "@/types/preview-plan";
 import type { ExperimentAssignment } from "@/types/experiment";
 
 // ---------------------------------------------------------------------------
@@ -322,21 +328,127 @@ export async function POST(request: Request) {
         console.error("Failed to save plan:", err);
       }
 
+      // Auto-send plan email if we have the visitor's email
+      let emailAutoSent = false;
+      const extractedEmail = updatedExtracted.email;
+      const extractedName = updatedExtracted.name || "";
+
+      if (extractedEmail && leadId && plan) {
+        try {
+          const apiKey = process.env.RESEND_API_KEY;
+          if (apiKey) {
+            const email = normalizeEmail(extractedEmail);
+            const resend = new Resend(apiKey);
+            const html = renderPreviewPlanHTML(
+              plan as unknown as PreviewPlan,
+              extractedName
+            );
+
+            await resend.emails.send({
+              from: "Nicer Systems <onboarding@resend.dev>",
+              to: email,
+              subject: "Your Preview Plan from Nicer Systems",
+              html,
+            });
+
+            // Dedup: check if another lead already owns this email
+            let effectiveLeadId = leadId;
+            const existing = await findLeadByEmail(email);
+            if (existing && existing.id !== leadId) {
+              // Merge into existing lead
+              const mergeData: Record<string, unknown> = {
+                name: extractedName || existing.data.name,
+                updated_at: new Date(),
+              };
+              if (planId) mergeData.plan_id = planId;
+              if (input.industry && !existing.data.industry) {
+                mergeData.industry = input.industry;
+              }
+              if (input.bottleneck && !existing.data.bottleneck) {
+                mergeData.bottleneck = input.bottleneck;
+              }
+              await db.collection("leads").doc(existing.id).update(mergeData);
+              await db.collection("leads").doc(leadId).update({
+                status: "merged",
+                merged_into: existing.id,
+                updated_at: new Date(),
+              });
+              effectiveLeadId = existing.id;
+            }
+
+            // Update lead with email + score
+            const score = computeLeadScore({
+              email,
+              company: "",
+              bottleneck: input.bottleneck,
+              urgency: input.urgency,
+              completed_agent_demo: true,
+              preview_plan_sent: true,
+            });
+
+            await db.collection("leads").doc(effectiveLeadId).update({
+              name: extractedName,
+              email,
+              score: Math.max(score, 0),
+              preview_plan_sent_at: new Date(),
+              updated_at: new Date(),
+            });
+
+            // Log activity
+            db.collection("leads").doc(effectiveLeadId).collection("activity").add({
+              type: "email_sent",
+              content: "Preview Plan auto-sent during chat",
+              created_at: new Date(),
+            }).catch(() => {});
+
+            // Fire-and-forget: admin notification + nurture
+            sendAdminNotification({
+              name: extractedName,
+              email,
+              industry: input.industry,
+              bottleneck: input.bottleneck,
+              score,
+              source: "agent_chat",
+            }).catch(() => {});
+
+            enrollInNurture({
+              lead_id: effectiveLeadId,
+              name: extractedName,
+              email,
+              industry: input.industry,
+              bottleneck: input.bottleneck,
+            }).catch(() => {});
+
+            emailAutoSent = true;
+          }
+        } catch (err) {
+          console.error("Auto-send email failed:", err);
+          // Non-fatal — fall back to manual email capture
+        }
+      }
+
       write("plan_complete", {
         plan_id: planId ?? "",
         lead_id: leadId ?? "",
         share_url: planId ? `/plan/${planId}` : "",
+        email_auto_sent: emailAutoSent,
       });
 
       // Emit phase change to complete
       write("phase_change", { from: "building", to: "complete" });
 
-      // Post-plan message with email capture prompt
-      write("message", {
-        content:
-          "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
-        email_capture: true,
-      });
+      // Post-plan message
+      if (emailAutoSent) {
+        write("message", {
+          content: `Your Preview Plan is ready! I've sent a copy to ${extractedEmail}. Feel free to ask any follow-up questions about the plan.`,
+        });
+      } else {
+        write("message", {
+          content:
+            "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
+          email_capture: true,
+        });
+      }
 
       close();
       return;

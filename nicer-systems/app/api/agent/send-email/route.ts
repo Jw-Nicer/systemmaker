@@ -5,6 +5,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { renderPreviewPlanHTML } from "@/lib/agents/email-template";
 import { computeLeadScore } from "@/lib/leads/scoring";
+import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
 import { enrollInNurture } from "@/lib/email/nurture-sequence";
 import {
@@ -66,31 +67,66 @@ export async function POST(request: Request) {
       const leadDoc = await db.collection("leads").doc(lead_id).get();
       const leadData = leadDoc.data();
 
-      if (!leadDoc.exists || !leadData || !["agent_demo", "agent_chat"].includes(leadData.source)) {
+      if (!leadDoc.exists || !leadData || !["agent_demo", "agent_chat", "guided_audit"].includes(leadData.source)) {
         // Always return success (blind response) — email was already sent
         return NextResponse.json({ success: true }, { status: 200 });
       }
 
+      const email = normalizeEmail(parsed.data.email);
+
+      // Dedup: if this lead has no email, check if another lead already owns this email
+      let effectiveLeadId = lead_id;
+      let effectiveLeadData = leadData;
+
+      if (!leadData.email || leadData.email === "") {
+        const existing = await findLeadByEmail(email);
+        if (existing && existing.id !== lead_id) {
+          // Merge plan data from the empty-email lead into the existing one
+          const mergeData: Record<string, unknown> = {
+            name: parsed.data.name || existing.data.name,
+            updated_at: new Date(),
+          };
+          if (leadData.plan_id) mergeData.plan_id = leadData.plan_id;
+          if (leadData.industry && !existing.data.industry) {
+            mergeData.industry = leadData.industry;
+          }
+          if (leadData.bottleneck && !existing.data.bottleneck) {
+            mergeData.bottleneck = leadData.bottleneck;
+          }
+          await db.collection("leads").doc(existing.id).update(mergeData);
+
+          // Mark the empty-email lead as merged
+          await db.collection("leads").doc(lead_id).update({
+            status: "merged",
+            merged_into: existing.id,
+            updated_at: new Date(),
+          });
+
+          effectiveLeadId = existing.id;
+          effectiveLeadData = { ...existing.data, ...mergeData };
+        }
+      }
+
       const score = computeLeadScore({
-        email: parsed.data.email,
-        company: leadData.company,
-        bottleneck: leadData.bottleneck,
-        urgency: leadData.urgency,
+        email,
+        company: effectiveLeadData.company,
+        bottleneck: effectiveLeadData.bottleneck,
+        urgency: effectiveLeadData.urgency,
         completed_agent_demo: true,
         preview_plan_sent: true,
-        utm_source: leadData.utm_source,
+        utm_source: effectiveLeadData.utm_source,
       });
 
-      await db.collection("leads").doc(lead_id).update({
+      await db.collection("leads").doc(effectiveLeadId).update({
         name: parsed.data.name,
-        email: parsed.data.email,
-        score,
+        email,
+        score: Math.max(score, (effectiveLeadData.score as number) || 0),
         preview_plan_sent_at: new Date(),
         updated_at: new Date(),
       });
 
       // Log email activity on the lead
-      db.collection("leads").doc(lead_id).collection("activity").add({
+      db.collection("leads").doc(effectiveLeadId).collection("activity").add({
         type: "email_sent",
         content: "Preview Plan sent",
         created_at: new Date(),
@@ -99,20 +135,20 @@ export async function POST(request: Request) {
       // Fire-and-forget: admin notification + nurture enrollment
       sendAdminNotification({
         name: parsed.data.name,
-        email: parsed.data.email,
-        company: leadData.company,
-        industry: leadData.industry,
-        bottleneck: leadData.bottleneck,
+        email,
+        company: effectiveLeadData.company as string | undefined,
+        industry: effectiveLeadData.industry as string | undefined,
+        bottleneck: effectiveLeadData.bottleneck as string | undefined,
         score,
-        source: leadData.source,
+        source: effectiveLeadData.source as "contact" | "agent_demo" | "agent_chat",
       }).catch(() => {});
 
       enrollInNurture({
-        lead_id,
+        lead_id: effectiveLeadId,
         name: parsed.data.name,
-        email: parsed.data.email,
-        industry: leadData.industry,
-        bottleneck: leadData.bottleneck,
+        email,
+        industry: effectiveLeadData.industry as string | undefined,
+        bottleneck: effectiveLeadData.bottleneck as string | undefined,
       }).catch(() => {});
     }
 
