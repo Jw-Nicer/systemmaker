@@ -122,6 +122,9 @@ types/
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
+  ADR/                   # Architecture Decision Records — see ADR/README.md for index
+  CI_CD.md               # Deployment checklist, rollback procedure, future CI/CD plan
+  Scaling_Playbook.md    # Roadmap: solo founder → VA/contractor → client portal → SaaS
 scripts/
   seed-firestore.ts          # Seeds site_settings/default
   seed-agent-templates.ts    # Seeds agent templates into Firestore

@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { EXPERIMENT_TARGETS } from "@/lib/constants/experiments";
 import {
+  AUDIT_INDUSTRIES,
   AUDIT_STACK_MATURITY,
   AUDIT_TEAM_SIZES,
+  AUDIT_TIME_LOST,
   AUDIT_WORKFLOW_TYPES,
 } from "@/types/audit";
 
@@ -36,6 +38,7 @@ export const caseStudySchema = z.object({
   slug: z.string().min(1, "Slug is required").max(200),
   client_name: z.string().min(1, "Client name is required").max(100),
   industry: z.string().min(1, "Industry is required").max(100),
+  workflow_type: z.string().max(100).optional(),
   tools: z.array(z.string().min(1).max(100)).min(1, "At least one tool is required"),
   challenge: z.string().min(1, "Challenge is required").max(5000),
   solution: z.string().min(1, "Solution is required").max(5000),
@@ -48,8 +51,16 @@ export const caseStudySchema = z.object({
       })
     )
     .min(1, "At least one metric is required"),
+  result_categories: z.array(z.enum([
+    "time_saved",
+    "error_reduction",
+    "cost_reduction",
+    "visibility_gained",
+    "throughput_increase",
+    "compliance_achieved",
+  ])).optional(),
   thumbnail_url: z.string().max(500).optional(),
-  is_published: z.boolean(),
+  status: z.enum(["draft", "review", "published", "archived"]),
   sort_order: z.number().int().min(0),
 });
 
@@ -108,11 +119,13 @@ export const agentRunSchema = z.object({
 export type AgentRunInput = z.infer<typeof agentRunSchema>;
 
 export const guidedAuditSchema = z.object({
-  industry: z.string().min(1, "Industry is required").max(100),
+  industry: z.enum(AUDIT_INDUSTRIES, {
+    message: "Industry is required",
+  }),
   workflow_type: z.enum(AUDIT_WORKFLOW_TYPES, {
     message: "Workflow type is required",
   }),
-  bottleneck: z.string().min(1, "Bottleneck is required").max(2000),
+  bottleneck: z.string().min(20, "Describe the bottleneck in at least 20 characters").max(2000),
   current_tools: z
     .array(z.string().min(1).max(100))
     .min(1, "Select at least one tool")
@@ -129,7 +142,7 @@ export const guidedAuditSchema = z.object({
   handoff_breaks: z.string().min(1, "Handoff detail is required").max(1500),
   visibility_gap: z.string().min(1, "Visibility detail is required").max(1500),
   desired_outcome: z.string().min(1, "Desired outcome is required").max(1500),
-  time_lost_per_week: z.string().max(100).optional(),
+  time_lost_per_week: z.enum(AUDIT_TIME_LOST).optional(),
   compliance_notes: z.string().max(500).optional(),
   landing_path: z.string().max(500).optional(),
   experiment_assignments: z.array(experimentAssignmentSchema).max(10).optional(),

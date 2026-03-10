@@ -9,6 +9,8 @@ interface TrackedLinkProps {
   eventPayload?: Record<string, unknown>;
   children: React.ReactNode;
   className?: string;
+  target?: string;
+  rel?: string;
 }
 
 export function TrackedLink({
@@ -17,7 +19,25 @@ export function TrackedLink({
   eventPayload,
   children,
   className,
+  target,
+  rel,
 }: TrackedLinkProps) {
+  const isExternal = href.startsWith("http://") || href.startsWith("https://");
+
+  if (isExternal || target === "_blank") {
+    return (
+      <a
+        href={href}
+        className={className}
+        target={target}
+        rel={rel || (target === "_blank" ? "noopener noreferrer" : undefined)}
+        onClick={() => track(eventName, eventPayload)}
+      >
+        {children}
+      </a>
+    );
+  }
+
   return (
     <Link
       href={href}

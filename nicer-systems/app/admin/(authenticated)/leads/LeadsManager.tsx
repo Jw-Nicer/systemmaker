@@ -2,7 +2,8 @@
 
 import { useState, Fragment } from "react";
 import Link from "next/link";
-import type { Lead } from "@/types/lead";
+import { LEAD_STATUSES } from "@/types/lead";
+import type { Lead, LeadStatus } from "@/types/lead";
 import {
   updateLeadStatus,
   exportLeadsCSV,
@@ -14,7 +15,12 @@ import {
 } from "@/components/admin/AdminPrimitives";
 import { formatDateLabel, isPastDate, parseDateValue } from "@/lib/date";
 
-const STATUSES = ["new", "qualified", "booked", "closed", "unqualified"];
+const STATUSES = LEAD_STATUSES;
+
+const STATUS_COLORS: Record<string, string> = {
+  nurture: "border-purple-300 bg-purple-50 text-purple-700",
+  lost: "border-gray-300 bg-gray-100 text-gray-500",
+};
 
 function toSearchValue(value: unknown) {
   return typeof value === "string" ? value.toLowerCase() : "";
@@ -55,7 +61,7 @@ export default function LeadsManager({
   const hasActiveExportFilters =
     filter !== "all" || search.trim().length > 0 || sortBy !== "date";
 
-  async function handleStatusChange(id: string, newStatus: string) {
+  async function handleStatusChange(id: string, newStatus: LeadStatus) {
     setStatusError(null);
     const result = await updateLeadStatus(id, newStatus);
     if (result.success) {
@@ -219,10 +225,10 @@ export default function LeadsManager({
                         value={lead.status}
                         onChange={(e) => {
                           e.stopPropagation();
-                          handleStatusChange(lead.id, e.target.value);
+                          handleStatusChange(lead.id, e.target.value as LeadStatus);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="cursor-pointer rounded-full border border-[#d7d0c1] bg-[#fbf7ef] px-2 py-1 text-xs font-medium text-[#27311f]"
+                        className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${STATUS_COLORS[lead.status] ?? "border-[#d7d0c1] bg-[#fbf7ef] text-[#27311f]"}`}
                       >
                         {STATUSES.map((s) => (
                           <option key={s} value={s}>

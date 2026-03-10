@@ -197,7 +197,7 @@ describe("updateLeadStatus", () => {
     mockGetSessionUser.mockResolvedValue(fakeUser);
     mockGet.mockResolvedValue(fakeDoc("lead-1", { status: "new" }));
 
-    for (const status of ["new", "qualified", "booked", "closed", "unqualified"]) {
+    for (const status of ["new", "qualified", "nurture", "booked", "closed", "unqualified", "lost"]) {
       mockUpdate.mockClear();
       mockAdd.mockClear();
       const result = await updateLeadStatus("lead-1", status);

@@ -7,6 +7,8 @@ import { Logo } from "@/components/ui/Logo";
 import { TrackedLink } from "@/components/marketing/TrackedLink";
 import { EVENTS, track } from "@/lib/analytics";
 
+const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL;
+
 const queryCards = [
   {
     id: "01",
@@ -105,11 +107,12 @@ export function BrushRevealHero({
 
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
               <TrackedLink
-                href="/contact"
+                href={bookingUrl || "/contact"}
                 eventName={EVENTS.CTA_CLICK_BOOK}
+                {...(bookingUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 className="rounded-full bg-[var(--green-dark)] px-7 py-3.5 text-center text-sm font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-transform hover:scale-[1.02]"
               >
-                {ctaText ?? "Book a Scoping Call"}
+                {ctaText ?? (bookingUrl ? "Schedule a 45-minute call" : "Book a Scoping Call")}
               </TrackedLink>
               <a
                 href="#see-it-work"

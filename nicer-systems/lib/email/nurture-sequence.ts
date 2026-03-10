@@ -30,10 +30,23 @@ export async function enrollInNurture(
     return;
   }
 
+  // Check if lead has unsubscribed
+  try {
+    const db = getAdminDb();
+    const doc = await db.collection("leads").doc(input.lead_id).get();
+    if (doc.exists && doc.data()?.nurture_unsubscribed) {
+      console.log(`Lead ${input.lead_id} is unsubscribed — skipping nurture`);
+      return;
+    }
+  } catch {
+    // Proceed with enrollment if check fails
+  }
+
   const ctx = {
     name: input.name,
     industry: input.industry,
     bottleneck: input.bottleneck,
+    lead_id: input.lead_id,
   };
 
   const now = new Date();

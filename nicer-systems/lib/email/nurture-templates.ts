@@ -1,10 +1,17 @@
+import { buildUnsubscribeUrl } from "./unsubscribe-token";
+
 interface NurtureContext {
   name: string;
   industry?: string;
   bottleneck?: string;
+  lead_id?: string;
 }
 
-function wrapper(content: string): string {
+function wrapper(content: string, leadId?: string): string {
+  const unsubscribeLink = leadId
+    ? `<a href="${buildUnsubscribeUrl(leadId)}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>`
+    : "";
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -17,6 +24,7 @@ function wrapper(content: string): string {
   <p style="color:#9ca3af;font-size:12px;text-align:center;">
     Nicer Systems — Tell us the problem. We'll build the system.<br>
     <a href="https://nicer-systems.web.app" style="color:#9ca3af;">nicersystems.com</a>
+    ${unsubscribeLink ? `<br>${unsubscribeLink}` : ""}
   </p>
 </body>
 </html>`;
@@ -44,7 +52,7 @@ export function renderQuickTipEmail(ctx: NurtureContext): {
         </a>
       </div>
       <p>— The Nicer Systems Team</p>
-    `),
+    `, ctx.lead_id),
   };
 }
 
@@ -75,7 +83,7 @@ export function renderCaseStudyEmail(ctx: NurtureContext): {
         </a>
       </div>
       <p>— The Nicer Systems Team</p>
-    `),
+    `, ctx.lead_id),
   };
 }
 
@@ -103,7 +111,7 @@ export function renderROIEmail(ctx: NurtureContext): {
         </a>
       </div>
       <p>— The Nicer Systems Team</p>
-    `),
+    `, ctx.lead_id),
   };
 }
 
@@ -125,6 +133,6 @@ export function renderFinalCTAEmail(ctx: NurtureContext): {
       </div>
       <p>Either way, thanks for checking us out. We're here when you need us.</p>
       <p>— The Nicer Systems Team</p>
-    `),
+    `, ctx.lead_id),
   };
 }

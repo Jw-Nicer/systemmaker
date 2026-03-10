@@ -20,12 +20,16 @@
 - title (string)
 - client_name (string)
 - industry (string)
+- workflow_type (string) // matches AUDIT_WORKFLOW_TYPES: Lead intake, Scheduling, Dispatch, Approvals, Reporting, Customer updates, Billing, Document handling, Other
 - tools (string[])
 - challenge (string)
 - solution (string)
 - metrics (array) // [{label, before, after}]
+- result_categories (string[]) // time_saved, error_reduction, cost_reduction, visibility_gained, throughput_increase, compliance_achieved
 - thumbnail_url (string)
-- is_published (boolean)
+- status (string) // draft|review|published|archived — replaces is_published
+- is_published (boolean) // derived from status === "published", kept for backward compat
+- published_at (string | null) // ISO timestamp, set on first publish
 - sort_order (number)
 - created_at, updated_at (timestamp)
 
@@ -72,7 +76,9 @@
 - utm_campaign (string)
 - utm_content (string)
 - landing_path (string)
-- status (string) // new|qualified|booked|closed|unqualified
+- status (LeadStatus) // new|qualified|nurture|booked|closed|unqualified|lost
+  // nurture = potential fit, not ready now — stays in email sequence
+  // lost = was qualified but chose competitor, went silent, or explicitly declined
 - score (number) // 0–75, computed by lib/leads/scoring.ts
 - plan_id (string) // links to generated plan doc
 - nurture_enrolled (boolean) // whether enrolled in email nurture sequence
@@ -144,7 +150,7 @@
 | Collection | Public Read | Public Write | Auth Read | Auth Write |
 |------------|-----------|-------------|-----------|-----------|
 | site_settings | all | — | all | yes |
-| case_studies | is_published=true | — | all | yes |
+| case_studies | status=published | — | all | yes |
 | testimonials | is_published=true | — | all | yes |
 | offers | is_published=true | — | all | yes |
 | faqs | is_published=true | — | all | yes |
@@ -158,7 +164,7 @@
 
 ## Firestore Indexes
 See `firestore.indexes.json` for custom composite indexes on:
-- case_studies (is_published + sort_order)
+- case_studies (status + sort_order)
 - faqs (is_published + sort_order)
 - testimonials (is_published + sort_order)
 - offers (is_published + sort_order)

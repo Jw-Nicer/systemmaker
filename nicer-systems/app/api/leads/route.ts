@@ -5,6 +5,7 @@ import { computeLeadScore } from "@/lib/leads/scoring";
 import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
 import { enrollInNurture } from "@/lib/email/nurture-sequence";
+import { sendConfirmationEmail } from "@/lib/email/confirmation-email";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
@@ -76,6 +77,13 @@ export async function POST(request: Request) {
       });
       leadId = docRef.id;
     }
+
+    // Fire-and-forget confirmation email to lead
+    sendConfirmationEmail({
+      name: parsed.data.name,
+      email,
+      bottleneck: parsed.data.bottleneck,
+    }).catch(() => {});
 
     // Fire-and-forget admin notification
     sendAdminNotification({

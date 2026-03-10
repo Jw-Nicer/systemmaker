@@ -1,6 +1,18 @@
 import type { ExperimentAssignment } from "@/types/experiment";
 import type { GuidedAuditResponses } from "@/types/audit";
 
+export const LEAD_STATUSES = [
+  "new",
+  "qualified",
+  "nurture",
+  "booked",
+  "closed",
+  "unqualified",
+  "lost",
+] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
 export interface Lead {
   id: string;
   name: string;
@@ -9,10 +21,11 @@ export interface Lead {
   bottleneck: string;
   tools: string;
   urgency: string;
-  status: string;
+  status: LeadStatus;
   source: string;
   score?: number;
   nurture_enrolled?: boolean;
+  nurture_unsubscribed?: boolean;
   preview_plan_sent_at?: string;
   plan_id?: string;
   follow_up_at?: string;

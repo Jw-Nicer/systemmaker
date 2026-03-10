@@ -7,10 +7,10 @@ import { revalidatePath } from "next/cache";
 import type { ExperimentAssignment } from "@/types/experiment";
 import type { GuidedAuditResponses } from "@/types/audit";
 import type { ActionResult } from "./types";
-import type { Lead, LeadExportFilters } from "@/types/lead";
-export type { Lead, LeadExportFilters } from "@/types/lead";
-
-const VALID_STATUSES = ["new", "qualified", "booked", "closed", "unqualified"];
+import { LEAD_STATUSES } from "@/types/lead";
+import type { Lead, LeadExportFilters, LeadStatus } from "@/types/lead";
+export type { Lead, LeadExportFilters, LeadStatus } from "@/types/lead";
+export { LEAD_STATUSES } from "@/types/lead";
 
 function toISOOrPassthrough(value: unknown): string | undefined {
   if (value && typeof value === "object" && typeof (value as { toDate?: unknown }).toDate === "function") {
@@ -28,7 +28,7 @@ function serializeLead(id: string, data: Record<string, unknown>): Lead {
     bottleneck: (data.bottleneck as string) ?? "",
     tools: (data.tools as string) ?? "",
     urgency: (data.urgency as string) ?? "",
-    status: (data.status as string) ?? "new",
+    status: ((data.status as string) ?? "new") as LeadStatus,
     source: (data.source as string) ?? "contact",
     score: (data.score as number) ?? undefined,
     nurture_enrolled: (data.nurture_enrolled as boolean) ?? false,
@@ -77,7 +77,7 @@ export async function updateLeadStatus(
 ): Promise<ActionResult> {
   try {
     const user = await requireAuth();
-    if (!VALID_STATUSES.includes(status)) {
+    if (!(LEAD_STATUSES as readonly string[]).includes(status)) {
       return { success: false, error: "Invalid status" };
     }
     const db = getAdminDb();
@@ -188,7 +188,7 @@ export async function getFollowUps(): Promise<Lead[]> {
     return snap.docs
       .filter((doc) => {
         const status = doc.data().status;
-        return status !== "closed" && status !== "unqualified";
+        return status !== "closed" && status !== "unqualified" && status !== "lost";
       })
       .map((doc) => serializeLead(doc.id, doc.data()));
   } catch (err) {

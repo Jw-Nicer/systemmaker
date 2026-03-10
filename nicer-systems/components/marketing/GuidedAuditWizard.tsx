@@ -8,8 +8,10 @@ import { guidedAuditSchema, type GuidedAuditInput } from "@/lib/validation";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
 import type { PreviewPlan } from "@/types/preview-plan";
 import {
+  AUDIT_INDUSTRIES,
   AUDIT_STACK_MATURITY,
   AUDIT_TEAM_SIZES,
+  AUDIT_TIME_LOST,
   AUDIT_WORKFLOW_TYPES,
 } from "@/types/audit";
 
@@ -29,19 +31,19 @@ const TOOL_OPTIONS = [
 type FieldErrors = Partial<Record<keyof GuidedAuditInput, string>>;
 
 const INITIAL_FORM: GuidedAuditInput = {
-  industry: "",
-  workflow_type: "Lead intake",
+  industry: "" as GuidedAuditInput["industry"],
+  workflow_type: "Intake & Onboarding",
   bottleneck: "",
   current_tools: [],
   urgency: undefined,
   volume: "",
-  team_size: "1-3",
-  stack_maturity: "Mostly manual",
+  team_size: "1-5",
+  stack_maturity: "Spreadsheets only",
   manual_steps: "",
   handoff_breaks: "",
   visibility_gap: "",
   desired_outcome: "",
-  time_lost_per_week: "",
+  time_lost_per_week: undefined,
   compliance_notes: "",
 };
 
@@ -312,12 +314,18 @@ export function GuidedAuditWizard() {
           {step === 0 ? (
             <>
               <Field label="Industry" error={errors.industry}>
-                <input
+                <select
                   value={form.industry}
-                  onChange={(event) => setField("industry", event.target.value)}
-                  placeholder="e.g. Logistics, property management, healthcare"
+                  onChange={(event) => setField("industry", event.target.value as GuidedAuditInput["industry"])}
                   className={inputClass(Boolean(errors.industry))}
-                />
+                >
+                  <option value="">Select industry</option>
+                  {AUDIT_INDUSTRIES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               <div className="grid gap-5 md:grid-cols-2">
@@ -467,12 +475,23 @@ export function GuidedAuditWizard() {
 
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label="Time lost per week" error={errors.time_lost_per_week}>
-                  <input
+                  <select
                     value={form.time_lost_per_week ?? ""}
-                    onChange={(event) => setField("time_lost_per_week", event.target.value)}
-                    placeholder="e.g. 12 team hours"
+                    onChange={(event) =>
+                      setField(
+                        "time_lost_per_week",
+                        (event.target.value || undefined) as GuidedAuditInput["time_lost_per_week"]
+                      )
+                    }
                     className={inputClass(Boolean(errors.time_lost_per_week))}
-                  />
+                  >
+                    <option value="">Select estimate</option>
+                    {AUDIT_TIME_LOST.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Accuracy or compliance concerns" error={errors.compliance_notes}>
                   <input
@@ -504,12 +523,24 @@ export function GuidedAuditWizard() {
                 </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 text-sm text-[#445042]">
                   <div>
+                    <p className="text-xs uppercase text-[#7f7c70]">Industry</p>
+                    <p className="mt-1">{form.industry || "Not selected"}</p>
+                  </div>
+                  <div>
                     <p className="text-xs uppercase text-[#7f7c70]">Workflow</p>
                     <p className="mt-1">{form.workflow_type}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase text-[#7f7c70]">Team</p>
                     <p className="mt-1">{form.team_size} people</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-[#7f7c70]">Stack maturity</p>
+                    <p className="mt-1">{form.stack_maturity}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs uppercase text-[#7f7c70]">Bottleneck</p>
+                    <p className="mt-1">{form.bottleneck || "Not described"}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase text-[#7f7c70]">Tools</p>
@@ -519,6 +550,18 @@ export function GuidedAuditWizard() {
                     <p className="text-xs uppercase text-[#7f7c70]">Urgency</p>
                     <p className="mt-1">{form.urgency ?? "Not specified"}</p>
                   </div>
+                  {form.time_lost_per_week ? (
+                    <div>
+                      <p className="text-xs uppercase text-[#7f7c70]">Time lost / week</p>
+                      <p className="mt-1">{form.time_lost_per_week}</p>
+                    </div>
+                  ) : null}
+                  {form.volume ? (
+                    <div>
+                      <p className="text-xs uppercase text-[#7f7c70]">Volume</p>
+                      <p className="mt-1">{form.volume}</p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </>
@@ -574,14 +617,13 @@ export function GuidedAuditWizard() {
 function sanitizeForm(form: GuidedAuditInput): GuidedAuditInput {
   return {
     ...form,
-    industry: form.industry.trim(),
     bottleneck: form.bottleneck.trim(),
     volume: form.volume?.trim() || undefined,
     manual_steps: form.manual_steps.trim(),
     handoff_breaks: form.handoff_breaks.trim(),
     visibility_gap: form.visibility_gap.trim(),
     desired_outcome: form.desired_outcome.trim(),
-    time_lost_per_week: form.time_lost_per_week?.trim() || undefined,
+    time_lost_per_week: form.time_lost_per_week || undefined,
     compliance_notes: form.compliance_notes?.trim() || undefined,
   };
 }

@@ -16,7 +16,7 @@ export function computeLeadScore(lead: LeadScoringInput): number {
   if (lead.bottleneck && lead.bottleneck.length > 20) score += 10;
 
   switch (lead.urgency?.toLowerCase()) {
-    case "critical":
+    case "urgent":
       score += 20;
       break;
     case "high":

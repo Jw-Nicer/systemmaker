@@ -87,7 +87,7 @@ export function SeeItWork({
           <div className="mt-5 flex flex-col gap-3 rounded-[26px] border border-[#d5cdbd] bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(246,239,227,0.95))] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-[#7f7c70]">
-                Need more structure?
+                Prefer a structured format?
               </p>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#556052]">
                 Run the guided audit to map workflow breaks, reporting gaps, and desired outcomes before generating the preview plan.
@@ -97,7 +97,7 @@ export function SeeItWork({
               href="/audit"
               className="inline-flex shrink-0 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
             >
-              Open guided audit
+              Try the Guided Audit &rarr;
             </Link>
           </div>
         </motion.div>

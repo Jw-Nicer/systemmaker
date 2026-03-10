@@ -1,28 +1,41 @@
-export const AUDIT_WORKFLOW_TYPES = [
-  "Lead intake",
-  "Scheduling",
-  "Dispatch",
-  "Approvals",
-  "Reporting",
-  "Customer updates",
-  "Billing",
-  "Document handling",
+export const AUDIT_INDUSTRIES = [
+  "Property Management",
+  "E-commerce",
+  "Professional Services",
+  "Healthcare",
+  "Construction/Field Services",
   "Other",
 ] as const;
 
+export const AUDIT_WORKFLOW_TYPES = [
+  "Intake & Onboarding",
+  "Scheduling & Dispatch",
+  "Billing & Invoicing",
+  "Reporting & Compliance",
+  "Maintenance & Renewals",
+  "Customer Support",
+  "Inventory & Procurement",
+] as const;
+
 export const AUDIT_TEAM_SIZES = [
-  "1-3",
-  "4-10",
-  "11-25",
-  "26-50",
-  "51+",
+  "1-5",
+  "6-15",
+  "16-50",
+  "50+",
 ] as const;
 
 export const AUDIT_STACK_MATURITY = [
-  "Mostly manual",
-  "Some automation",
-  "Several connected tools",
-  "Already systemized",
+  "Spreadsheets only",
+  "Some tools no integration",
+  "Multiple tools partially connected",
+  "Established stack needs optimization",
+] as const;
+
+export const AUDIT_TIME_LOST = [
+  "<2 hours",
+  "2-5 hours",
+  "5-10 hours",
+  "10+ hours",
 ] as const;
 
 export interface GuidedAuditResponses {
