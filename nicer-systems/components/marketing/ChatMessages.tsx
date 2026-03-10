@@ -54,7 +54,7 @@ export function ChatMessages({ messages, isTyping, streamingContent, emailForm }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
-  }, [messages.length, isTyping, reduced]);
+  }, [messages.length, isTyping, streamingContent, reduced]);
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">

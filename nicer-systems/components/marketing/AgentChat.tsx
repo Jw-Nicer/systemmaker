@@ -115,8 +115,29 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
       />
 
       {chat.error && (
-        <div className="px-4 py-2 bg-red-500/10 border-t border-red-500/20 text-red-400 text-xs">
-          {chat.error}
+        <div className="flex items-center justify-between gap-2 border-t border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-400">
+          <span>{chat.error}</span>
+          <div className="flex shrink-0 gap-2">
+            {chat.isTimeout && (
+              <button
+                onClick={() => {
+                  chat.clearError();
+                  // Re-send the last user message to retry
+                  const lastUserMsg = [...chat.messages].reverse().find((m) => m.role === "user");
+                  if (lastUserMsg) chat.sendMessage(lastUserMsg.content);
+                }}
+                className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20"
+              >
+                Try again
+              </button>
+            )}
+            <button
+              onClick={chat.reset}
+              className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20"
+            >
+              Start over
+            </button>
+          </div>
         </div>
       )}
 

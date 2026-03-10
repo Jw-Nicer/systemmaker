@@ -29,13 +29,14 @@ type ChatAction =
   | { type: "PLAN_COMPLETE"; plan_id: string; lead_id?: string; share_url: string; email_auto_sent?: boolean }
   | { type: "SET_PLAN"; plan: PreviewPlan }
   | { type: "STREAM_DONE" }
-  | { type: "ERROR"; message: string }
+  | { type: "ERROR"; message: string; isTimeout?: boolean }
   | { type: "CLEAR_ERROR" }
   | { type: "RESET" };
 
 interface ChatState extends ConversationState {
   isStreaming: boolean;
   error: string | null;
+  isTimeout: boolean;
   streamingContent: string;
   share_url: string | null;
   streamedPlan: Partial<PreviewPlan>;
@@ -68,12 +69,15 @@ function createMessage(
   };
 }
 
+const SSE_TIMEOUT_MS = 30_000; // 30 seconds with no data = stall
+
 const initialState: ChatState = {
   phase: "gathering",
   messages: [],
   extracted: {},
   isStreaming: false,
   error: null,
+  isTimeout: false,
   streamingContent: "",
   share_url: null,
   streamedPlan: {},
@@ -207,11 +211,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         isStreaming: false,
         error: action.message,
+        isTimeout: action.isTimeout ?? false,
         streamingContent: "",
       };
 
     case "CLEAR_ERROR":
-      return { ...state, error: null };
+      return { ...state, error: null, isTimeout: false };
 
     case "RESET":
       return { ...initialState };
@@ -289,6 +294,7 @@ export function useSSEChat() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
         const res = await fetch("/api/agent/chat", {
           method: "POST",
@@ -315,9 +321,24 @@ export function useSSEChat() {
         let currentEvent = "message";
         const MAX_BUFFER_SIZE = 64 * 1024; // 64KB
 
+        // Timeout: if no data arrives for 30s, treat as stall
+        const resetTimeout = () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            controller.abort();
+            dispatch({
+              type: "ERROR",
+              message: "The agent is taking longer than expected. Try again?",
+              isTimeout: true,
+            });
+          }, SSE_TIMEOUT_MS);
+        };
+        resetTimeout();
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          resetTimeout();
 
           buffer += decoder.decode(value, { stream: true });
           if (buffer.length > MAX_BUFFER_SIZE) {
@@ -434,11 +455,15 @@ export function useSSEChat() {
           }
         }
 
+        // Clear timeout when stream ends normally
+        if (timeoutId) clearTimeout(timeoutId);
+
         // If stream ended without explicit done event
         if (stateRef.current.isStreaming) {
           dispatch({ type: "STREAM_DONE" });
         }
       } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
         if ((err as Error).name === "AbortError") return;
         dispatch({
           type: "ERROR",
@@ -475,6 +500,7 @@ export function useSSEChat() {
     phase: state.phase,
     isStreaming: state.isStreaming,
     error: state.error,
+    isTimeout: state.isTimeout,
     streamingContent: state.streamingContent,
     extracted: state.extracted,
     plan: state.plan,
