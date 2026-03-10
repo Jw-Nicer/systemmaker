@@ -94,7 +94,14 @@ export default async function CaseStudyDetailPage({ params }: Props) {
             {cs.title}
           </h1>
           {cs.client_name && (
-            <p className="mt-2 text-[var(--text-muted)]">{cs.client_name}</p>
+            <p className="mt-2 text-[var(--text-muted)]">
+              {cs.client_name}
+              {cs.published_at && (
+                <span className="ml-3 text-xs text-[var(--text-muted)]">
+                  Published {new Date(cs.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                </span>
+              )}
+            </p>
           )}
         </div>
 

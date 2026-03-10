@@ -33,10 +33,15 @@ export async function ProofOfWork({
     return null;
   }
 
+  const workflowTypes = Array.from(
+    new Set(caseStudies.map((cs) => cs.workflow_type).filter(Boolean))
+  ).sort();
+
   return (
     <ProofOfWorkClient
       caseStudies={caseStudies}
       industries={industries}
+      workflowTypes={workflowTypes}
       eyebrow={eyebrow}
       title={title}
       description={description}

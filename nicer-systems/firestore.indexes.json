@@ -4,7 +4,7 @@
       "collectionGroup": "case_studies",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "is_published", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "sort_order", "order": "ASCENDING" }
       ]
     },

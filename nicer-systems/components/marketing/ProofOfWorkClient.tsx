@@ -7,10 +7,12 @@ import { motion } from "framer-motion";
 import { track, EVENTS } from "@/lib/analytics";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { CaseStudy } from "@/types/case-study";
+import { RESULT_CATEGORIES } from "@/types/case-study";
 
 interface ProofOfWorkClientProps {
   caseStudies: CaseStudy[];
   industries: string[];
+  workflowTypes?: string[];
   eyebrow?: string;
   title?: string;
   description?: string;
@@ -19,21 +21,31 @@ interface ProofOfWorkClientProps {
 export function ProofOfWorkClient({
   caseStudies,
   industries,
+  workflowTypes = [],
   eyebrow = "Results",
   title = "Case studies",
   description = "Real results from real operations teams.",
 }: ProofOfWorkClientProps) {
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeIndustry, setActiveIndustry] = useState("All");
+  const [activeWorkflow, setActiveWorkflow] = useState("All");
+  const [activeResultCat, setActiveResultCat] = useState("All");
   const reducedMotion = useReducedMotion();
 
-  const filtered =
-    activeFilter === "All"
-      ? caseStudies
-      : caseStudies.filter((cs) => cs.industry === activeFilter);
+  const filtered = caseStudies.filter((cs) => {
+    if (activeIndustry !== "All" && cs.industry !== activeIndustry) return false;
+    if (activeWorkflow !== "All" && cs.workflow_type !== activeWorkflow) return false;
+    if (activeResultCat !== "All" && !(cs.result_categories ?? []).includes(activeResultCat as never)) return false;
+    return true;
+  });
 
   const springTransition = reducedMotion
     ? { duration: 0.3 }
     : { type: "spring" as const, stiffness: 80, damping: 20 };
+
+  // Collect unique result categories present in data
+  const availableResultCats = Array.from(
+    new Set(caseStudies.flatMap((cs) => cs.result_categories ?? []))
+  );
 
   return (
     <section className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
@@ -55,25 +67,25 @@ export function ProofOfWorkClient({
           </p>
         </motion.div>
 
-        {/* Filter chips */}
+        {/* Industry filter chips */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ ...springTransition, delay: 0.1 }}
-          className="mt-8 mb-10 flex flex-wrap gap-2 sm:mt-10 sm:mb-12"
+          className="mt-8 mb-4 flex flex-wrap gap-2 sm:mt-10"
         >
           {["All", ...industries].map((industry) => (
             <button
               key={industry}
               onClick={() => {
-                setActiveFilter(industry);
+                setActiveIndustry(industry);
                 if (industry !== "All") {
                   track(EVENTS.PROOF_GALLERY_FILTER, { industry });
                 }
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                activeFilter === industry
+                activeIndustry === industry
                   ? "bg-[var(--green-dark)] text-[var(--cream-warm)] shadow-[var(--shadow-card)]"
                   : "border border-[var(--green-accent)]/25 text-[var(--text-accent)] hover:border-[var(--green-accent)]/50 hover:text-[var(--text-heading)]"
               }`}
@@ -82,6 +94,52 @@ export function ProofOfWorkClient({
             </button>
           ))}
         </motion.div>
+
+        {/* Workflow type filter chips */}
+        {workflowTypes.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {["All", ...workflowTypes].map((wt) => (
+              <button
+                key={wt}
+                onClick={() => setActiveWorkflow(wt)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
+                  activeWorkflow === wt
+                    ? "bg-[var(--text-accent)] text-[var(--cream-warm)]"
+                    : "border border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--text-accent)]/40 hover:text-[var(--text-body)]"
+                }`}
+              >
+                {wt}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Result category filter chips */}
+        {availableResultCats.length > 0 && (
+          <div className="mb-10 sm:mb-12 flex flex-wrap gap-2">
+            {["All", ...availableResultCats].map((cat) => {
+              const label = cat === "All" ? "All Results" : RESULT_CATEGORIES.find((rc) => rc.value === cat)?.label ?? cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveResultCat(cat)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
+                    activeResultCat === cat
+                      ? "bg-[var(--green-accent)] text-[var(--cream-warm)]"
+                      : "border border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--green-accent)]/40 hover:text-[var(--text-body)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Spacer when no secondary filters */}
+        {workflowTypes.length === 0 && availableResultCats.length === 0 && (
+          <div className="mb-6 sm:mb-8" />
+        )}
 
         {/* Cards grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -103,11 +161,6 @@ export function ProofOfWorkClient({
                 }
                 className="group relative block rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] shadow-[var(--shadow-card)] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
               >
-                {!cs.is_published && (
-                  <span className="absolute right-3 top-3 z-10 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                    Draft
-                  </span>
-                )}
                 {/* Thumbnail */}
                 <div className="h-40 bg-[linear-gradient(180deg,rgba(212,221,205,0.42),rgba(162,182,152,0.22))] flex items-center justify-center overflow-hidden">
                   {cs.thumbnail_url ? (
@@ -140,6 +193,17 @@ export function ProofOfWorkClient({
                         {tool}
                       </span>
                     ))}
+                    {(cs.result_categories ?? []).map((cat) => {
+                      const label = RESULT_CATEGORIES.find((rc) => rc.value === cat)?.label ?? cat;
+                      return (
+                        <span
+                          key={cat}
+                          className="px-2 py-0.5 rounded-full bg-[var(--green-accent)]/10 text-[10px] uppercase tracking-[0.08em] text-[var(--green-accent)] font-medium"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                   </div>
 
                   <h3 className="font-medium text-[var(--text-heading)] mb-2 group-hover:text-[var(--green-accent)] transition-colors duration-300">

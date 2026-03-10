@@ -9,7 +9,7 @@ export const getPublishedCaseStudies = unstable_cache(
       const db = getAdminDb();
       const snap = await db
         .collection("case_studies")
-        .where("is_published", "==", true)
+        .where("status", "==", "published")
         .orderBy("sort_order", "asc")
         .get();
 
@@ -31,7 +31,7 @@ export async function getCaseStudyBySlug(
     const snap = await db
       .collection("case_studies")
       .where("slug", "==", slug)
-      .where("is_published", "==", true)
+      .where("status", "==", "published")
       .limit(1)
       .get();
 

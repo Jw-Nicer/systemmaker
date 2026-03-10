@@ -1,12 +1,15 @@
 "use client";
 
-import type { CaseStudy } from "@/types/case-study";
+import type { CaseStudy, CaseStudyStatus } from "@/types/case-study";
+import { RESULT_CATEGORIES } from "@/types/case-study";
+import { AUDIT_WORKFLOW_TYPES } from "@/types/audit";
 import {
   createCaseStudy,
   deleteCaseStudy,
   reorderCaseStudies,
   toggleCaseStudyPublished,
   updateCaseStudy,
+  updateCaseStudyStatus,
 } from "@/lib/actions/case-studies";
 import {
   AdminPageHeader,
@@ -15,17 +18,21 @@ import {
 } from "@/components/admin/AdminPrimitives";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import { useCrudManager, INPUT_CLASS_NAME } from "@/hooks/useCrudManager";
+import { useRouter } from "next/navigation";
 
 type FormData = {
   title: string;
   slug: string;
   client_name: string;
   industry: string;
+  workflow_type: string;
   tools: string;
   challenge: string;
   solution: string;
   metrics: { label: string; before: string; after: string }[];
+  result_categories: string[];
   thumbnail_url: string;
+  status: CaseStudyStatus;
   is_published: boolean;
   sort_order: number;
 };
@@ -35,11 +42,14 @@ const emptyForm: FormData = {
   slug: "",
   client_name: "",
   industry: "",
+  workflow_type: "",
   tools: "",
   challenge: "",
   solution: "",
   metrics: [{ label: "", before: "", after: "" }],
+  result_categories: [],
   thumbnail_url: "",
+  status: "draft",
   is_published: false,
   sort_order: 0,
 };
@@ -65,13 +75,16 @@ function itemToForm(item: CaseStudy): FormData {
     slug: item.slug,
     client_name: item.client_name,
     industry: item.industry,
+    workflow_type: item.workflow_type ?? "",
     tools: item.tools.join(", "),
     challenge: item.challenge,
     solution: item.solution,
     metrics: item.metrics.length
       ? item.metrics
       : [{ label: "", before: "", after: "" }],
+    result_categories: item.result_categories ?? [],
     thumbnail_url: item.thumbnail_url,
+    status: item.status ?? (item.is_published ? "published" : "draft"),
     is_published: item.is_published,
     sort_order: item.sort_order,
   };
@@ -85,14 +98,24 @@ function preparePayload(form: FormData) {
       .map((t) => t.trim())
       .filter(Boolean),
     metrics: form.metrics.filter((m) => m.label || m.before || m.after),
+    result_categories: form.result_categories,
+    workflow_type: form.workflow_type || undefined,
   };
 }
+
+const STATUS_CONFIG: Record<CaseStudyStatus, { label: string; tone: "green" | "neutral" | "yellow" | "red" }> = {
+  draft: { label: "Draft", tone: "neutral" },
+  review: { label: "Review", tone: "yellow" },
+  published: { label: "Published", tone: "green" },
+  archived: { label: "Archived", tone: "red" },
+};
 
 export default function CaseStudiesManager({
   initialData,
 }: {
   initialData: CaseStudy[];
 }) {
+  const router = useRouter();
   const crud = useCrudManager<CaseStudy, FormData>({
     initialData,
     emptyForm,
@@ -125,6 +148,22 @@ export default function CaseStudiesManager({
     );
   }
 
+  function toggleResultCategory(cat: string) {
+    const current = crud.form.result_categories;
+    if (current.includes(cat)) {
+      crud.updateField("result_categories", current.filter((c) => c !== cat));
+    } else {
+      crud.updateField("result_categories", [...current, cat]);
+    }
+  }
+
+  async function handleStatusChange(id: string, newStatus: CaseStudyStatus) {
+    const result = await updateCaseStudyStatus(id, newStatus);
+    if (result.success) {
+      router.refresh();
+    }
+  }
+
   return (
     <div>
       <AdminPageHeader
@@ -154,8 +193,8 @@ export default function CaseStudiesManager({
                 Keep metrics and narrative aligned with the published proof of work.
               </p>
             </div>
-            <AdminPill tone={crud.form.is_published ? "green" : "neutral"}>
-              {crud.form.is_published ? "Published" : "Draft"}
+            <AdminPill tone={STATUS_CONFIG[crud.form.status].tone}>
+              {STATUS_CONFIG[crud.form.status].label}
             </AdminPill>
           </div>
 
@@ -210,6 +249,20 @@ export default function CaseStudiesManager({
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-[#6c7467]">Workflow Type</label>
+              <select
+                value={crud.form.workflow_type}
+                onChange={(e) => crud.updateField("workflow_type", e.target.value)}
+                className={INPUT_CLASS_NAME}
+              >
+                <option value="">— Select workflow type —</option>
+                {AUDIT_WORKFLOW_TYPES.map((wt) => (
+                  <option key={wt} value={wt}>{wt}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -309,15 +362,47 @@ export default function CaseStudiesManager({
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-[#27311f]">
-              <input
-                type="checkbox"
-                checked={crud.form.is_published}
-                onChange={(e) => crud.updateField("is_published", e.target.checked)}
-                className="rounded"
-              />
-              Published
-            </label>
+            <div>
+              <label className="mb-2 block text-sm text-[#6c7467]">Result Categories</label>
+              <div className="flex flex-wrap gap-2">
+                {RESULT_CATEGORIES.map((cat) => (
+                  <label
+                    key={cat.value}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      crud.form.result_categories.includes(cat.value)
+                        ? "border-[#4f6032] bg-[#4f6032]/10 text-[#4f6032]"
+                        : "border-[#d7d0c1] text-[#6c7467] hover:border-[#92a07a]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={crud.form.result_categories.includes(cat.value)}
+                      onChange={() => toggleResultCategory(cat.value)}
+                      className="sr-only"
+                    />
+                    {cat.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-[#6c7467]">Status</label>
+              <select
+                value={crud.form.status}
+                onChange={(e) => {
+                  const newStatus = e.target.value as CaseStudyStatus;
+                  crud.updateField("status", newStatus);
+                  crud.updateField("is_published", newStatus === "published");
+                }}
+                className={INPUT_CLASS_NAME}
+              >
+                <option value="draft">Draft</option>
+                <option value="review">Review</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
 
             <div className="flex gap-3 pt-2">
               <button
@@ -362,61 +447,70 @@ export default function CaseStudiesManager({
                 </td>
               </tr>
             ) : (
-              crud.items.map((item, idx) => (
-                <tr
-                  key={item.id}
-                  draggable
-                  onDragStart={() => crud.handleDragStart(idx)}
-                  onDragEnter={() => crud.handleDragEnter(idx)}
-                  onDragEnd={crud.handleDragEnd}
-                  onDragOver={(e) => e.preventDefault()}
-                  className="cursor-grab border-b border-[#e1d9cb] transition-colors hover:bg-white/45 active:cursor-grabbing"
-                >
-                  <td className="px-6 py-4 text-[#8a8f7f]">⠿</td>
-                  <td className="px-6 py-4 font-medium text-[#1d2318]">{item.title}</td>
-                  <td className="px-6 py-4 text-[#596351]">{item.industry}</td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => crud.handleTogglePublished(item)}>
-                      <AdminPill tone={item.is_published ? "green" : "neutral"}>
-                        {item.is_published ? "Published" : "Draft"}
-                      </AdminPill>
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => crud.openEdit(item)}
-                        className="text-sm text-[#4f6032] hover:underline"
+              crud.items.map((item, idx) => {
+                const statusKey = item.status ?? (item.is_published ? "published" : "draft");
+                const config = STATUS_CONFIG[statusKey];
+                return (
+                  <tr
+                    key={item.id}
+                    draggable
+                    onDragStart={() => crud.handleDragStart(idx)}
+                    onDragEnter={() => crud.handleDragEnter(idx)}
+                    onDragEnd={crud.handleDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                    className="cursor-grab border-b border-[#e1d9cb] transition-colors hover:bg-white/45 active:cursor-grabbing"
+                  >
+                    <td className="px-6 py-4 text-[#8a8f7f]">&#x283F;</td>
+                    <td className="px-6 py-4 font-medium text-[#1d2318]">{item.title}</td>
+                    <td className="px-6 py-4 text-[#596351]">{item.industry}</td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={statusKey}
+                        onChange={(e) => handleStatusChange(item.id, e.target.value as CaseStudyStatus)}
+                        className="rounded-full border border-[#d7d0c1] bg-transparent px-2 py-1 text-xs font-medium outline-none"
                       >
-                        Edit
-                      </button>
-                      {crud.deleteConfirm === item.id ? (
-                        <span className="flex items-center gap-2">
+                        <option value="draft">Draft</option>
+                        <option value="review">Review</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => crud.openEdit(item)}
+                          className="text-sm text-[#4f6032] hover:underline"
+                        >
+                          Edit
+                        </button>
+                        {crud.deleteConfirm === item.id ? (
+                          <span className="flex items-center gap-2">
+                            <button
+                              onClick={() => crud.handleDelete(item.id)}
+                              className="text-sm text-[#9d3f3f] hover:underline"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => crud.setDeleteConfirm(null)}
+                              className="text-sm text-[#6c7467] hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
                           <button
-                            onClick={() => crud.handleDelete(item.id)}
+                            onClick={() => crud.setDeleteConfirm(item.id)}
                             className="text-sm text-[#9d3f3f] hover:underline"
                           >
-                            Confirm
+                            Delete
                           </button>
-                          <button
-                            onClick={() => crud.setDeleteConfirm(null)}
-                            className="text-sm text-[#6c7467] hover:underline"
-                          >
-                            Cancel
-                          </button>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => crud.setDeleteConfirm(item.id)}
-                          className="text-sm text-[#9d3f3f] hover:underline"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

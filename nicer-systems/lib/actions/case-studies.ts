@@ -42,10 +42,15 @@ export async function createCaseStudy(
 
     await assertUniqueSlug("case_studies", parsed.data.slug);
 
+    const isPublished = parsed.data.status === "published";
     const db = getAdminDb();
     const ref = await db.collection("case_studies").add({
       ...parsed.data,
+      workflow_type: parsed.data.workflow_type ?? "",
+      result_categories: parsed.data.result_categories ?? [],
       thumbnail_url: parsed.data.thumbnail_url ?? "",
+      is_published: isPublished,
+      published_at: isPublished ? new Date().toISOString() : null,
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
     });
@@ -73,13 +78,27 @@ export async function updateCaseStudy(
 
     await assertUniqueSlug("case_studies", parsed.data.slug, id);
 
+    const isPublished = parsed.data.status === "published";
+
+    // Check if this is the first time being published (for published_at)
     const db = getAdminDb();
+    const existing = await db.collection("case_studies").doc(id).get();
+    const existingData = existing.data();
+    const publishedAt =
+      isPublished && !existingData?.published_at
+        ? new Date().toISOString()
+        : existingData?.published_at ?? null;
+
     await db
       .collection("case_studies")
       .doc(id)
       .update({
         ...parsed.data,
+        workflow_type: parsed.data.workflow_type ?? "",
+        result_categories: parsed.data.result_categories ?? [],
         thumbnail_url: parsed.data.thumbnail_url ?? "",
+        is_published: isPublished,
+        published_at: publishedAt,
         updated_at: FieldValue.serverTimestamp(),
       });
 
@@ -116,9 +135,21 @@ export async function toggleCaseStudyPublished(
 ): Promise<ActionResult> {
   try {
     await requireAuth();
+    const newStatus = is_published ? "published" : "draft";
     const db = getAdminDb();
+
+    // Set published_at on first publish
+    const existing = await db.collection("case_studies").doc(id).get();
+    const existingData = existing.data();
+    const publishedAt =
+      is_published && !existingData?.published_at
+        ? new Date().toISOString()
+        : existingData?.published_at ?? null;
+
     await db.collection("case_studies").doc(id).update({
+      status: newStatus,
       is_published,
+      published_at: publishedAt,
       updated_at: FieldValue.serverTimestamp(),
     });
     revalidatePath("/admin/case-studies");
@@ -128,6 +159,38 @@ export async function toggleCaseStudyPublished(
   } catch (err) {
     console.error("[actions] toggleCaseStudyPublished failed:", err);
     return { success: false, error: err instanceof Error ? err.message : "Failed to toggle case study" };
+  }
+}
+
+export async function updateCaseStudyStatus(
+  id: string,
+  status: "draft" | "review" | "published" | "archived"
+): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    const isPublished = status === "published";
+    const db = getAdminDb();
+
+    const existing = await db.collection("case_studies").doc(id).get();
+    const existingData = existing.data();
+    const publishedAt =
+      isPublished && !existingData?.published_at
+        ? new Date().toISOString()
+        : existingData?.published_at ?? null;
+
+    await db.collection("case_studies").doc(id).update({
+      status,
+      is_published: isPublished,
+      published_at: publishedAt,
+      updated_at: FieldValue.serverTimestamp(),
+    });
+    revalidatePath("/admin/case-studies");
+    revalidatePath("/");
+    revalidateTag("case-studies", "max");
+    return { success: true };
+  } catch (err) {
+    console.error("[actions] updateCaseStudyStatus failed:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to update case study status" };
   }
 }
 
