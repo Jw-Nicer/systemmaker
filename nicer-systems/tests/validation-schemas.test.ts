@@ -4,11 +4,78 @@ import assert from "node:assert/strict";
 import {
   agentChatSchema,
   agentRunSchema,
+  bookingSchema,
   experimentConfigSchema,
   experimentVariantSchema,
   guidedAuditSchema,
   variantSchema,
 } from "../lib/validation";
+
+// --- Booking Schema ---
+
+test("bookingSchema accepts valid booking", () => {
+  const valid = {
+    name: "Jane Doe",
+    email: "jane@example.com",
+    preferred_date: "2026-03-20",
+    preferred_time: "10:00 AM",
+    message: "Looking forward to discussing our workflow.",
+  };
+  const result = bookingSchema.safeParse(valid);
+  assert.ok(result.success);
+});
+
+test("bookingSchema rejects missing name", () => {
+  const invalid = {
+    email: "jane@example.com",
+    preferred_date: "2026-03-20",
+    preferred_time: "10:00 AM",
+  };
+  const result = bookingSchema.safeParse(invalid);
+  assert.equal(result.success, false);
+});
+
+test("bookingSchema rejects invalid email", () => {
+  const invalid = {
+    name: "Jane",
+    email: "not-an-email",
+    preferred_date: "2026-03-20",
+    preferred_time: "10:00 AM",
+  };
+  const result = bookingSchema.safeParse(invalid);
+  assert.equal(result.success, false);
+});
+
+test("bookingSchema rejects missing date", () => {
+  const invalid = {
+    name: "Jane",
+    email: "jane@example.com",
+    preferred_time: "10:00 AM",
+  };
+  const result = bookingSchema.safeParse(invalid);
+  assert.equal(result.success, false);
+});
+
+test("bookingSchema rejects missing time", () => {
+  const invalid = {
+    name: "Jane",
+    email: "jane@example.com",
+    preferred_date: "2026-03-20",
+  };
+  const result = bookingSchema.safeParse(invalid);
+  assert.equal(result.success, false);
+});
+
+test("bookingSchema accepts without optional message", () => {
+  const valid = {
+    name: "Jane",
+    email: "jane@example.com",
+    preferred_date: "2026-03-20",
+    preferred_time: "2:00 PM",
+  };
+  const result = bookingSchema.safeParse(valid);
+  assert.ok(result.success);
+});
 
 // --- Experiment Variant Schema ---
 
@@ -291,6 +358,31 @@ test("guidedAuditSchema accepts structured audit input", () => {
   });
 
   assert.ok(result.success);
+});
+
+test("guidedAuditSchema accepts freeform labels and trims whitespace", () => {
+  const result = guidedAuditSchema.safeParse({
+    industry: "  Commercial Cleaning  ",
+    workflow_type: "  Route planning  ",
+    bottleneck: "Dispatchers manually rebalance crews across last-minute schedule changes.",
+    current_tools: ["Sheets", "Email"],
+    team_size: "  11-25  ",
+    stack_maturity: "  Point solutions with manual handoffs  ",
+    manual_steps: "Supervisors copy requests from email into separate scheduling trackers.",
+    handoff_breaks: "Sales, operations, and field supervisors each work from a different queue.",
+    visibility_gap: "No shared view of missed SLAs or crews that are running behind.",
+    desired_outcome: "A single operating queue with automated routing and exception alerts.",
+  });
+
+  assert.ok(result.success);
+  if (!result.success) {
+    return;
+  }
+
+  assert.equal(result.data.industry, "Commercial Cleaning");
+  assert.equal(result.data.workflow_type, "Route planning");
+  assert.equal(result.data.team_size, "11-25");
+  assert.equal(result.data.stack_maturity, "Point solutions with manual handoffs");
 });
 
 test("guidedAuditSchema rejects empty tool selection", () => {

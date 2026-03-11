@@ -1,7 +1,6 @@
 import { TrackedLink } from "@/components/marketing/TrackedLink";
+import { BookingCTAButton } from "@/components/marketing/BookingCTAButton";
 import { EVENTS } from "@/lib/analytics";
-
-const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL;
 
 interface FinalCTAProps {
   eyebrow?: string;
@@ -44,14 +43,11 @@ export function FinalCTA({
           {description}
         </p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
-          <TrackedLink
-            href={bookingUrl || "/contact"}
-            eventName={EVENTS.CTA_CLICK_BOOK}
-            {...(bookingUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          <BookingCTAButton
             className="inline-flex rounded-full bg-[#f2eadb] px-6 py-3 text-sm font-medium text-[#132015] transition-all duration-300 hover:scale-[1.02] sm:px-7"
-          >
-            {ctaText ?? (bookingUrl ? "Schedule a 45-minute call" : "Book a Scoping Call")}
-          </TrackedLink>
+            ctaText={ctaText ?? "Book a Scoping Call"}
+            source="final_cta"
+          />
           <TrackedLink
             href="/#see-it-work"
             eventName={EVENTS.CTA_CLICK_DEMO}

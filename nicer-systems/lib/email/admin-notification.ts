@@ -49,7 +49,7 @@ function renderAdminNotificationHTML(lead: AdminNotificationInput): string {
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Score</td>
-      <td style="padding:6px 0;"><strong style="color:${scoreColor};">${lead.score}/75</strong></td>
+      <td style="padding:6px 0;"><strong style="color:${scoreColor};">${lead.score}/90</strong></td>
     </tr>
   </table>
 

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getPlanById, incrementPlanViews } from "@/lib/firestore/plans";
 import { ShareButtons } from "@/components/marketing/ShareButtons";
 import { PlanWithRefine } from "./PlanWithRefine";
 import { PlanViewTracker } from "./PlanViewTracker";
+import { PlanBookingCTA } from "./PlanBookingCTA";
 import type { Metadata } from "next";
 
 interface Props {
@@ -92,22 +92,8 @@ export default async function PlanPage({ params }: Props) {
           not match your exact setup.
         </p>
 
-        {/* CTA: Generate your own */}
-        <div className="mt-12 rounded-xl border border-primary/30 bg-surface p-8 text-center">
-          <h2 className="text-xl font-bold mb-2">
-            Want a plan for your business?
-          </h2>
-          <p className="text-muted mb-6">
-            Tell us your bottleneck and our agent will build a custom Preview
-            Plan with workflow, KPI, alert, and action recommendations.
-          </p>
-          <Link
-            href="/#see-it-work"
-            className="inline-block px-8 py-3 rounded-lg bg-primary text-background font-medium hover:opacity-90 transition-opacity"
-          >
-            Generate Your Own Preview Plan
-          </Link>
-        </div>
+        {/* CTA: Book a call + Generate your own */}
+        <PlanBookingCTA />
 
         {/* Analytics tracker */}
         <PlanViewTracker planId={id} />

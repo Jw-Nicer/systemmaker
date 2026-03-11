@@ -9,11 +9,12 @@ export const getPublishedCaseStudies = unstable_cache(
       const db = getAdminDb();
       const snap = await db
         .collection("case_studies")
-        .where("status", "==", "published")
         .orderBy("sort_order", "asc")
         .get();
 
-      return snap.docs.map((doc) => serializeDoc<CaseStudy>(doc));
+      return snap.docs
+        .map((doc) => serializeDoc<CaseStudy>(doc))
+        .filter((doc) => doc.status === "published");
     } catch (err) {
       console.error("[firestore] getPublishedCaseStudies failed:", err);
       return [];

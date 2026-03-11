@@ -9,8 +9,6 @@ import type { GuidedAuditResponses } from "@/types/audit";
 import type { ActionResult } from "./types";
 import { LEAD_STATUSES } from "@/types/lead";
 import type { Lead, LeadExportFilters, LeadStatus } from "@/types/lead";
-export type { Lead, LeadExportFilters, LeadStatus } from "@/types/lead";
-export { LEAD_STATUSES } from "@/types/lead";
 
 function toISOOrPassthrough(value: unknown): string | undefined {
   if (value && typeof value === "object" && typeof (value as { toDate?: unknown }).toDate === "function") {

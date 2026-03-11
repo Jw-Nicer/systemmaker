@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { EXPERIMENT_TARGETS } from "@/lib/constants/experiments";
 import {
-  AUDIT_INDUSTRIES,
-  AUDIT_STACK_MATURITY,
-  AUDIT_TEAM_SIZES,
   AUDIT_TIME_LOST,
-  AUDIT_WORKFLOW_TYPES,
 } from "@/types/audit";
 
 const experimentAssignmentSchema = z.object({
@@ -15,6 +11,9 @@ const experimentAssignmentSchema = z.object({
   variant_key: z.string().min(1).max(100),
   variant_label: z.string().min(1).max(200),
 });
+
+const auditLabelSchema = (field: string, max: number) =>
+  z.string().trim().min(1, `${field} is required`).max(max);
 
 export const leadSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -119,12 +118,8 @@ export const agentRunSchema = z.object({
 export type AgentRunInput = z.infer<typeof agentRunSchema>;
 
 export const guidedAuditSchema = z.object({
-  industry: z.enum(AUDIT_INDUSTRIES, {
-    message: "Industry is required",
-  }),
-  workflow_type: z.enum(AUDIT_WORKFLOW_TYPES, {
-    message: "Workflow type is required",
-  }),
+  industry: auditLabelSchema("Industry", 120),
+  workflow_type: auditLabelSchema("Workflow type", 120),
   bottleneck: z.string().min(20, "Describe the bottleneck in at least 20 characters").max(2000),
   current_tools: z
     .array(z.string().min(1).max(100))
@@ -132,12 +127,8 @@ export const guidedAuditSchema = z.object({
     .max(10, "Too many tools selected"),
   urgency: z.enum(["low", "medium", "high", "urgent"]).optional(),
   volume: z.string().max(200).optional(),
-  team_size: z.enum(AUDIT_TEAM_SIZES, {
-    message: "Team size is required",
-  }),
-  stack_maturity: z.enum(AUDIT_STACK_MATURITY, {
-    message: "Stack maturity is required",
-  }),
+  team_size: auditLabelSchema("Team size", 50),
+  stack_maturity: auditLabelSchema("Stack maturity", 120),
   manual_steps: z.string().min(1, "Manual work detail is required").max(1500),
   handoff_breaks: z.string().min(1, "Handoff detail is required").max(1500),
   visibility_gap: z.string().min(1, "Visibility detail is required").max(1500),
@@ -342,3 +333,15 @@ export const templateUpdateSchema = z.object({
 export const leadNoteSchema = z.object({
   content: z.string().min(1, "Note cannot be empty").max(5000),
 });
+
+// --- Booking ---
+
+export const bookingSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Valid email is required"),
+  preferred_date: z.string().min(1, "Date is required").max(20),
+  preferred_time: z.string().min(1, "Time slot is required").max(20),
+  message: z.string().max(500).optional(),
+});
+
+export type BookingInput = z.infer<typeof bookingSchema>;

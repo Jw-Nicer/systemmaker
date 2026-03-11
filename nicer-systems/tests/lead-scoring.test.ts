@@ -45,6 +45,10 @@ describe("computeLeadScore", () => {
     assert.equal(computeLeadScore({ urgency: "Critical" }), 20);
   });
 
+  test("urgency ignores surrounding whitespace", () => {
+    assert.equal(computeLeadScore({ urgency: "  urgent  " }), 20);
+  });
+
   test("unknown urgency adds 0", () => {
     assert.equal(computeLeadScore({ urgency: "someday" }), 0);
   });
@@ -65,7 +69,15 @@ describe("computeLeadScore", () => {
     assert.equal(computeLeadScore({ utm_source: "google" }), 5);
   });
 
-  test("maximum score is 75 (all factors present)", () => {
+  test("booked_call adds 15", () => {
+    assert.equal(computeLeadScore({ booked_call: true }), 15);
+  });
+
+  test("booked_call false adds 0", () => {
+    assert.equal(computeLeadScore({ booked_call: false }), 0);
+  });
+
+  test("maximum score is 90 (all factors present)", () => {
     const maxLead: LeadScoringInput = {
       email: "test@example.com",
       company: "Acme Corp",
@@ -73,9 +85,10 @@ describe("computeLeadScore", () => {
       urgency: "critical",
       completed_agent_demo: true,
       preview_plan_sent: true,
+      booked_call: true,
       utm_source: "linkedin",
     };
-    assert.equal(computeLeadScore(maxLead), 75);
+    assert.equal(computeLeadScore(maxLead), 90);
   });
 
   test("partial lead scores correctly (email + company + medium urgency)", () => {
