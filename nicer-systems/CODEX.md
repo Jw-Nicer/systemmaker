@@ -42,12 +42,16 @@
     auth/session/route.ts
     auth/signout/route.ts
     leads/route.ts
+    leads/unsubscribe/route.ts # GET: unsubscribe from nurture emails
     events/route.ts
+    booking/route.ts           # POST: book scoping call (Google Calendar)
     plans/route.ts             # GET: fetch plan by ID
+    plans/export/route.ts      # GET: export plan as PDF
     agent/run/route.ts         # POST: run agent chain
     agent/chat/route.ts        # POST: SSE streaming chat (multi-phase)
     agent/refine/route.ts      # POST: refine plan section
     agent/send-email/route.ts  # POST: send email via Resend
+    agent/audit/route.ts       # POST: run guided audit agent chain
 /components
   /marketing     # Landing page section components + chat UI
   /ui            # Shared UI primitives (Button, Input, Badge, GlassCard, GlitchText, GlowLine, SectionHeading, PostHogProvider)
@@ -66,7 +70,7 @@
 /hooks           # useReducedMotion, useExperiment, useSSEChat, useRefineSection
 /agents          # Agent markdown specs (intake, workflow mapper, automation designer, dashboard designer, ops pulse writer)
 /docs            # Product specs (PRD, Architecture, Data Model, API Spec, etc.)
-/scripts         # Seed scripts (seed-agent-templates.ts, seed-firestore.ts)
+/scripts         # Seed scripts (seed-firestore.ts, seed-agent-templates.ts, seed-content.ts, seed-variants.ts, seed-case-studies.ts)
 
 ## Conventions
 - Keep marketing pages **server-rendered** where possible (SEO).
@@ -93,4 +97,5 @@
 - **Phase 2**: ✅ Complete (agent demo + lead magnet + deployment)
 - **Phase 3**: ✅ Complete (funnel optimization + variants + leads CRM + email sequences + A/B testing)
 - **Phase 4**: ✅ Complete (agent chat SSE streaming + plan sharing + section refinement)
-- **Deferred**: CRM sync (ClickUp/HubSpot/Close), guided audit wizard, proposal generator
+- **Phase 5**: ✅ Complete (QA remediation — seeded data, chat fixes, booking flow, visual effects, variant fixes)
+- **Deferred**: CRM sync (ClickUp/HubSpot/Close), proposal generator

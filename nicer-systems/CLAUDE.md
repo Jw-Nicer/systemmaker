@@ -33,6 +33,7 @@ app/
     case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
     case-studies/CaseStudiesListClient.tsx # Client-side case studies filter/grid
     [industry]/page.tsx  # Industry variant landing pages (dynamic, SSR)
+    audit/page.tsx       # Guided audit wizard (structured intake → preview plan)
     plan/[id]/page.tsx   # Shareable preview plan (public link)
     privacy/page.tsx
     terms/page.tsx
@@ -59,11 +60,15 @@ app/
     auth/signout/route.ts      # POST: clear session cookie, redirect to login
     events/route.ts            # POST: log analytics events
     leads/route.ts             # POST: create lead in Firestore
+    leads/unsubscribe/route.ts # GET: unsubscribe from nurture emails
+    booking/route.ts           # POST: book scoping call (Google Calendar integration)
     agent/run/route.ts         # POST: run agent chain via Gemini
     agent/chat/route.ts        # POST: SSE streaming agent chat (multi-phase conversation)
     agent/refine/route.ts      # POST: refine a specific plan section with feedback
     agent/send-email/route.ts  # POST: send email via Resend
+    agent/audit/route.ts       # POST: run guided audit agent chain
     plans/route.ts             # GET: fetch stored plan by ID
+    plans/export/route.ts      # GET: export plan as PDF
 
 components/
   marketing/             # Landing page sections (see below)
@@ -97,6 +102,9 @@ lib/
   email/nurture-sequence.ts  # 5-email automated nurture via Resend scheduledAt
   email/nurture-templates.ts # Nurture email content templates
   email/admin-notification.ts # Admin email alerts on new leads
+  email/confirmation-email.ts # Immediate lead confirmation email
+  marketing/variant-content.ts # Variant section defaults + normalizeVariantSections()
+  marketing/reserved-slugs.ts  # Reserved URL slugs for marketing routes
   leads/scoring.ts       # Lead scoring algorithm (0-75 points)
   security/request-guards.ts # Rate limiting + request validation
   analytics.ts           # EVENTS constants + track() + initAnalytics()
@@ -131,6 +139,10 @@ docs/                    # PRD, Architecture, Data Model, API Spec, etc.
 scripts/
   seed-firestore.ts          # Seeds site_settings/default
   seed-agent-templates.ts    # Seeds agent templates into Firestore
+  seed-content.ts            # Seeds FAQs, testimonials, offers + fixes healthcare variant
+  seed-variants.ts           # Seeds industry variant landing pages (6 variants)
+  seed-case-studies.ts       # Seeds sample case studies
+  seed-case-study-thumbnails.ts # Seeds case study thumbnail images
 ```
 
 ## Landing Page Components (`components/marketing/`)
@@ -147,7 +159,7 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `ProofOfWork.tsx` | server | Fetches case studies from Firestore |
 | `ProofOfWorkClient.tsx` | client | Filter chips + card grid |
 | `IsThisForYou.tsx` | client | Persona cards (Ops Owner, Founder/GM, Operator) with scenarios |
-| `HowItWorks.tsx` | client | 4-step timeline with scroll animation |
+| `HowItWorks.tsx` | client | 3-step timeline with scroll animation |
 | `WhyNotDIY.tsx` | client | Comparison grid: DIY vs Consultant vs Nicer Systems |
 | `PricingSection.tsx` | server | Fetches offers from Firestore (3 tiers) |
 | `FAQSection.tsx` | server | Fetches FAQs from Firestore |
@@ -165,6 +177,12 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `TypingIndicator.tsx` | client | Animated typing dots for chat |
 | `TrackedLink.tsx` | client | Link + analytics event on click |
 | `LandingViewTracker.tsx` | client | Fires `landing_view` on mount |
+| `BookingCTAButton.tsx` | client | Opens BookingModal on click (used in nav + hero) |
+| `BookingModal.tsx` | client | Modal with date/time picker for scoping calls |
+| `BookingForm.tsx` | client | Booking form fields (name, email, date, time, message) |
+| `MobileNav.tsx` | client | Hamburger menu for mobile navigation |
+| `VariantLandingPage.tsx` | server | Assembles variant-specific landing page sections |
+| `homepage-experiments.tsx` | mixed | A/B experiment wrappers for hero + final CTA |
 
 ## Conventions
 - **Server/Client split**: Firestore reads in server components, interactivity in client components
@@ -187,7 +205,7 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `leads/{id}/activity` | none | none | auth | type (status_change/note_added/email_sent), timestamp, admin_email, details |
 | `events` | none | create only | auth | event tracking |
 | `agent_templates` | none | none | auth | key, markdown (agent prompt specs) |
-| `variants` | is_published=true | none | auth | slug, industry, headline, subheadline, cta_text, featured_industries[] |
+| `variants` | is_published=true | none | auth | slug, industry, headline, subheadline, cta_text, meta_title, meta_description, featured_industries[], sections (LandingVariantSections) |
 | `experiments` | status=running | none | auth | name, target, variants[], status, winner |
 | `plans` | is_public=true | none | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
 
@@ -240,6 +258,16 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [ ] Guided audit wizard — deferred
 - [ ] Proposal generator — deferred
 
+## What's Built (Phase 5 — QA Remediation, complete)
+- [x] Seeded production Firestore data (7 FAQs, 4 testimonials, 3 pricing tiers)
+- [x] Fixed agent chat regression (wider industry matching, safety valve at 8+ messages, expanded affirm patterns)
+- [x] Wired BookingCTAButton into nav header + hero (opens BookingModal with date/time picker)
+- [x] Wired visual effects (BrushRevealCanvas lazy-loaded, FlowText hero animation, WaveDividers between sections)
+- [x] FAQSection always renders `id="faq"` with fallback card when empty
+- [x] Fixed healthcare variant placeholder content (sections.hero + meta_description)
+- [x] Seeded 5 industry variant landing pages (construction, property-management, staffing, legal, home-services)
+- [x] Added SSE timeout (30s) with retry and "Start over" button in agent chat
+
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
 
@@ -257,4 +285,16 @@ npm run deploy:rules     # Deploy Firestore security rules
 npm run deploy:indexes   # Deploy Firestore indexes
 npm run seed:templates   # Seed agent templates into Firestore
 npx tsx scripts/seed-firestore.ts  # Seed default site_settings
+npx tsx scripts/seed-content.ts    # Seed FAQs, testimonials, offers
+npx tsx scripts/seed-variants.ts   # Seed industry variant pages
 ```
+
+## Published Industry Variants
+| Slug | Industry | URL |
+|------|----------|-----|
+| `healthcare` | Healthcare | /healthcare |
+| `construction` | Construction | /construction |
+| `property-management` | Property Management | /property-management |
+| `staffing` | Staffing | /staffing |
+| `legal` | Legal | /legal |
+| `home-services` | Home Services | /home-services |

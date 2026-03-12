@@ -52,6 +52,8 @@ A conversion-first marketing site and web app for **Nicer Systems**, an automati
    ```bash
    npx tsx scripts/seed-firestore.ts     # Seed default site settings
    npm run seed:templates                 # Seed agent templates
+   npx tsx scripts/seed-content.ts       # Seed FAQs, testimonials, offers
+   npx tsx scripts/seed-variants.ts      # Seed industry variant pages
    ```
 
 4. Start the dev server:

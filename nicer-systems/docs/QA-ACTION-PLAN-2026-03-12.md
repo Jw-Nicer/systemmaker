@@ -2,6 +2,7 @@
 
 **Based on**: QA Report dated March 12, 2026
 **Total issues**: 35 FAIL, 17 BLOCKED
+**Status**: ✅ ALL STREAMS COMPLETED (2026-03-12)
 
 ---
 
@@ -25,7 +26,7 @@ Before diving into fixes, many "FAIL" results trace back to just a few root caus
 
 ## Action Plan — 6 Work Streams
 
-### Stream 1: Seed Firestore Production Data (P0 — Quick Win)
+### Stream 1: Seed Firestore Production Data (P0 — Quick Win) ✅ DONE
 **Impact**: Fixes 9 test failures instantly
 **Effort**: 1-2 hours
 **Risk**: Low
@@ -43,7 +44,7 @@ The FAQ, Testimonials, and Pricing sections all work correctly — they return `
 
 ---
 
-### Stream 2: Fix Agent Chat Regression (P0 — Critical)
+### Stream 2: Fix Agent Chat Regression (P0 — Critical) ✅ DONE
 **Impact**: Fixes 9 test failures + unblocks all Plan Display tests
 **Effort**: 4-8 hours
 **Risk**: Medium (core product flow)
@@ -68,7 +69,7 @@ The agent repeats the intake question and never transitions through phases. This
 
 ---
 
-### Stream 3: Fix Dead Nav Links & Anchors (P0 — Quick Win)
+### Stream 3: Fix Dead Nav Links & Anchors (P0 — Quick Win) ✅ DONE
 **Impact**: Fixes broken UX for every visitor
 **Effort**: 30 minutes
 **Risk**: Low
@@ -86,7 +87,7 @@ The agent repeats the intake question and never transitions through phases. This
 
 ---
 
-### Stream 4: Fix Industry Variant Content (P1 — Content Quality)
+### Stream 4: Fix Industry Variant Content (P1 — Content Quality) ✅ DONE
 **Impact**: Fixes live unprofessional content
 **Effort**: 15 minutes
 **Risk**: Low
@@ -100,7 +101,7 @@ The agent repeats the intake question and never transitions through phases. This
 
 ---
 
-### Stream 5: Wire Visual Effects (P2 — Polish)
+### Stream 5: Wire Visual Effects (P2 — Polish) ✅ DONE
 **Impact**: Fixes 4 cosmetic failures
 **Effort**: 2-4 hours
 **Risk**: Low-Medium
@@ -122,7 +123,7 @@ These components exist in the codebase but aren't rendering on the deployed page
 
 ---
 
-### Stream 6: Implement Booking Flow (P1 — Conversion)
+### Stream 6: Implement Booking Flow (P1 — Conversion) ✅ DONE (Option B — In-App)
 **Impact**: Fixes 5 test failures, improves primary CTA
 **Effort**: 4-8 hours (or 30 min if using external booking link)
 **Risk**: Medium
@@ -181,11 +182,11 @@ Build the `BookingModal` + `BookingForm` as specced.
 
 ---
 
-## Spec vs. Reality Alignment
+## Spec vs. Reality Alignment — RESOLVED
 
-These items should be updated in the spec/CLAUDE.md to reflect current reality:
+All items below have been addressed:
 
-1. **AgentDemoForm** — Spec says structured form. Reality is freeform chat. Chat is better UX. Update spec.
-2. **HowItWorks** — Spec says 4 steps. Reality is 3 steps (Tell, Plan, Decide). The 3-step version is correct — "Refine" is part of step 3. Update spec.
-3. **BrushRevealCanvas** — May have been intentionally removed for performance. Confirm with design whether to restore or remove from spec.
-4. **Booking flow** — Spec assumes in-app booking exists. Reality uses contact page. Decide which path to commit to.
+1. **AgentDemoForm** — ✅ Chat-based approach is the production design. CLAUDE.md updated to reflect both AgentDemoForm (structured) and AgentChat (freeform SSE) coexist.
+2. **HowItWorks** — ✅ CLAUDE.md updated: 3-step timeline (not 4). Steps: Describe → Generate → Share/Refine.
+3. **BrushRevealCanvas** — ✅ Now wired and rendering. Lazy-loaded via React.lazy + Suspense, opacity-25 mix-blend-overlay, respects prefers-reduced-motion.
+4. **Booking flow** — ✅ In-app BookingModal implemented with date/time picker + Google Calendar integration. Wired to nav header and hero CTA via BookingCTAButton.

@@ -1,12 +1,13 @@
 # Sitemap & Routes
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
 
 ## Public (Marketing)
-- `/` — Landing page (7 sections)
+- `/` — Landing page (hero, demo, proof, personas, testimonials, how it works, why not DIY, features, pricing, FAQ, final CTA)
 - `/case-studies` — Case study listing with filter
 - `/case-studies/[slug]` — Case study detail + related recommendations
 - `/contact` — Lead capture form
-- `/[industry]` — Industry variant landing pages (dynamic, admin-managed)
+- `/audit` — Guided audit wizard (structured 4-step intake → preview plan)
+- `/[industry]` — Industry variant landing pages (healthcare, construction, property-management, staffing, legal, home-services)
 - `/plan/[id]` — Shareable preview plan (public link with view tracking)
 - `/privacy` — Privacy policy
 - `/terms` — Terms of service
@@ -29,9 +30,13 @@
 - `POST /api/auth/session` — Create session cookie from Firebase ID token
 - `POST /api/auth/signout` — Clear session cookie, redirect to login
 - `POST /api/leads` — Create lead in Firestore
+- `GET  /api/leads/unsubscribe` — Unsubscribe from nurture emails
 - `POST /api/events` — Log analytics events
+- `POST /api/booking` — Book scoping call (Google Calendar integration)
 - `GET  /api/plans?id={planId}` — Fetch stored plan by ID
+- `GET  /api/plans/export?id={planId}` — Export plan as PDF
 - `POST /api/agent/run` — Run agent chain via Gemini
 - `POST /api/agent/chat` — SSE streaming agent chat (multi-phase conversation)
 - `POST /api/agent/refine` — Refine a specific plan section with feedback
 - `POST /api/agent/send-email` — Send email via Resend
+- `POST /api/agent/audit` — Run guided audit agent chain

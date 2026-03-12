@@ -1,5 +1,5 @@
 # Data Model (Firebase Firestore)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
 
 ## Collections
 
@@ -116,10 +116,23 @@
 - headline (string)
 - subheadline (string)
 - cta_text (string)
+- meta_title (string) // SEO title for the variant page
+- meta_description (string) // SEO description for the variant page
 - featured_industries (string[])
+- sections (map, optional) // LandingVariantSections — per-section overrides
+  - hero: {headline, subheadline, cta_text, proof_line}
+  - demo: {eyebrow, title, description}
+  - proof: {eyebrow, title, description, featured_industries[]}
+  - how_it_works: {eyebrow, title, steps[{id, title, description}]}
+  - features: {eyebrow, title, items[{id, title, description, visual}]}
+  - pricing: {eyebrow, title, description, highlighted_tier?}
+  - faq: {eyebrow, title, description}
+  - final_cta: {eyebrow, title, description, cta_text}
 - is_published (boolean)
 - sort_order (number)
 - created_at, updated_at (timestamp)
+
+Note: When sections is omitted or partially filled, `normalizeVariantSections()` in `lib/marketing/variant-content.ts` fills in defaults. Top-level headline/subheadline/cta_text are used as fallback for sections.hero fields.
 
 ### experiments
 - id (auto-generated doc ID)

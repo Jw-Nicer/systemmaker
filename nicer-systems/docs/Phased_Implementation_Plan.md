@@ -1,5 +1,5 @@
 # Phased Implementation Plan
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
 
 ## Phase 0 — Foundations ✅ COMPLETE
 **Outcome:** Repo, stack, environments, design tokens, analytics scaffolding.
@@ -112,9 +112,32 @@
 
 ---
 
+---
+
+## Phase 5 — QA Remediation ✅ COMPLETE
+**Outcome:** Production-ready site with seeded content, fixed regressions, and wired features.
+
+### Deliverables
+- ✅ Seeded Firestore production data via `scripts/seed-content.ts` (7 FAQs, 4 testimonials, 3 pricing tiers)
+- ✅ Fixed agent chat phase regression in `lib/agents/conversation.ts` (wider industry matching, safety valve at 8+ messages, expanded affirm patterns)
+- ✅ Wired BookingCTAButton (in-app BookingModal with date/time picker + Google Calendar integration) into nav header + hero
+- ✅ Wired visual effects: BrushRevealCanvas (lazy-loaded), FlowText (hero animation), WaveDividers (between sections)
+- ✅ FAQSection always renders `id="faq"` with fallback card when Firestore is empty
+- ✅ Fixed healthcare variant sections.hero placeholder content + meta_description
+- ✅ Seeded 5 new industry variants via `scripts/seed-variants.ts` (construction, property-management, staffing, legal, home-services)
+- ✅ Added SSE timeout (30s) with retry and always-visible "Start over" button in agent chat
+
+### Exit criteria
+- ✅ All seeded content renders on production site
+- ✅ Agent chat progresses through phases with bare industry names
+- ✅ Booking modal opens from nav and hero CTAs
+- ✅ 6 industry variant pages render at their respective URLs
+- ✅ All nav anchor links (#pricing, #faq) scroll to correct sections
+
+---
+
 ## Deferred Items
 - CRM sync (ClickUp/HubSpot/Close integration)
-- Guided audit wizard (productized assessment tool)
 - Proposal generator (internal tooling from intake data)
 - Full client portal
 - Multi-tenant enterprise RBAC

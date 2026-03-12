@@ -1,5 +1,5 @@
 # Architecture
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
 
 ## Overview
 Two surfaces:

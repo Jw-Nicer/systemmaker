@@ -1,5 +1,5 @@
 # API Spec (App Routes)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
 
 ## Auth endpoints
 - POST /api/auth/session
@@ -29,6 +29,21 @@
 - GET /api/plans?id={planId}
   - returns: plan document (preview_plan, input_summary, view_count, version)
   - increments view_count on each public fetch
+
+- POST /api/booking
+  - body: {name, email, date, time, message?, source?}
+  - creates Google Calendar event via service account
+  - creates lead record if email is new
+  - returns: {success: true, booking_id}
+
+- GET /api/leads/unsubscribe?token={hashedLeadId}
+  - verifies token against lead_id
+  - sets nurture_unsubscribed: true on lead doc
+  - returns: HTML confirmation page
+
+- GET /api/plans/export?id={planId}
+  - generates PDF export of preview plan
+  - returns: PDF file download
 
 ## Agent endpoints
 - POST /api/agent/run
@@ -62,6 +77,12 @@
   - sends preview-plan email via Resend API
   - returns: {success: true}
 
+- POST /api/agent/audit
+  - body: {industry, workflow_type, team_size, stack_maturity, bottleneck, manual_steps?, handoff_breaks?, visibility_gap?, current_tools[], volume?, urgency?, time_lost_per_week?, compliance_notes?, desired_outcome}
+  - runs full agent chain (same as /api/agent/run but with richer intake)
+  - stores result in plans collection with source: "guided_audit"
+  - returns: {preview_plan, plan_id, lead_id}
+
 ## Admin endpoints (server actions)
 Admin CRUD is implemented via Next.js server actions in `lib/actions/`, not REST API routes.
 All actions require authentication (checked via `getSessionUser()`).
@@ -73,6 +94,6 @@ All actions require authentication (checked via `getSessionUser()`).
 - **Leads**: getAllLeads, updateLeadStatus, exportLeadsCSV
 - **Lead Activity**: getLeadActivity, addNote, logStatusChange, logEmailSent
 - **Agent Templates**: getAllTemplates, updateTemplate, testRunTemplate
-- **Variants**: getAllVariants, createVariant, updateVariant, deleteVariant, toggleVariantPublished
+- **Variants**: getAllVariants, createVariant, updateVariant, deleteVariant, toggleVariantPublished, reorderVariants, bulkTogglePublished, getVariantAnalytics
 - **Experiments**: getAllExperiments, createExperiment, updateExperiment, deleteExperiment, startExperiment, stopExperiment, declareWinner
 - **Site Settings**: managed via ThemeCustomizer component (direct Firestore writes)
