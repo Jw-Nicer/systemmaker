@@ -184,6 +184,13 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `VariantLandingPage.tsx` | server | Assembles variant-specific landing page sections |
 | `homepage-experiments.tsx` | mixed | A/B experiment wrappers for hero + final CTA |
 
+## Known Issues & QA
+**Read `docs/KNOWN_ISSUES.md` before making changes.** It contains:
+- 7 recurring mistake patterns to avoid (empty Firestore returns, variant field precedence, unwired components, etc.)
+- 20 resolved bugs from QA with root causes
+- Pre-deploy QA checklist
+- Documentation sync checklist
+
 ## Conventions
 - **Server/Client split**: Firestore reads in server components, interactivity in client components
 - **Analytics**: Use `track(EVENTS.EVENT_NAME)` from `lib/analytics.ts` — logs to console in dev, PostHog in prod

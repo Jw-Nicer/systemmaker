@@ -72,6 +72,9 @@
 /docs            # Product specs (PRD, Architecture, Data Model, API Spec, etc.)
 /scripts         # Seed scripts (seed-firestore.ts, seed-agent-templates.ts, seed-content.ts, seed-variants.ts, seed-case-studies.ts)
 
+## Known Issues
+**Read `docs/KNOWN_ISSUES.md` before making changes.** Contains recurring mistake patterns, resolved bug registry, and pre-deploy QA checklist.
+
 ## Conventions
 - Keep marketing pages **server-rendered** where possible (SEO).
 - Canvas effects load **client-side only**, lazy-loaded.
