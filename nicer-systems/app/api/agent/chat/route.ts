@@ -208,10 +208,12 @@ export async function POST(request: Request) {
     }
 
     // Step 2: Detect the correct phase
+    const messageCount = Array.isArray(history) ? history.length : 0;
     const nextPhase: ConversationPhase = detectPhase(
       clientPhase,
       updatedExtracted,
-      message
+      message,
+      messageCount
     );
 
     // Emit phase change if it changed

@@ -141,6 +141,17 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
         </div>
       )}
 
+      {!chat.error && chat.messages.filter((m) => m.role === "user").length >= 2 && chat.phase !== "building" && (
+        <div className="flex justify-end border-t border-[var(--border-light)] px-4 py-1.5">
+          <button
+            onClick={chat.reset}
+            className="rounded-full px-3 py-1 text-[11px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--cream-card)] hover:text-[var(--text-body)]"
+          >
+            Start over
+          </button>
+        </div>
+      )}
+
       <ChatInput
         onSend={chat.sendMessage}
         disabled={inputDisabled}

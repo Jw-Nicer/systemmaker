@@ -107,36 +107,43 @@ function inferCurrentTools(message: string): string | undefined {
 }
 
 function inferIndustry(message: string): string | undefined {
+  // Match explicit "I run a ..." patterns
   const match = message.match(
-    /\b(?:i run|we run|i own|we own|i'm in|i am in|my company is|our business is)\s+(?:a|an)?\s*([^,.!\n]{2,80})/i
+    /\b(?:i run|we run|i own|we own|i'm in|i am in|my company is|our business is|we're in|we are in)\s+(?:a|an)?\s*([^,.!\n]{2,80})/i
   );
-  if (!match) return undefined;
-
-  const value = match[1]
-    .replace(/\b(company|business|firm|team|shop|agency)\b/gi, "")
-    .trim();
-
-  if (
-    !value ||
-    /\b(use|using|problem|bottleneck|manual|urgent|currently|tool|stack)\b/i.test(value)
-  ) {
-    return undefined;
+  if (match) {
+    const value = match[1]
+      .replace(/\b(company|business|firm|team|shop|agency)\b/gi, "")
+      .trim();
+    if (
+      value &&
+      !/\b(use|using|problem|bottleneck|manual|urgent|currently|tool|stack)\b/i.test(value)
+    ) {
+      return cleanField(value, 200);
+    }
   }
-  return cleanField(value, 200);
+
+  // Match bare industry names (common when user just types the industry)
+  const knownIndustries = /^(construction|healthcare|real estate|legal|logistics|staffing|wholesale|distribution|dental|plumbing|hvac|electrical|property management|home services|landscaping|roofing|accounting|insurance|manufacturing|retail|restaurants?|hospitality|trucking|cleaning|pest control|moving|storage|auto repair|veterinary|childcare|senior care|medical|fitness|salon|spa|consulting)\b/i;
+  const bareMatch = message.trim().match(knownIndustries);
+  if (bareMatch) return cleanField(bareMatch[0], 200);
+
+  return undefined;
 }
 
 function inferBottleneck(message: string): string | undefined {
   const explicitMatch = message.match(
-    /\b(?:bottleneck|problem|pain point|biggest issue|biggest problem|main issue|main problem)\s*(?:is|:)\s*([^.!?\n]+(?:[.!?]\s*[^.!?\n]+)*)/i
+    /\b(?:bottleneck|problem|pain point|biggest issue|biggest problem|main issue|main problem|struggle|struggling with)\s*(?:is|:)?\s*([^.!?\n]+(?:[.!?]\s*[^.!?\n]+)*)/i
   );
   if (explicitMatch) {
     return cleanField(explicitMatch[1], 2000);
   }
 
-  if (
-    /\b(?:we're dealing with|we are dealing with|we keep hitting|the process is|our workflow is|things get stuck|we lose time because|we get delayed because)\b/i.test(message) &&
-    /\b(manual|spreadsheet|slow|delay|rework|double[- ]entry|follow[- ]up|handoff|chasing|bottleneck|stuck|missed|error|backlog)\b/i.test(message)
-  ) {
+  // Match conversational descriptions of workflow problems
+  const problemPatterns = /\b(?:we're dealing with|we are dealing with|we keep hitting|the process is|our workflow is|things get stuck|we lose time|we get delayed|takes too long|too much time|waste time|drop the ball|fall through the cracks|no visibility|can't track|hard to track)\b/i;
+  const problemKeywords = /\b(manual|spreadsheet|slow|delay|rework|double[- ]entry|follow[- ]up|handoff|chasing|bottleneck|stuck|missed|error|backlog|paperwork|disconnected|scattered|chaotic|messy|broken)\b/i;
+
+  if (problemPatterns.test(message) || (message.length > 50 && problemKeywords.test(message))) {
     return cleanField(message, 2000);
   }
 
@@ -167,7 +174,8 @@ export function extractHeuristicIntakeData(message: string): Partial<ExtractedIn
 export function detectPhase(
   currentPhase: ConversationPhase,
   extracted: ExtractedIntake,
-  lastUserMessage: string
+  lastUserMessage: string,
+  messageCount = 0
 ): ConversationPhase {
   // Once building starts, it runs to completion — no going back
   if (currentPhase === "building") return "building";
@@ -180,10 +188,10 @@ export function detectPhase(
   // If confirming and user affirms, move to building
   if (currentPhase === "confirming") {
     if (hasRevisionSignal(lastUserMessage)) return "gathering";
-    const affirm = /\b(yes|yeah|yep|sure|go|ready|build|do it|let's go|looks good|correct|right|proceed)\b/i;
+    const affirm = /\b(yes|yeah|yep|sure|go|ready|build|do it|let's go|looks good|correct|right|proceed|ok|okay|sounds good|that's right|that works|perfect|awesome|great|good|fine|absolutely|definitely|for sure)\b/i;
     if (affirm.test(lastUserMessage)) return "building";
     if (looksLikeQuestion(lastUserMessage)) return "confirming";
-    // Ambiguous — stay in confirming to ask again
+    // If not clearly a question or revision, treat as affirmation after 2+ confirming rounds
     return "confirming";
   }
 
@@ -194,6 +202,16 @@ export function detectPhase(
   });
 
   if (allCollected) return "confirming";
+
+  // Safety valve: if we've exchanged 8+ messages and have at least industry,
+  // move to confirming to avoid infinite gathering loop.
+  // The agent can fill in reasonable defaults for missing fields.
+  const filledCount = REQUIRED_FIELDS.filter((f) => {
+    const val = extracted[f];
+    return val !== undefined && val !== "";
+  }).length;
+  if (messageCount >= 8 && filledCount >= 1) return "confirming";
+
   return "gathering";
 }
 

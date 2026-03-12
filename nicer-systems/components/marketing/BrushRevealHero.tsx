@@ -1,11 +1,19 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Logo } from "@/components/ui/Logo";
 import { TrackedLink } from "@/components/marketing/TrackedLink";
+import { BookingCTAButton } from "@/components/marketing/BookingCTAButton";
+import { FlowText } from "@/components/ui/GlitchText";
 import { EVENTS, track } from "@/lib/analytics";
+
+const BrushRevealCanvas = lazy(() =>
+  import("@/components/marketing/BrushRevealCanvas").then((m) => ({
+    default: m.BrushRevealCanvas,
+  }))
+);
 
 const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL;
 
@@ -76,6 +84,13 @@ export function BrushRevealHero({
       id="hero"
       className="computer-hero relative overflow-hidden border-b border-[var(--border-light)] bg-[var(--cream-bg)]"
     >
+      {!reducedMotion && (
+        <Suspense fallback={null}>
+          <div className="pointer-events-none absolute inset-0 z-0 opacity-25 mix-blend-overlay">
+            <BrushRevealCanvas />
+          </div>
+        </Suspense>
+      )}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(164,141,108,0.22),transparent_28%),linear-gradient(180deg,rgba(248,243,232,0)_0%,rgba(235,226,210,0.85)_78%,rgba(228,220,204,1)_100%)]" />
       <div className="pointer-events-none absolute inset-y-0 left-0 w-[42%] bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.55),transparent_62%)]" />
 
@@ -96,7 +111,7 @@ export function BrushRevealHero({
             <h1 className="mt-5 max-w-[11ch] font-[var(--font-editorial)] text-[clamp(2.35rem,10vw,5.1rem)] leading-[0.95] tracking-[-0.05em] text-[var(--text-heading)]">
               {heroHeadline.split("\n").map((line, index, arr) => (
                 <span key={line}>
-                  {line}
+                  <FlowText text={line} staggerDelay={0.04} />
                   {index < arr.length - 1 && <br />}
                 </span>
               ))}
@@ -106,14 +121,11 @@ export function BrushRevealHero({
             </p>
 
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-              <TrackedLink
-                href={bookingUrl || "/contact"}
-                eventName={EVENTS.CTA_CLICK_BOOK}
-                {...(bookingUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              <BookingCTAButton
+                source="hero"
+                ctaText={ctaText ?? "Book a Scoping Call"}
                 className="rounded-full bg-[var(--green-dark)] px-7 py-3.5 text-center text-sm font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-transform hover:scale-[1.02]"
-              >
-                {ctaText ?? (bookingUrl ? "Schedule a 45-minute call" : "Book a Scoping Call")}
-              </TrackedLink>
+              />
               <a
                 href="#see-it-work"
                 onClick={() => track(EVENTS.CTA_CLICK_PREVIEW_PLAN)}

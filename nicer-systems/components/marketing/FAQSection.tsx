@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPublishedFAQs } from "@/lib/firestore/faqs";
 import { FAQAccordion } from "./FAQAccordion";
 import type { FAQ } from "@/types/faq";
@@ -14,11 +15,8 @@ export async function FAQSection({
   faqsData?: FAQ[];
 } = {}) {
   const faqs = faqsData ?? await getPublishedFAQs();
-  if (faqs.length === 0) {
-    return null;
-  }
 
-  const faqJsonLd = {
+  const faqJsonLd = faqs.length > 0 ? {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: faqs.map((faq) => ({
@@ -29,14 +27,16 @@ export async function FAQSection({
         text: faq.answer,
       },
     })),
-  };
+  } : null;
 
   return (
     <section id="faq" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mb-10 sm:mb-12">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
@@ -51,7 +51,21 @@ export async function FAQSection({
             </p>
           ) : null}
         </div>
-        <FAQAccordion faqs={faqs} />
+        {faqs.length > 0 ? (
+          <FAQAccordion faqs={faqs} />
+        ) : (
+          <div className="rounded-[var(--radius-card)] border border-[var(--border-card)] bg-[var(--cream-card)] px-6 py-8 text-center">
+            <p className="text-base text-[var(--text-heading)]">
+              Have a question we haven&apos;t covered?
+            </p>
+            <Link
+              href="/contact"
+              className="mt-4 inline-flex rounded-full bg-[var(--green-dark)] px-6 py-2.5 text-sm font-medium text-[#f5f0e5] transition-all duration-300 hover:scale-[1.02]"
+            >
+              Get in touch
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );

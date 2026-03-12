@@ -5,6 +5,7 @@ import {
   PrivacyPreferencesButton,
 } from "@/components/ui/AnalyticsConsentControls";
 import { MobileNav } from "@/components/marketing/MobileNav";
+import { BookingCTAButton } from "@/components/marketing/BookingCTAButton";
 import { getPublishedCaseStudies } from "@/lib/firestore/case-studies";
 
 export interface NavLink {
@@ -92,13 +93,11 @@ export default async function MarketingLayout({
 
           <div className="flex items-center gap-3">
             <MobileNav links={navLinks} />
-            <Link
-              href="/contact"
+            <BookingCTAButton
+              source="nav_header"
               className="shrink-0 rounded-full bg-[var(--green-dark)] px-3 py-2 text-xs font-medium text-[var(--cream-warm)] shadow-[var(--shadow-card)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm"
-            >
-              <span className="sm:hidden">Book Call</span>
-              <span className="hidden sm:inline">Book a Scoping Call</span>
-            </Link>
+              ctaText="Book a Scoping Call"
+            />
           </div>
         </nav>
       </header>

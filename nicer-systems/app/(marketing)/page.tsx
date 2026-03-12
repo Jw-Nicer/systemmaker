@@ -8,6 +8,7 @@ import { FAQSection } from "@/components/marketing/FAQSection";
 import { TestimonialsSection } from "@/components/marketing/TestimonialsSection";
 import { IsThisForYou } from "@/components/marketing/IsThisForYou";
 import { WhyNotDIY } from "@/components/marketing/WhyNotDIY";
+import { WaveDivider } from "@/components/ui/GlowLine";
 import { LandingViewTracker } from "@/components/marketing/LandingViewTracker";
 import {
   HomepageExperimentFinalCTA,
@@ -61,12 +62,16 @@ export default async function LandingPage() {
       <LandingViewTracker landingPath="/" />
       <HomepageExperimentTracker experiments={homepageExperiments} />
       <HomepageExperimentHero experiments={homepageExperiments} />
+      <WaveDivider />
       <SeeItWork />
+      <WaveDivider />
       <ProofOfWork />
       <IsThisForYou />
       <TestimonialsSection />
+      <WaveDivider />
       <HowItWorks />
       <WhyNotDIY />
+      <WaveDivider />
       <ComputerFeatures />
       <PricingSection />
       <FAQSection />

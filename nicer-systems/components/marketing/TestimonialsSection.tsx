@@ -14,7 +14,7 @@ export async function TestimonialsSection({
   }
 
   return (
-    <section className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
+    <section id="testimonials" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mb-10 max-w-3xl sm:mb-12">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
