@@ -2,29 +2,25 @@ import Link from "next/link";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getFollowUps } from "@/lib/actions/leads";
 import {
-  EMPTY_DASHBOARD_ANALYTICS,
-  getDashboardAnalytics,
-} from "@/lib/admin/analytics";
-import {
   AdminMetricCard,
   AdminPageHeader,
   AdminPanel,
   AdminPill,
 } from "@/components/admin/AdminPrimitives";
+import DashboardAnalytics from "@/components/admin/DashboardAnalytics";
 
 async function getDashboardMetrics() {
   try {
     const db = getAdminDb();
 
-    const [caseStudies, testimonials, faqs, offers, allLeads, recentLeadsSnap, experiments, analytics] = await Promise.all([
-      db.collection("case_studies").where("is_published", "==", true).get(),
-      db.collection("testimonials").where("is_published", "==", true).get(),
-      db.collection("faqs").where("is_published", "==", true).get(),
-      db.collection("offers").where("is_published", "==", true).get(),
-      db.collection("leads").get(),
+    const [caseStudies, testimonials, faqs, offers, allLeads, recentLeadsSnap, experiments] = await Promise.all([
+      db.collection("case_studies").where("is_published", "==", true).count().get(),
+      db.collection("testimonials").where("is_published", "==", true).count().get(),
+      db.collection("faqs").where("is_published", "==", true).count().get(),
+      db.collection("offers").where("is_published", "==", true).count().get(),
+      db.collection("leads").count().get(),
       db.collection("leads").orderBy("created_at", "desc").limit(5).get(),
-      db.collection("experiments").get(),
-      getDashboardAnalytics(),
+      db.collection("experiments").count().get(),
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,14 +34,13 @@ async function getDashboardMetrics() {
     }));
 
     return {
-      publishedCaseStudies: caseStudies.size,
-      publishedTestimonials: testimonials.size,
-      publishedFAQs: faqs.size,
-      publishedOffers: offers.size,
-      totalLeads: allLeads.size,
-      totalExperiments: experiments.size,
+      publishedCaseStudies: caseStudies.data().count,
+      publishedTestimonials: testimonials.data().count,
+      publishedFAQs: faqs.data().count,
+      publishedOffers: offers.data().count,
+      totalLeads: allLeads.data().count,
+      totalExperiments: experiments.data().count,
       recentLeads,
-      analytics,
       loadError: false,
     };
   } catch {
@@ -57,7 +52,6 @@ async function getDashboardMetrics() {
       totalLeads: 0,
       totalExperiments: 0,
       recentLeads: [],
-      analytics: EMPTY_DASHBOARD_ANALYTICS,
       loadError: true,
     };
   }
@@ -79,10 +73,6 @@ const statusColors: Record<string, string> = {
   closed: "neutral",
   unqualified: "red",
 };
-
-function formatPercent(value: number) {
-  return `${value.toFixed(value % 1 === 0 ? 0 : 1)}%`;
-}
 
 export default async function AdminDashboard() {
   const [metrics, followUps] = await Promise.all([
@@ -148,155 +138,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div className="mt-10">
-        <div className="mb-4 flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-[#1d2318]">Funnel</h2>
-          <AdminPill tone="blue">
-            Last {metrics.analytics.windowDays} days
-          </AdminPill>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <AdminMetricCard
-            label="Landing Views"
-            value={metrics.analytics.funnel.landingViews}
-            meta="Tracked visits"
-          />
-          <AdminMetricCard
-            label="Preview Starts"
-            value={metrics.analytics.funnel.previewStarts}
-            meta="Demo + chat starts"
-          />
-          <AdminMetricCard
-            label="Preview Completed"
-            value={metrics.analytics.funnel.previewCompleted}
-            meta={`${formatPercent(metrics.analytics.funnel.previewCompletionRate)} of starts`}
-          />
-          <AdminMetricCard
-            label="Leads Submitted"
-            value={metrics.analytics.funnel.leadsSubmitted}
-            meta={`${formatPercent(metrics.analytics.funnel.leadConversionRate)} of landing views`}
-          />
-        </div>
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <AdminPanel>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#7e7b70]">
-                  Top Landing Paths
-                </p>
-                <p className="mt-2 text-sm text-[#596351]">
-                  Compare where traffic lands against where leads actually convert.
-                </p>
-              </div>
-              <AdminPill tone="neutral">
-                {metrics.analytics.topLandingPaths.length} tracked
-              </AdminPill>
-            </div>
-            {metrics.analytics.topLandingPaths.length === 0 ? (
-              <p className="mt-4 text-sm text-[#6c7467]">
-                No landing-path analytics captured yet.
-              </p>
-            ) : (
-              <div className="mt-4 overflow-hidden rounded-[20px] border border-[#ddd5c7] bg-white/50">
-                <table className="w-full text-sm">
-                  <thead className="bg-white/60">
-                    <tr className="border-b border-[#ddd5c7]">
-                      <th className="px-4 py-3 text-left font-medium text-[#6c7467]">Path</th>
-                      <th className="px-4 py-3 text-left font-medium text-[#6c7467]">Views</th>
-                      <th className="px-4 py-3 text-left font-medium text-[#6c7467]">Leads</th>
-                      <th className="px-4 py-3 text-left font-medium text-[#6c7467]">Conv.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metrics.analytics.topLandingPaths.map((path) => (
-                      <tr key={path.path} className="border-b border-[#e1d9cb] last:border-0">
-                        <td className="px-4 py-3 font-medium text-[#1d2318]">{path.path}</td>
-                        <td className="px-4 py-3 text-[#596351]">{path.views}</td>
-                        <td className="px-4 py-3 text-[#596351]">{path.leads}</td>
-                        <td className="px-4 py-3 text-[#596351]">{formatPercent(path.conversionRate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </AdminPanel>
-
-          <div className="grid gap-4">
-            <AdminPanel tone="accent">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#d9d1c3]">
-                Conversion Signals
-              </p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-3xl font-semibold tracking-[-0.04em]">
-                    {metrics.analytics.funnel.previewPlanEmailCaptures}
-                  </p>
-                  <p className="mt-1 text-sm text-[#d8cfbe]">
-                    Plan email captures
-                  </p>
-                  <p className="mt-1 text-xs text-[#bcb39f]">
-                    {formatPercent(metrics.analytics.funnel.previewEmailCaptureRate)} of completed previews
-                  </p>
-                </div>
-                <div>
-                  <p className="text-3xl font-semibold tracking-[-0.04em]">
-                    {metrics.analytics.funnel.bookingClicks}
-                  </p>
-                  <p className="mt-1 text-sm text-[#d8cfbe]">
-                    Booking clicks
-                  </p>
-                  <p className="mt-1 text-xs text-[#bcb39f]">
-                    {formatPercent(metrics.analytics.funnel.bookingClickRate)} of leads
-                  </p>
-                </div>
-                <div>
-                  <p className="text-3xl font-semibold tracking-[-0.04em]">
-                    {metrics.analytics.funnel.planShares}
-                  </p>
-                  <p className="mt-1 text-sm text-[#d8cfbe]">
-                    Plan share actions
-                  </p>
-                  <p className="mt-1 text-xs text-[#bcb39f]">
-                    {metrics.analytics.funnel.sharedPlanViews} shared-plan views
-                  </p>
-                </div>
-              </div>
-            </AdminPanel>
-
-            <AdminPanel>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#7e7b70]">
-                    Lead Sources
-                  </p>
-                  <p className="mt-2 text-sm text-[#596351]">
-                    Based on UTM source when available, then fall back to lead source.
-                  </p>
-                </div>
-                <AdminPill tone="neutral">
-                  {metrics.analytics.leadSources.length} sources
-                </AdminPill>
-              </div>
-              {metrics.analytics.leadSources.length === 0 ? (
-                <p className="mt-4 text-sm text-[#6c7467]">No lead source data yet.</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {metrics.analytics.leadSources.map((source) => (
-                    <div
-                      key={source.source}
-                      className="flex items-center justify-between rounded-[18px] border border-[#ddd5c7] bg-white/55 px-4 py-3"
-                    >
-                      <span className="text-sm font-medium text-[#1d2318]">{source.source}</span>
-                      <AdminPill tone="blue">{source.leads} leads</AdminPill>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AdminPanel>
-          </div>
-        </div>
-      </div>
+      <DashboardAnalytics />
 
       {followUps.length > 0 && (
         <div className="mt-8">
