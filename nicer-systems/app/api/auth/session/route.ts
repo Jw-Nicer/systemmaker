@@ -20,7 +20,32 @@ export async function POST(request: Request) {
     await createSessionCookie(idToken);
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err: unknown) {
+    const code =
+      (err as { code?: string })?.code ??
+      (err as { errorInfo?: { code?: string } })?.errorInfo?.code;
+    const message = err instanceof Error ? err.message : String(err);
+
+    console.error("[auth/session] Failed to create session:", {
+      code,
+      message,
+    });
+
+    // Surface a specific hint so the client can decide whether to retry
+    if (code === "auth/id-token-expired" || code === "auth/id-token-revoked") {
+      return NextResponse.json(
+        { error: "Token expired — please retry", code: "TOKEN_EXPIRED" },
+        { status: 401 }
+      );
+    }
+
+    if (code === "auth/argument-error" || code === "auth/invalid-credential") {
+      return NextResponse.json(
+        { error: "Invalid credentials", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to create session" },
       { status: 401 }

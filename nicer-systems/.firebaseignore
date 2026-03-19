@@ -5,3 +5,4 @@ node_modules/
 docs/
 agents/
 scripts/
+users.json

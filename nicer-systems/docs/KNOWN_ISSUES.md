@@ -139,6 +139,42 @@ done
 
 ---
 
+### P8: Turbopack hashes firebase-admin package name in SSR bundles
+
+**Pattern**: When Next.js 16 with Turbopack builds for Firebase Hosting Cloud Functions, the SSR bundle renames `firebase-admin` to something like `firebase-admin-a14c8a5423a75469`. The Cloud Function then fails with `ERR_MODULE_NOT_FOUND` on any page that requires dynamic SSR (server-rendered at request time).
+
+**Rule**: All pages that use `firebase-admin` (variant pages, case study detail, admin pages) must either:
+1. Be **statically pre-rendered** at build time via `generateStaticParams()` — this is the current workaround
+2. OR add `firebase-admin` to `serverExternalPackages` in `next.config.ts` if dynamic SSR is needed
+
+**Current workaround**: All 6 industry variant pages are statically generated via `generateStaticParams()` in `app/(marketing)/[industry]/page.tsx`. New variants added to Firestore require a redeploy to be pre-rendered.
+
+**How to check**: After deploying, visit a variant page that was recently added. If it returns 500, check Cloud Function logs:
+```bash
+firebase functions:log --only firebase-frameworks-nicer-systems-ssrnicersystems
+```
+Look for `ERR_MODULE_NOT_FOUND` with a hashed package name.
+
+---
+
+### P9: Admin login can fail in production if session creation assumes injected service-account secrets
+
+**Pattern**: Client Firebase auth succeeds, but `/api/auth/session` returns `401` on the live site because the deployed SSR backend tries to initialize Firebase Admin only from `FIREBASE_PRIVATE_KEY`/`FIREBASE_CLIENT_EMAIL`.
+
+**Rule**: Firebase Admin bootstrap used by SSR/auth routes must support two modes:
+1. Local/dev: explicit service-account env vars from `.env.local`
+2. Deployed Firebase/GCP runtime: application default credentials with `projectId`
+
+**Past occurrence**: 2026-03-13 admin login on `nicersystems.com` showed `Failed to create session` after successful client auth, while invalid credentials still surfaced as Firebase `auth/invalid-credential`.
+
+**How to check**:
+```bash
+firebase functions:log --only firebase-frameworks-nicer-systems-ssrnicersystems
+```
+Then submit a valid admin login and confirm there is no `/api/auth/session` `401` failure.
+
+---
+
 ### P7: QA tester false positives on components that render differently than expected
 
 **Pattern**: Automated QA (ChatGPT Agent mode) marks sections as "FAIL/absent" when they render with different styling, naming, or structure than what the spec describes.
@@ -180,6 +216,7 @@ done
 | BUG-018 | Case study thumbnails missing | Content not uploaded | Content task — not a code bug | None |
 | BUG-019 | `confirming` phase loops on questions | `looksLikeQuestion()` kept agent in confirming | Expanded affirm regex to match more patterns | `conversation.ts` |
 | BUG-020 | 5+ docs stale after code changes | No process to update docs with code | Created update process (Pattern P5) | 10 doc files |
+| BUG-021 | 5 new variant pages return 500 | Turbopack hashes `firebase-admin` package name in SSR bundle; variants seeded after deploy need dynamic SSR which crashes | Redeployed so all 6 variants are statically pre-rendered via `generateStaticParams()` | Firestore data + redeploy |
 
 ---
 

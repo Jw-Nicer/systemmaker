@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -11,12 +11,19 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const readyRef = useRef(false);
 
-  // Clear any stale client-side auth state so it doesn't cause redirect loops
+  // Clear any stale client-side auth state so it doesn't cause redirect loops.
+  // We await signOut and gate form submission until it completes.
   useEffect(() => {
-    if (auth.currentUser) {
-      signOut(auth);
-    }
+    let cancelled = false;
+    (async () => {
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      if (!cancelled) readyRef.current = true;
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -25,6 +32,12 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      // Wait for stale auth cleanup if still in progress
+      if (!readyRef.current && auth.currentUser) {
+        await signOut(auth);
+        readyRef.current = true;
+      }
+
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await credential.user.getIdToken();
 
@@ -36,7 +49,18 @@ export default function AdminLoginPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to create session");
+        // Retry once with a force-refreshed token (handles token timing issues)
+        const freshToken = await credential.user.getIdToken(true);
+        const retryRes = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: freshToken }),
+        });
+
+        if (!retryRes.ok) {
+          const body = await retryRes.json().catch(() => null);
+          throw new Error(body?.error || "Failed to create session");
+        }
       }
 
       router.push("/admin");

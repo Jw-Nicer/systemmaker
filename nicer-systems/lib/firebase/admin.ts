@@ -16,37 +16,52 @@ let _auth: Auth;
 let _db: Firestore;
 
 function getAdminApp(): App {
-      if (_app) return _app;
+  if (_app) return _app;
 
   if (getApps().length) {
-          _app = getApps()[0] as App;
-          return _app;
+    _app = getApps()[0] as App;
+    return _app;
   }
 
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-      if (!privateKey || privateKey === "''" || privateKey === "") {
-              throw new Error(
-                        "FIREBASE_PRIVATE_KEY is not set. Add your Firebase service account credentials to .env.local."
-                      );
-      }
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const hasServiceAccount =
+    !!privateKey &&
+    privateKey !== "''" &&
+    privateKey !== "" &&
+    !!clientEmail &&
+    clientEmail !== "''" &&
+    clientEmail !== "";
 
+  if (hasServiceAccount) {
+    _app = initializeApp({
+      credential: cert({
+        projectId,
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, "\n"),
+      }),
+      projectId,
+    }) as App;
+
+    return _app;
+  }
+
+  // In Firebase-hosted SSR and other GCP runtimes, Admin SDK can use
+  // application default credentials from the environment.
   _app = initializeApp({
-          credential: cert({
-                    projectId: process.env.FIREBASE_PROJECT_ID,
-                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                    privateKey: privateKey.replace(/\\n/g, "\n"),
-          }),
+    projectId,
   }) as App;
 
   return _app;
 }
 
 export function getAdminAuth(): Auth {
-      if (!_auth) _auth = getAuth(getAdminApp()) as Auth;
-      return _auth;
+  if (!_auth) _auth = getAuth(getAdminApp()) as Auth;
+  return _auth;
 }
 
 export function getAdminDb(): Firestore {
-      if (!_db) _db = getFirestore(getAdminApp()) as Firestore;
-      return _db;
+  if (!_db) _db = getFirestore(getAdminApp()) as Firestore;
+  return _db;
 }

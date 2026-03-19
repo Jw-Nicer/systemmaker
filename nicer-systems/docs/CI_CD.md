@@ -2,10 +2,11 @@
 
 ## Current State (Manual)
 - Deploy: `npm run deploy` from local machine
-- Hosting: Firebase App Hosting (config in `apphosting.yaml`)
+- Hosting: Firebase Hosting with a framework-aware SSR backend via `firebase deploy`
 - Runtime: Node.js 22, 512MiB memory, 100 max concurrent
 - Region: us-central1
-- Secrets: All in `.env.local` locally, mapped in `apphosting.yaml` for production
+- Production backend: pinned SSR function `firebase-frameworks-nicer-systems:ssrnicersystems`
+- Secrets/config: local development uses `.env.local`; the live runtime must not depend on `apphosting.yaml` secrets unless the site is explicitly migrated to Firebase App Hosting
 
 ## Pre-Deploy Checklist
 1. Run `npm run typecheck` — runs `next typegen` then `tsc --noEmit`, zero errors required
@@ -24,7 +25,9 @@ npm run deploy:indexes   # Deploy Firestore indexes
 ```
 
 ## Environment Variables
-All secrets are stored in `.env.local` for local development and mapped via `apphosting.yaml` for production.
+All secrets are stored in `.env.local` for local development.
+
+For the current live deploy path, the server runtime should work without requiring the Firebase Admin service-account values to be injected into production. The deployed SSR backend can use Firebase/GCP application default credentials for Admin SDK access. `apphosting.yaml` documents a future App Hosting environment, but it is not the source of truth for the current production deployment.
 
 **Server-side (private):**
 - `FIREBASE_PROJECT_ID` — Firebase Admin SDK project identifier
@@ -57,6 +60,7 @@ After every deploy, manually verify:
 - [ ] Admin dashboard shows real data
 
 ## Production URL
+- https://nicersystems.com
 - https://nicer-systems.web.app
 
 ## Test Suite
