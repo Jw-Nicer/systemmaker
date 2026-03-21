@@ -206,7 +206,8 @@ export function SectionRefiner({
               </button>
               <button
                 onClick={handleApply}
-                className="text-xs px-3 py-1 rounded-md bg-primary text-background font-medium hover:opacity-90 transition-opacity"
+                disabled={!!error}
+                className="text-xs px-3 py-1 rounded-md bg-primary text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-30"
               >
                 Apply changes
               </button>

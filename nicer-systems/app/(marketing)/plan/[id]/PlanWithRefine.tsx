@@ -19,7 +19,7 @@ export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
   const [refiningSection, setRefiningSection] = useState<RefineSectionKey | null>(null);
   const [currentPlan, setCurrentPlan] = useState(plan);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     return () => clearTimeout(saveTimerRef.current);
