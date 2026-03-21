@@ -1,4 +1,5 @@
 import type { PreviewPlan } from "@/types/preview-plan";
+import { buildUnsubscribeUrl } from "@/lib/email/unsubscribe-token";
 
 /** Escape HTML special characters to prevent XSS in email content. */
 function esc(str: string): string {
@@ -12,8 +13,10 @@ function esc(str: string): string {
 
 export function renderPreviewPlanHTML(
   plan: PreviewPlan,
-  recipientName: string
+  recipientName: string,
+  leadId?: string
 ): string {
+  const unsubscribeUrl = leadId ? buildUnsubscribeUrl(leadId) : null;
   const stagesHTML = plan.workflow.stages
     .map(
       (s, i) => `
@@ -167,6 +170,12 @@ export function renderPreviewPlanHTML(
   <p style="color:#9ca3af;font-size:12px;text-align:center;">
     Nicer Systems — Tell us the problem. We'll build the system.
   </p>
+
+  ${unsubscribeUrl ? `
+  <p style="color:#9ca3af;font-size:11px;text-align:center;margin-top:16px;">
+    <a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a> from future emails.
+  </p>
+  ` : ''}
 </body>
 </html>`;
 }

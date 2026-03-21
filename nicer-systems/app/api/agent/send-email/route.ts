@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const resend = new Resend(apiKey);
-    const html = renderPreviewPlanHTML(preview_plan, parsed.data.name);
+    const html = renderPreviewPlanHTML(preview_plan, parsed.data.name, lead_id);
 
     await resend.emails.send({
       from: "Nicer Systems <onboarding@resend.dev>",

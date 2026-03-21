@@ -343,7 +343,8 @@ export async function POST(request: Request) {
             const resend = new Resend(apiKey);
             const html = renderPreviewPlanHTML(
               plan as unknown as PreviewPlan,
-              extractedName
+              extractedName,
+              leadId
             );
 
             await resend.emails.send({
