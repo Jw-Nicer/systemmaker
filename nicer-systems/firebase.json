@@ -5,7 +5,10 @@
       "region": "us-central1",
       "timeoutSeconds": 300,
       "memory": "512MiB"
-    }
+    },
+    "predeploy": [
+      "node scripts/fix-turbopack-externals.js"
+    ]
   },
   "firestore": {
     "database": "(default)",

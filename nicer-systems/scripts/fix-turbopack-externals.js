@@ -15,40 +15,56 @@
 const fs = require("fs");
 const path = require("path");
 
-const SERVER_DIR = path.join(__dirname, "..", ".next", "server");
 const HASH_PATTERN = /firebase-admin-[a-f0-9]{16}/g;
 const REAL_NAME = "firebase-admin";
 
-let filesPatched = 0;
-let replacements = 0;
+const ROOT = path.join(__dirname, "..");
+
+// Directories to patch — both the build output and the Firebase deploy staging area
+const TARGETS = [
+  path.join(ROOT, ".next", "server"),
+  path.join(ROOT, ".firebase", "nicer-systems", "functions", ".next", "server"),
+];
+
+let totalFiles = 0;
+let totalReplacements = 0;
 
 function walk(dir) {
+  let files = 0;
+  let reps = 0;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      walk(full);
+      const sub = walk(full);
+      files += sub.files;
+      reps += sub.reps;
     } else if (/\.(js|json)$/.test(entry.name)) {
       const content = fs.readFileSync(full, "utf8");
       const matches = content.match(HASH_PATTERN);
       if (matches) {
         fs.writeFileSync(full, content.replace(HASH_PATTERN, REAL_NAME));
-        filesPatched++;
-        replacements += matches.length;
+        files++;
+        reps += matches.length;
       }
     }
   }
+  return { files, reps };
 }
 
-if (!fs.existsSync(SERVER_DIR)) {
-  console.log("⚠ .next/server not found — skipping external package fix");
-  process.exit(0);
+for (const dir of TARGETS) {
+  if (!fs.existsSync(dir)) continue;
+  const { files, reps } = walk(dir);
+  if (files > 0) {
+    const label = path.relative(ROOT, dir);
+    console.log(`  ✓ ${label}: ${reps} replacements in ${files} files`);
+  }
+  totalFiles += files;
+  totalReplacements += reps;
 }
 
-walk(SERVER_DIR);
-
-if (filesPatched > 0) {
+if (totalFiles > 0) {
   console.log(
-    `✓ Fixed Turbopack external hashing: ${replacements} replacements in ${filesPatched} files`
+    `✓ Fixed Turbopack external hashing: ${totalReplacements} total replacements in ${totalFiles} files`
   );
 } else {
   console.log("✓ No Turbopack external hashing issues found");
