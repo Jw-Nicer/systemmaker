@@ -137,12 +137,16 @@ docs/                    # PRD, Architecture, Data Model, API Spec, etc.
   Weekly_Review_Template.md  # Fillable Friday review template (pipeline, wins, stuck, priorities)
   Triage_Process.md          # Bug/feature/content triage with priority SLAs and GitHub Issue templates
 scripts/
+  fix-turbopack-externals.js # Patches Turbopack hashed module names (predeploy hook + postbuild)
   seed-firestore.ts          # Seeds site_settings/default
   seed-agent-templates.ts    # Seeds agent templates into Firestore
   seed-content.ts            # Seeds FAQs, testimonials, offers + fixes healthcare variant
   seed-variants.ts           # Seeds industry variant landing pages (6 variants)
   seed-case-studies.ts       # Seeds sample case studies
   seed-case-study-thumbnails.ts # Seeds case study thumbnail images
+
+tests/
+  firebase-admin-init.test.ts # Tests dual-mode Admin SDK init (service account + ADC fallback)
 ```
 
 ## Landing Page Components (`components/marketing/`)
@@ -186,8 +190,8 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 
 ## Known Issues & QA
 **Read `docs/KNOWN_ISSUES.md` before making changes.** It contains:
-- 7 recurring mistake patterns to avoid (empty Firestore returns, variant field precedence, unwired components, etc.)
-- 20 resolved bugs from QA with root causes
+- 9 documented patterns (P1–P9), with P8 (Turbopack hashing) and P9 (admin auth) now resolved
+- 25 resolved bugs from QA with root causes
 - Pre-deploy QA checklist
 - Documentation sync checklist
 
@@ -237,8 +241,10 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 ## Deployment
 - **Hosting**: Firebase Hosting + Cloud Functions (SSR)
 - **Region**: us-central1
-- **URL**: https://nicer-systems.web.app
+- **URLs**: https://nicersystems.com, https://nicer-systems.web.app
 - **Plan**: Blaze (pay-as-you-go)
+- **Predeploy hook**: `scripts/fix-turbopack-externals.js` patches Turbopack's hashed `firebase-admin` module names (see P8 in KNOWN_ISSUES.md)
+- **Admin SDK**: Dual-mode init — service account creds locally, GCP application default credentials in production
 
 ## What's Built (Phase 3 — complete)
 - [x] Case study related recommendations (on detail pages)
@@ -274,6 +280,15 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [x] Fixed healthcare variant placeholder content (sections.hero + meta_description)
 - [x] Seeded 5 industry variant landing pages (construction, property-management, staffing, legal, home-services)
 - [x] Added SSE timeout (30s) with retry and "Start over" button in agent chat
+
+## What's Built (Phase 6 — Auth & Deploy Fixes, complete)
+- [x] Dual-mode Firebase Admin SDK init (service account creds locally, GCP ADC in production)
+- [x] Login resilience (await stale auth cleanup, retry with force-refreshed token)
+- [x] Session endpoint specific error codes (TOKEN_EXPIRED, INVALID_CREDENTIALS)
+- [x] Turbopack predeploy fix (patches hashed firebase-admin module names before upload)
+- [x] CSP security headers + Permissions-Policy on all routes
+- [x] Admin dashboard Suspense loading with skeleton UI
+- [x] Firebase Admin SDK init unit tests
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.

@@ -24,6 +24,11 @@ npm run deploy:rules     # Deploy Firestore security rules
 npm run deploy:indexes   # Deploy Firestore indexes
 ```
 
+### Predeploy Hook
+`firebase.json` includes a `predeploy` hook that runs `scripts/fix-turbopack-externals.js` before every deploy. This patches Turbopack's hashed `firebase-admin` module names (e.g. `firebase-admin-a14c8a5423a75469` → `firebase-admin`) in both `.next/server/` and `.firebase/nicer-systems/functions/.next/server/`. Without this, all dynamic SSR routes (admin pages, API routes) crash with `ERR_MODULE_NOT_FOUND`. See Known Issue P8 in `docs/KNOWN_ISSUES.md`.
+
+Do NOT remove this hook until Turbopack fixes the upstream bug.
+
 ## Environment Variables
 All secrets are stored in `.env.local` for local development.
 

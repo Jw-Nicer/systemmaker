@@ -101,4 +101,5 @@
 - **Phase 3**: ✅ Complete (funnel optimization + variants + leads CRM + email sequences + A/B testing)
 - **Phase 4**: ✅ Complete (agent chat SSE streaming + plan sharing + section refinement)
 - **Phase 5**: ✅ Complete (QA remediation — seeded data, chat fixes, booking flow, visual effects, variant fixes)
+- **Phase 6**: ✅ Complete (auth & deploy fixes — dual-mode Admin SDK, login resilience, Turbopack predeploy fix, CSP headers)
 - **Deferred**: CRM sync (ClickUp/HubSpot/Close), proposal generator

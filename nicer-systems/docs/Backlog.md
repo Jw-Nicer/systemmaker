@@ -1,5 +1,5 @@
 # Backlog (Prioritized)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-21
 
 ## P0 (Phase 1) ✅ COMPLETE
 - ✅ Brush reveal hero with fallback
@@ -46,6 +46,14 @@
 - ✅ Fixed healthcare variant placeholder content
 - ✅ Seeded 5 industry variants (construction, property-management, staffing, legal, home-services)
 - ✅ SSE timeout + retry + Start Over button in agent chat
+
+## P5 (Post-QA — Auth & Deploy Fixes) ✅ COMPLETE
+- ✅ Fixed admin login in production (dual-mode Firebase Admin SDK — service account + ADC)
+- ✅ Fixed Turbopack hashed module names (predeploy script patches firebase-admin references)
+- ✅ Added CSP security headers + Permissions-Policy to all routes
+- ✅ Login resilience: token retry logic + specific error codes from session endpoint
+- ✅ Admin dashboard Suspense loading with skeleton UI
+- ✅ Firebase Admin SDK init tests (2 tests covering both credential paths)
 
 ## Deferred Items
 - CRM sync (ClickUp/HubSpot/Close integration)

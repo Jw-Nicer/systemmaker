@@ -2,7 +2,7 @@
 
 **Purpose**: Central registry of all bugs, mistakes, and patterns found during QA and development. Every AI agent and developer MUST read this file before making changes to avoid repeating past mistakes.
 
-**Updated**: 2026-03-12
+**Updated**: 2026-03-21
 
 ---
 
@@ -139,39 +139,32 @@ done
 
 ---
 
-### P8: Turbopack hashes firebase-admin package name in SSR bundles
+### P8: Turbopack hashes firebase-admin package name in SSR bundles — RESOLVED
 
 **Pattern**: When Next.js 16 with Turbopack builds for Firebase Hosting Cloud Functions, the SSR bundle renames `firebase-admin` to something like `firebase-admin-a14c8a5423a75469`. The Cloud Function then fails with `ERR_MODULE_NOT_FOUND` on any page that requires dynamic SSR (server-rendered at request time).
 
-**Rule**: All pages that use `firebase-admin` (variant pages, case study detail, admin pages) must either:
-1. Be **statically pre-rendered** at build time via `generateStaticParams()` — this is the current workaround
-2. OR add `firebase-admin` to `serverExternalPackages` in `next.config.ts` if dynamic SSR is needed
+**Status**: **RESOLVED** (2026-03-21). A predeploy script (`scripts/fix-turbopack-externals.js`) now automatically patches all hashed module names back to `firebase-admin` in both `.next/server/` and `.firebase/nicer-systems/functions/.next/server/` before upload. Configured as a Firebase `predeploy` hook in `firebase.json` and as a `postbuild` step in `package.json`.
 
-**Current workaround**: All 6 industry variant pages are statically generated via `generateStaticParams()` in `app/(marketing)/[industry]/page.tsx`. New variants added to Firestore require a redeploy to be pre-rendered.
+**Rule**: Do NOT remove the predeploy hook or the `fix-turbopack-externals.js` script until Turbopack fixes the upstream bug. Dynamic SSR routes (admin pages, API routes) depend on it.
 
-**How to check**: After deploying, visit a variant page that was recently added. If it returns 500, check Cloud Function logs:
+**How to check**: After deploying, check Cloud Function logs — there should be NO `ERR_MODULE_NOT_FOUND` errors:
 ```bash
 firebase functions:log --only firebase-frameworks-nicer-systems-ssrnicersystems
 ```
-Look for `ERR_MODULE_NOT_FOUND` with a hashed package name.
 
 ---
 
-### P9: Admin login can fail in production if session creation assumes injected service-account secrets
+### P9: Admin login can fail in production if session creation assumes injected service-account secrets — RESOLVED
 
 **Pattern**: Client Firebase auth succeeds, but `/api/auth/session` returns `401` on the live site because the deployed SSR backend tries to initialize Firebase Admin only from `FIREBASE_PRIVATE_KEY`/`FIREBASE_CLIENT_EMAIL`.
 
-**Rule**: Firebase Admin bootstrap used by SSR/auth routes must support two modes:
+**Status**: **RESOLVED** (2026-03-21). Firebase Admin SDK in `lib/firebase/admin.ts` now supports dual-mode initialization:
 1. Local/dev: explicit service-account env vars from `.env.local`
-2. Deployed Firebase/GCP runtime: application default credentials with `projectId`
+2. Deployed Firebase/GCP runtime: application default credentials with `projectId` only
 
-**Past occurrence**: 2026-03-13 admin login on `nicersystems.com` showed `Failed to create session` after successful client auth, while invalid credentials still surfaced as Firebase `auth/invalid-credential`.
+Additionally, the login page (`app/admin/login/page.tsx`) retries session creation with a force-refreshed token on failure, and the session endpoint (`app/api/auth/session/route.ts`) returns specific error codes (`TOKEN_EXPIRED`, `INVALID_CREDENTIALS`) for client-side retry logic.
 
-**How to check**:
-```bash
-firebase functions:log --only firebase-frameworks-nicer-systems-ssrnicersystems
-```
-Then submit a valid admin login and confirm there is no `/api/auth/session` `401` failure.
+**Past occurrence**: 2026-03-13 admin login on `nicersystems.com` showed `Failed to create session` after successful client auth. Fixed and verified working 2026-03-21.
 
 ---
 
@@ -217,6 +210,15 @@ Then submit a valid admin login and confirm there is no `/api/auth/session` `401
 | BUG-019 | `confirming` phase loops on questions | `looksLikeQuestion()` kept agent in confirming | Expanded affirm regex to match more patterns | `conversation.ts` |
 | BUG-020 | 5+ docs stale after code changes | No process to update docs with code | Created update process (Pattern P5) | 10 doc files |
 | BUG-021 | 5 new variant pages return 500 | Turbopack hashes `firebase-admin` package name in SSR bundle; variants seeded after deploy need dynamic SSR which crashes | Redeployed so all 6 variants are statically pre-rendered via `generateStaticParams()` | Firestore data + redeploy |
+
+### Post-QA Fixes (2026-03-21)
+
+| ID | Issue | Root Cause | Fix | Files Changed |
+|----|-------|-----------|-----|---------------|
+| BUG-022 | Admin login fails in production (401 on session creation) | Firebase Admin SDK required service account env vars not available in Cloud Functions runtime | Dual-mode Admin SDK init: service account creds OR GCP application default credentials | `lib/firebase/admin.ts`, `app/admin/login/page.tsx`, `app/api/auth/session/route.ts` |
+| BUG-023 | All dynamic SSR routes return 500 (ERR_MODULE_NOT_FOUND) | Turbopack hashes `firebase-admin` to `firebase-admin-a14c8a5423a75469` despite `serverExternalPackages` | Predeploy script patches hashed names back to real package name in both `.next/` and `.firebase/` staging | `scripts/fix-turbopack-externals.js`, `firebase.json`, `package.json` |
+| BUG-024 | Session endpoint returns generic error on all failures | No error differentiation between expired tokens and invalid credentials | Session route returns specific error codes (`TOKEN_EXPIRED`, `INVALID_CREDENTIALS`) with server-side logging | `app/api/auth/session/route.ts` |
+| BUG-025 | Login race condition with stale auth state | `signOut()` not awaited before new `signIn()`, causing token mismatch | Login page awaits stale auth cleanup; retries session creation with force-refreshed token | `app/admin/login/page.tsx` |
 
 ---
 

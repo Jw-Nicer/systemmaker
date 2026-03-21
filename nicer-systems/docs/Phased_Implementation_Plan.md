@@ -1,5 +1,5 @@
 # Phased Implementation Plan
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-21
 
 ## Phase 0 — Foundations ✅ COMPLETE
 **Outcome:** Repo, stack, environments, design tokens, analytics scaffolding.
@@ -133,6 +133,26 @@
 - ✅ Booking modal opens from nav and hero CTAs
 - ✅ 6 industry variant pages render at their respective URLs
 - ✅ All nav anchor links (#pricing, #faq) scroll to correct sections
+
+---
+
+## Phase 6 — Auth & Deploy Fixes ✅ COMPLETE
+**Outcome:** Admin portal fully functional in production. Turbopack SSR bundling issue resolved.
+
+### Deliverables
+- ✅ Dual-mode Firebase Admin SDK init (`lib/firebase/admin.ts`): service account creds locally, GCP application default credentials in production
+- ✅ Login resilience (`app/admin/login/page.tsx`): await stale auth cleanup, retry session creation with force-refreshed token
+- ✅ Session endpoint error codes (`app/api/auth/session/route.ts`): `TOKEN_EXPIRED` vs `INVALID_CREDENTIALS` with server-side logging
+- ✅ Turbopack predeploy fix (`scripts/fix-turbopack-externals.js`): patches hashed `firebase-admin` module names in SSR bundles before upload
+- ✅ CSP security headers + Permissions-Policy on all routes (`next.config.ts`)
+- ✅ Admin dashboard Suspense loading with skeleton UI (`app/admin/(authenticated)/page.tsx`, `loading.tsx`)
+- ✅ Firebase Admin SDK init tests (`tests/firebase-admin-init.test.ts`)
+
+### Exit criteria
+- ✅ Admin login works on production (`nicersystems.com/admin/login`)
+- ✅ Session endpoint returns 401 (not 500) for invalid tokens
+- ✅ Cloud Function logs show no `ERR_MODULE_NOT_FOUND` errors
+- ✅ All dynamic SSR routes (admin, API) work in production
 
 ---
 
