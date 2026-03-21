@@ -476,17 +476,39 @@ export async function* generateConversationalResponse(
   }
 
   try {
-    const result = await model.generateContent(prompt);
-    let text = result.response.text()?.trim() ?? "";
-    if (!text) return;
+    const result = await model.generateContentStream(prompt);
+    const chunks: string[] = [];
+    let totalLength = 0;
 
-    // Enforce response size limit
-    if (text.length > MAX_RESPONSE_LENGTH) {
-      text = text.slice(0, MAX_RESPONSE_LENGTH);
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (!text) continue;
+
+      // Enforce response size limit across all chunks
+      if (totalLength + text.length > MAX_RESPONSE_LENGTH) {
+        const remaining = MAX_RESPONSE_LENGTH - totalLength;
+        if (remaining > 0) {
+          const trimmed = text.slice(0, remaining);
+          chunks.push(trimmed);
+          yield trimmed;
+        }
+        break;
+      }
+
+      chunks.push(text);
+      totalLength += text.length;
+      yield text;
     }
 
-    assertSafeAgentText(text, `conversation:${phase}`);
-    yield text;
+    // Run safety check on the full assembled response after streaming
+    const fullText = chunks.join("");
+    if (fullText) {
+      try {
+        assertSafeAgentText(fullText, `conversation:${phase}`);
+      } catch {
+        console.error("Post-stream safety check failed — content already sent");
+      }
+    }
   } catch {
     console.error("Conversation safety fallback triggered");
     yield buildSafeConversationFallback(phase);

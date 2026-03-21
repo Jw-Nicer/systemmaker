@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PlanDisplay } from "@/components/marketing/PlanDisplay";
 import { SectionRefiner } from "@/components/marketing/SectionRefiner";
 import type { PreviewPlan } from "@/types/preview-plan";
@@ -18,12 +18,21 @@ interface PlanWithRefineProps {
 export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
   const [refiningSection, setRefiningSection] = useState<RefineSectionKey | null>(null);
   const [currentPlan, setCurrentPlan] = useState(plan);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => clearTimeout(saveTimerRef.current);
+  }, []);
 
   function handleRefined(sectionKey: RefineSectionKey, newContent: string) {
     const parsed = JSON.parse(newContent) as unknown;
     const planSection = mapRefineSectionKeyToPlanSection(sectionKey);
     setCurrentPlan((prev) => applyRefinedSection(prev, planSection, parsed));
     setRefiningSection(null);
+    setSaveStatus("saved");
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
   }
 
   return (
@@ -34,6 +43,15 @@ export function PlanWithRefine({ plan, planId }: PlanWithRefineProps) {
           showRefine={true}
           onRefineSection={(key) => setRefiningSection(key as RefineSectionKey)}
         />
+
+      {saveStatus === "saved" && (
+        <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-green-400">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Changes saved
+        </div>
+      )}
 
       {refiningSection && (
         <div className="mt-4">
@@ -95,6 +113,40 @@ function getSectionContent(plan: PreviewPlan, sectionKey: RefineSectionKey): str
           (a) => `[${a.priority}] ${a.owner_role}: ${a.action}`
         ),
       ].join("\n\n");
+    case "roadmap": {
+      if (!plan.roadmap) return "No roadmap generated yet.";
+      const phases = plan.roadmap.phases
+        .map((p) => {
+          const tasks = p.tasks
+            .map((t) => `- [${t.effort}] ${t.task} (${t.owner_role})`)
+            .join("\n");
+          const deps =
+            p.dependencies.length > 0
+              ? p.dependencies.join(", ")
+              : "none";
+          const quickWins =
+            p.quick_wins.length > 0
+              ? `Quick wins: ${p.quick_wins.join(", ")}`
+              : "";
+          const risks =
+            p.risks.length > 0 ? `Risks: ${p.risks.join(", ")}` : "";
+          return [
+            `Week ${p.week}: ${p.title}`,
+            `Tasks:\n${tasks}`,
+            `Dependencies: ${deps}`,
+            quickWins,
+            risks,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        })
+        .join("\n\n");
+      return [
+        phases,
+        `Critical path: ${plan.roadmap.critical_path}`,
+        `Total estimated weeks: ${plan.roadmap.total_estimated_weeks}`,
+      ].join("\n\n");
+    }
     default:
       return "";
   }
