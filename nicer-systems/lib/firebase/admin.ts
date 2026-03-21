@@ -35,11 +35,19 @@ function getAdminApp(): App {
     clientEmail !== "";
 
   if (hasServiceAccount) {
+    let formattedKey = privateKey;
+    if (formattedKey.startsWith('"') && formattedKey.endsWith('"')) {
+      formattedKey = formattedKey.slice(1, -1);
+    } else if (formattedKey.startsWith("'") && formattedKey.endsWith("'")) {
+      formattedKey = formattedKey.slice(1, -1);
+    }
+    formattedKey = formattedKey.replace(/\\n/g, "\n");
+
     _app = initializeApp({
       credential: cert({
         projectId,
         clientEmail,
-        privateKey: privateKey.replace(/\\n/g, "\n"),
+        privateKey: formattedKey,
       }),
       projectId,
     }) as App;
