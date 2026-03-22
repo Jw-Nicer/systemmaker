@@ -37,7 +37,7 @@ For the current live deploy path, the server runtime should work without requiri
 **Server-side (private):**
 - `FIREBASE_PROJECT_ID` — Firebase Admin SDK project identifier
 - `FIREBASE_CLIENT_EMAIL` — Firebase Admin SDK service account email
-- `FIREBASE_PRIVATE_KEY` — Firebase Admin SDK private key
+- `FIREBASE_PRIVATE_KEY` — Firebase Admin SDK private key (must use `-----BEGIN PRIVATE KEY-----` header; wrapping quotes are auto-stripped by `admin.ts`)
 - `GOOGLE_GEMINI_API_KEY` — AI agent chain (Gemini API)
 - `RESEND_API_KEY` — Email delivery (nurture, notifications, plan delivery)
 - `ADMIN_EMAIL` — Recipient for admin notification emails

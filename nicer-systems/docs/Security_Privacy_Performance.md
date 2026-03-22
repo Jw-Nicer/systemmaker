@@ -1,5 +1,5 @@
 # Security, Privacy, Performance
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-21
 
 ## Security
 - Admin auth required (Firebase Auth email/password + HTTP-only session cookies)
@@ -10,6 +10,10 @@
 - Agent outputs filtered to avoid secrets, impersonation, or unsafe claims
 - Lead creation restricted to specific fields only (Firestore rules)
 - No exposed Firebase Admin credentials on client side
+- Firebase Admin SDK private key parsing strips wrapping quotes and normalizes `\n` escape sequences
+- Dual-mode Admin SDK init: service account creds locally, GCP application default credentials in production
+- Session endpoint surfaces specific error codes (`TOKEN_EXPIRED`, `INVALID_CREDENTIALS`) for debugging
+- CSP security headers + Permissions-Policy on all routes
 
 ## Privacy
 - Minimal PII: name, email, company

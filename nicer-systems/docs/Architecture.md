@@ -36,7 +36,7 @@ Visitor → Agent chat → Preview Plan → Shareable URL + Email delivery
 - Theme tokens (CSS variables in globals.css)
 - Analytics event library (PostHog via lib/analytics.ts)
 - Validation schemas (Zod via lib/validation.ts)
-- Firebase Admin SDK (server-only singletons via lib/firebase/admin.ts)
+- Firebase Admin SDK (server-only singletons via lib/firebase/admin.ts — dual-mode init with key format normalization)
 - UI primitives (Button, Input, Badge, GlassCard, GlitchText, GlowLine, SectionHeading)
 
 ## Deployment

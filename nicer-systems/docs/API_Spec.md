@@ -1,11 +1,13 @@
 # API Spec (App Routes)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
+**Doc Date:** 2026-02-27 | **Updated:** 2026-03-21
 
 ## Auth endpoints
 - POST /api/auth/session
   - body: {idToken} (Firebase ID token)
   - sets HTTP-only session cookie
   - returns: 200
+  - error responses: 401 with `{error, code}` — codes: `TOKEN_EXPIRED`, `INVALID_CREDENTIALS`
+  - error message includes underlying cause for debugging
 
 - POST /api/auth/signout
   - clears session cookie

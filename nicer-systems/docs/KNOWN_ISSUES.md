@@ -168,6 +168,22 @@ Additionally, the login page (`app/admin/login/page.tsx`) retries session creati
 
 ---
 
+### P10: FIREBASE_PRIVATE_KEY format errors in .env.local
+
+**Pattern**: When copying the Firebase service account private key into `.env.local`, the key header can get mangled (e.g., `-----PRIVATE KEY-----` instead of `-----BEGIN PRIVATE KEY-----`), the variable name can get corrupted (e.g., `FIREBASE_PRIVATE_KEYBEGIN`), or extra wrapping quotes can be added.
+
+**Rule**: The `.env.local` entry must be:
+1. Variable name: `FIREBASE_PRIVATE_KEY` (not `KEYBEGIN` or other variants)
+2. Header: `-----BEGIN PRIVATE KEY-----` (must include `BEGIN`)
+3. Footer: `-----END PRIVATE KEY-----`
+4. Value wrapped in double quotes with `\n` for newlines
+
+**Current safeguard**: `lib/firebase/admin.ts` `getAdminApp()` strips wrapping `"` or `'` quotes and replaces `\\n` with real newlines before passing to `cert()`. However, a missing `BEGIN` in the header will still cause auth failures.
+
+**How to check**: Run `node -e "require('dotenv').config({path:'.env.local'}); const k=process.env.FIREBASE_PRIVATE_KEY; console.log('starts:', k?.substring(0,30)); console.log('ends:', k?.substring(k.length-30));"` — should show `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`.
+
+---
+
 ### P7: QA tester false positives on components that render differently than expected
 
 **Pattern**: Automated QA (ChatGPT Agent mode) marks sections as "FAIL/absent" when they render with different styling, naming, or structure than what the spec describes.
@@ -219,6 +235,8 @@ Additionally, the login page (`app/admin/login/page.tsx`) retries session creati
 | BUG-023 | All dynamic SSR routes return 500 (ERR_MODULE_NOT_FOUND) | Turbopack hashes `firebase-admin` to `firebase-admin-a14c8a5423a75469` despite `serverExternalPackages` | Predeploy script patches hashed names back to real package name in both `.next/` and `.firebase/` staging | `scripts/fix-turbopack-externals.js`, `firebase.json`, `package.json` |
 | BUG-024 | Session endpoint returns generic error on all failures | No error differentiation between expired tokens and invalid credentials | Session route returns specific error codes (`TOKEN_EXPIRED`, `INVALID_CREDENTIALS`) with server-side logging | `app/api/auth/session/route.ts` |
 | BUG-025 | Login race condition with stale auth state | `signOut()` not awaited before new `signIn()`, causing token mismatch | Login page awaits stale auth cleanup; retries session creation with force-refreshed token | `app/admin/login/page.tsx` |
+| BUG-026 | Admin SDK fails to parse private key with wrapping quotes | `.env.local` `FIREBASE_PRIVATE_KEY` can have extra `"` or `'` wrapping from copy-paste; header was `-----PRIVATE KEY-----` instead of `-----BEGIN PRIVATE KEY-----` | `getAdminApp()` now strips wrapping quotes before replacing `\\n`; `.env.local` key header corrected | `lib/firebase/admin.ts`, `.env.local` |
+| BUG-027 | Session error message is generic "Failed to create session" | Session endpoint swallowed actual error details | Error message now includes the underlying cause (`Failed to create session: <message>`) | `app/api/auth/session/route.ts` |
 
 ---
 
