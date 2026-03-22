@@ -33,7 +33,7 @@
 - ✅ Shareable preview plans (public URLs)
 - ✅ Plan section refinement with version history
 - ✅ Performance optimization pass
-- ❌ Guided audit wizard — **deferred**
+- ✅ Guided audit wizard — fully deployed (4-step wizard + API endpoint)
 - ❌ Proposal generator — **deferred**
 - ❌ Account-based follow-ups — **deferred**
 

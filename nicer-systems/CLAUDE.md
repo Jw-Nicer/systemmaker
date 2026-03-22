@@ -268,7 +268,7 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [x] Plan version history (version tracking with diff comparison)
 - [x] Chat UI components (AgentChat, ChatMessages, ChatInput, ChatPlanCard, TypingIndicator)
 - [x] Comprehensive performance optimization pass (animations, CSS, lazy loading)
-- [ ] Guided audit wizard — deferred
+- [x] Guided audit wizard (4-step intake → full 6-stage agent chain → shareable plan)
 - [ ] Proposal generator — deferred
 
 ## What's Built (Phase 5 — QA Remediation, complete)

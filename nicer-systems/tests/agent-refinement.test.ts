@@ -472,7 +472,12 @@ describe("refinePlanSectionStreaming", () => {
   });
 
   test("yields text chunks and returns parsed JSON", async () => {
-    const refined = { clarified_problem: "Streamed result for testing." };
+    const refined = {
+      clarified_problem: "The main bottleneck is manual scheduling across three field teams.",
+      assumptions: ["Team has 3-5 field technicians on any given day"],
+      constraints: ["Budget is limited to existing Google Workspace tools"],
+      suggested_scope: "Automate job assignment from intake form to field tech notification",
+    };
     const jsonStr = JSON.stringify(refined);
     const chunk1 = jsonStr.slice(0, 20);
     const chunk2 = jsonStr.slice(20);

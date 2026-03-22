@@ -3,6 +3,7 @@ import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan, PlanWarning } from "@/types/preview-plan";
 import { buildPlanSummary } from "./conversation";
 import { assertSafeAgentObject } from "./safety";
+import { templateOutputSchemas } from "./schemas";
 
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 500;
@@ -28,6 +29,16 @@ function isTransient(msg: string): boolean {
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
+
+/** Map PlanSectionType → template key for schema lookup */
+const SECTION_TO_TEMPLATE: Record<PlanSectionType, string> = {
+  intake: "intake_agent",
+  workflow: "workflow_mapper",
+  automation: "automation_designer",
+  dashboard: "dashboard_designer",
+  ops_pulse: "ops_pulse_writer",
+  implementation_sequencer: "implementation_sequencer",
+};
 
 const SECTION_LABELS: Record<PlanSectionType, string> = {
   intake: "Suggested Scope",
@@ -184,9 +195,27 @@ export async function* refinePlanSectionStreaming(
     .trim();
 
   try {
-    return JSON.parse(cleaned);
-  } catch {
-    return cleaned;
+    const parsed = JSON.parse(cleaned);
+    assertSafeAgentObject(parsed, `refinement:${section}`);
+
+    // Validate against the section's schema if available
+    const schema = templateOutputSchemas[SECTION_TO_TEMPLATE[section]];
+    if (schema) {
+      const result = schema.safeParse(parsed);
+      if (!result.success) {
+        console.warn(
+          `[refinement] Streamed output failed schema validation for ${section}:`,
+          result.error.issues.slice(0, 3)
+        );
+        throw new Error(`Refined "${SECTION_LABELS[section]}" failed validation`);
+      }
+      return result.data;
+    }
+
+    return parsed;
+  } catch (err) {
+    if (err instanceof SyntaxError) return cleaned;
+    throw err;
   }
 }
 

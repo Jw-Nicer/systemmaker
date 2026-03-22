@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { agentRunSchema } from "@/lib/validation";
 import { runAgentChain } from "@/lib/agents/runner";
+import { savePlan } from "@/lib/firestore/plans";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { computeLeadScore } from "@/lib/leads/scoring";
 import {
@@ -89,10 +90,22 @@ export async function POST(request: Request) {
       }
     );
 
+    // Store plan in Firestore for shareable URL
+    const planId = await savePlan({
+      preview_plan: plan,
+      input_summary: {
+        industry: industry ?? "",
+        bottleneck_summary: (bottleneck ?? "").slice(0, 200),
+      },
+      lead_id: leadRef.id,
+    });
+
     return NextResponse.json(
       {
         preview_plan: plan,
         lead_id: leadRef.id,
+        plan_id: planId,
+        share_url: `/plan/${planId}`,
         steps_completed: completedSteps,
       },
       { status: 200 }

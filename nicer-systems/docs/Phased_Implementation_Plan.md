@@ -101,7 +101,7 @@
 - ✅ Plan section refinement (feedback-driven section updates via Gemini)
 - ✅ Plan version history (version tracking with diff comparison)
 - ✅ Comprehensive performance optimization pass (animations, CSS, lazy loading)
-- ❌ Guided audit wizard — **deferred**
+- ✅ Guided audit wizard — fully deployed (GuidedAuditWizard.tsx + /api/agent/audit + /audit page)
 - ❌ Proposal generator — **deferred**
 
 ### Exit criteria

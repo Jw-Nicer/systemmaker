@@ -220,7 +220,7 @@ Additionally, the login page (`app/admin/login/page.tsx`) retries session creati
 | BUG-013 | IsThisForYou/WhyNotDIY "absent" | QA false positive — sections rendered correctly | No code change needed | None (QA error) |
 | BUG-014 | HowItWorks "missing step" | Spec said 4 steps, code has 3 (correct) | Updated CLAUDE.md spec to say 3 steps | `CLAUDE.md` |
 | BUG-015 | SSE no timeout handling | No timeout on SSE connection | Added 30s timeout with retry prompt | `useSSEChat.ts` |
-| BUG-016 | /audit returns 404 | Deferred feature, route not deployed | Accepted as deferred — not a bug | None |
+| BUG-016 | /audit returns 404 | Was listed as deferred but is now fully deployed | RESOLVED — GuidedAuditWizard + API route + lib/guided-audit.ts all functional | `audit/page.tsx`, `GuidedAuditWizard.tsx`, `api/agent/audit/route.ts` |
 | BUG-017 | AgentDemoForm not structured form | Design decision: chat replaced form | Accepted — chat is better UX | None |
 | BUG-018 | Case study thumbnails missing | Content not uploaded | Content task — not a code bug | None |
 | BUG-019 | `confirming` phase loops on questions | `looksLikeQuestion()` kept agent in confirming | Expanded affirm regex to match more patterns | `conversation.ts` |
