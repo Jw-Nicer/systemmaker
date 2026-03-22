@@ -1,5 +1,28 @@
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import assert from "node:assert/strict";
+
+// Mock firebase-admin so enforceRateLimit falls back to in-memory
+vi.mock("firebase-admin/app", () => ({
+  initializeApp: () => ({ name: "test" }),
+  getApps: () => [],
+  cert: (v: unknown) => v,
+}));
+vi.mock("firebase-admin/auth", () => ({
+  getAuth: () => ({}),
+}));
+vi.mock("firebase-admin/firestore", () => ({
+  getFirestore: () => ({
+    collection: () => ({
+      doc: () => ({
+        get: () => Promise.reject(new Error("no firestore in test")),
+      }),
+      add: () => Promise.resolve({ id: "test" }),
+    }),
+    runTransaction: () => Promise.reject(new Error("no firestore in test")),
+  }),
+  FieldValue: { serverTimestamp: () => null, increment: (n: number) => n },
+}));
+
 import {
   POST,
   getActiveSSEConnectionCount,
