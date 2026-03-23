@@ -21,6 +21,78 @@ const MAX_FIELD_LENGTH = 2000;
 const MAX_RESPONSE_LENGTH = 10_000; // Max chars for a single conversational response
 
 // ---------------------------------------------------------------------------
+// Industry probing — contextual follow-ups per industry
+// ---------------------------------------------------------------------------
+
+interface IndustryProbing {
+  common_bottlenecks: string[];
+  common_tools: string[];
+  probing_angles: string[];
+}
+
+const INDUSTRY_PROBING: Record<string, IndustryProbing> = {
+  construction: {
+    common_bottlenecks: ["field crew scheduling and dispatch", "job costing and change order tracking", "permit and inspection tracking", "subcontractor coordination", "daily log and progress reporting"],
+    common_tools: ["Procore", "Buildertrend", "CoConstruct", "QuickBooks", "spreadsheets", "text/WhatsApp groups"],
+    probing_angles: ["How do you track jobs from estimate to closeout?", "Where does info get lost between field and office?", "How do change orders flow through your process?"],
+  },
+  healthcare: {
+    common_bottlenecks: ["patient intake and paperwork", "appointment scheduling and no-shows", "insurance verification and prior auth", "referral tracking", "compliance documentation"],
+    common_tools: ["Epic", "Athenahealth", "DrChrono", "SimplePractice", "fax machines", "paper forms"],
+    probing_angles: ["What happens between a patient calling in and being seen?", "Where does staff spend the most time on admin?", "How do referrals get tracked once they leave your office?"],
+  },
+  "property management": {
+    common_bottlenecks: ["tenant communication and requests", "maintenance work order tracking", "lease renewal management", "rent collection follow-up", "vendor coordination for repairs"],
+    common_tools: ["AppFolio", "Buildium", "Rent Manager", "Yardi", "spreadsheets", "email"],
+    probing_angles: ["How do maintenance requests flow from tenant to vendor to completion?", "What happens when a lease is approaching renewal?", "Where do work orders get stuck or lost?"],
+  },
+  staffing: {
+    common_bottlenecks: ["candidate sourcing and screening", "timesheet collection and approval", "client job order management", "onboarding documentation", "payroll reconciliation"],
+    common_tools: ["Bullhorn", "JobDiva", "Avionté", "spreadsheets", "email"],
+    probing_angles: ["What does your process look like from job order to placement?", "How do timesheets get collected, approved, and sent to payroll?", "Where do candidates fall through the cracks?"],
+  },
+  legal: {
+    common_bottlenecks: ["client intake and conflict checks", "document review and drafting", "billing and time tracking", "deadline and statute tracking", "case file organization"],
+    common_tools: ["Clio", "MyCase", "PracticePanther", "NetDocuments", "Outlook", "Excel"],
+    probing_angles: ["What does new client intake look like end to end?", "How do attorneys track deadlines and key dates?", "Where does time tracking break down?"],
+  },
+  "home services": {
+    common_bottlenecks: ["dispatching and routing", "estimate-to-invoice workflow", "customer follow-up after service", "parts and inventory tracking", "review and referral collection"],
+    common_tools: ["ServiceTitan", "Housecall Pro", "Jobber", "QuickBooks", "paper invoices"],
+    probing_angles: ["How does a job move from the call to completion?", "What happens between finishing a job and getting paid?", "How do you handle callbacks or warranty work?"],
+  },
+  logistics: {
+    common_bottlenecks: ["dispatch and route optimization", "proof of delivery tracking", "driver communication", "load planning and dock scheduling", "invoice reconciliation"],
+    common_tools: ["TMS software", "spreadsheets", "WhatsApp groups", "QuickBooks", "EDI systems"],
+    probing_angles: ["How do loads get assigned to drivers today?", "What visibility do you have once a truck leaves the yard?", "Where do billing disputes come from?"],
+  },
+  dental: {
+    common_bottlenecks: ["patient scheduling and recall", "insurance verification", "treatment plan follow-up", "front desk workflow", "new patient onboarding"],
+    common_tools: ["Dentrix", "Eaglesoft", "Open Dental", "Weave", "paper charts"],
+    probing_angles: ["What does your new patient flow look like from first call to first appointment?", "How do you handle treatment plan acceptance and follow-up?", "Where does insurance verification slow things down?"],
+  },
+};
+
+const INDUSTRY_ALIASES: Record<string, string> = {
+  plumbing: "home services", hvac: "home services", electrical: "home services",
+  landscaping: "home services", roofing: "home services", "pest control": "home services",
+  cleaning: "home services", "auto repair": "home services", salon: "home services", spa: "home services",
+  trucking: "logistics", distribution: "logistics", wholesale: "logistics",
+  moving: "logistics", storage: "logistics",
+  "real estate": "property management",
+  medical: "healthcare", "senior care": "healthcare", veterinary: "healthcare",
+  fitness: "healthcare", childcare: "healthcare",
+};
+
+function getIndustryProbing(industry: string): IndustryProbing | undefined {
+  const lower = industry.toLowerCase().trim();
+  if (INDUSTRY_PROBING[lower]) return INDUSTRY_PROBING[lower];
+  const alias = INDUSTRY_ALIASES[lower];
+  if (alias && INDUSTRY_PROBING[alias]) return INDUSTRY_PROBING[alias];
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -190,8 +262,11 @@ export function detectPhase(
     if (hasRevisionSignal(lastUserMessage)) return "gathering";
     const affirm = /\b(yes|yeah|yep|sure|go|ready|build|do it|let's go|looks good|correct|right|proceed|ok|okay|sounds good|that's right|that works|perfect|awesome|great|good|fine|absolutely|definitely|for sure)\b/i;
     if (affirm.test(lastUserMessage)) return "building";
+    // Safety valve: auto-advance to building after 12+ total messages to prevent
+    // confirming loops. By message 12 we have had at least 3-4 confirming rounds.
+    if (messageCount > 12) return "building";
     if (looksLikeQuestion(lastUserMessage)) return "confirming";
-    // If not clearly a question or revision, treat as affirmation after 2+ confirming rounds
+    // If not clearly a question or revision, treat as affirmation
     return "confirming";
   }
 
@@ -228,8 +303,9 @@ export function missingFields(extracted: ExtractedIntake): string[] {
 // ---------------------------------------------------------------------------
 
 const SYSTEM_IDENTITY = `You are the Nicer Systems AI consultant. You help American businesses automate admin-heavy workflows.
-Your tone is clear, confident, practical, and business-friendly. No hype, no jargon.
-You ask short, specific questions — one at a time. Keep responses to 2-3 sentences max during intake.`;
+Your tone is clear, confident, practical, and business-friendly. No hype, no jargon. No filler phrases like "Great question" or "That's interesting."
+You ask short, specific questions — one at a time. Keep responses to 2-3 sentences max during intake.
+When someone gives a one-word or vague answer, ask a brief clarifying follow-up instead of moving on. When someone shares their industry, react with a relevant observation before asking the next question.`;
 
 function buildGatheringPrompt(
   history: ChatMessage[],
@@ -242,23 +318,38 @@ function buildGatheringPrompt(
     .map(([k, v]) => `- ${k}: ${v}`)
     .join("\n");
 
+  // Inject industry-specific context when available
+  let industryContext = "";
+  if (extracted.industry) {
+    const probing = getIndustryProbing(extracted.industry);
+    if (probing) {
+      industryContext = `
+## Industry context for ${extracted.industry}
+Common bottlenecks in this industry: ${probing.common_bottlenecks.join(", ")}
+Common tools: ${probing.common_tools.join(", ")}
+Good probing questions: ${probing.probing_angles.join(" / ")}
+Use this context to ask smarter, more specific follow-ups. Do NOT list these — pick ONE that fits what the visitor has already said.`;
+    }
+  }
+
   return `${SYSTEM_IDENTITY}
 
 ## Your task
-You are gathering information to build a Preview Plan for this visitor. Ask questions conversationally — one at a time.
+You are gathering information to build a Preview Plan for this visitor. Have a real conversation — not an intake form.
 
 ## Already collected
 ${collected || "(nothing yet)"}
 
 ## Still needed
 ${missing.map((f) => `- ${f}`).join("\n")}
+${industryContext}
 
 ## Field descriptions
 - industry: What industry or type of business they run (e.g., "property management", "dental clinic", "logistics")
-- bottleneck: Their main operational bottleneck or pain point — the specific process that wastes time
+- bottleneck: Their main operational bottleneck or pain point — the specific process that wastes time, causes errors, or blocks throughput
 - current_tools: What software/tools they currently use (e.g., "Google Sheets, email, QuickBooks")
-- urgency: How urgent this is (low/medium/high/urgent) — optional, ask if natural
-- volume: Scale context like "50 tenants" or "200 orders/week" — optional, ask if natural
+- urgency: How urgent this is (low/medium/high/urgent) — optional, only ask if it comes up naturally
+- volume: Scale context like "50 tenants" or "200 orders/week" — optional, only ask if it comes up naturally
 
 ## Conversation so far
 ${formatHistory(history)}
@@ -266,13 +357,16 @@ ${formatHistory(history)}
 Visitor: ${userMessage}
 
 ## Instructions
-1. If this is the first message, greet them warmly and ask about their industry.
-2. If they provided info, acknowledge it briefly and ask for the NEXT missing field.
-3. Be conversational — don't list all questions at once.
-4. If they give multiple pieces of info in one message, acknowledge all of them.
-5. Once you have industry, bottleneck, and current_tools, DON'T ask more — the system will handle the transition.
-6. If the visitor shares their email or name at any point, acknowledge it naturally.
-7. Respond ONLY with your next conversational message. No JSON, no markdown headers.`;
+1. If this is the first message, greet them warmly and ask what kind of business they run and what brings them here. Keep it to one natural question.
+2. When they share their industry, react with a brief observation that shows you understand their world (e.g., "Construction — scheduling across crews and subs is usually where things break down"). Then ask about their specific bottleneck using industry context if available.
+3. When they describe their bottleneck, reflect it back in sharper language and ask what tools they are working with now. If they mention something vague like "everything is manual", ask a clarifying question like "Are we talking about scheduling, invoicing, or something else?"
+4. If they give a one-word or vague answer, do not just move to the next field. Ask a brief clarifying follow-up that shows you are listening (e.g., "When you say scheduling is the issue — is that dispatching crews to jobs, or tracking who is where?").
+5. If they give multiple pieces of info in one message, acknowledge all of them naturally.
+6. Once you have industry, bottleneck, and current_tools, stop asking. The system handles the transition.
+7. If the visitor shares their email or name, acknowledge it naturally without making it the focus.
+8. Keep every response to 2-3 sentences max. Sound like a sharp consultant, not a chatbot.
+9. Never say "Great question" or "That's a great point." Just answer directly.
+10. Respond ONLY with your next conversational message. No JSON, no markdown headers, no bullet lists.`;
 }
 
 function buildConfirmingPrompt(
@@ -280,17 +374,29 @@ function buildConfirmingPrompt(
   extracted: ExtractedIntake,
   userMessage: string
 ): string {
+  // Build a contextual insight hint based on industry + bottleneck
+  let insightHint = "";
+  if (extracted.industry && extracted.bottleneck) {
+    const probing = getIndustryProbing(extracted.industry);
+    if (probing) {
+      insightHint = `
+## Insight hint
+Based on your knowledge of ${extracted.industry} operations and their stated bottleneck ("${extracted.bottleneck}"), offer ONE brief observation about why this problem tends to persist — e.g., "Most ${extracted.industry} teams I see try to solve this with more people instead of fixing the handoff between [X] and [Y]." Keep it to one sentence.`;
+    }
+  }
+
   return `${SYSTEM_IDENTITY}
 
 ## Your task
-Summarize what you understand about this visitor's situation, respond to any clarification in their latest message, and ask if they're ready for you to build their Preview Plan.
+You have gathered enough information. Confirm your understanding, demonstrate insight, and ask if they are ready for you to build the Preview Plan.
 
 ## Collected information
-- Industry: ${extracted.industry}
-- Bottleneck: ${extracted.bottleneck}
-- Current tools: ${extracted.current_tools}
+- Industry: ${extracted.industry ?? "Not specified"}
+- Bottleneck: ${extracted.bottleneck ?? "Not specified"}
+- Current tools: ${extracted.current_tools ?? "Not specified"}
 ${extracted.urgency ? `- Urgency: ${extracted.urgency}` : ""}
 ${extracted.volume ? `- Volume: ${extracted.volume}` : ""}
+${insightHint}
 
 ## Conversation so far
 ${formatHistory(history)}
@@ -299,12 +405,14 @@ ${formatHistory(history)}
 ${userMessage}
 
 ## Instructions
-1. Write a brief summary of their situation.
-2. If their latest message adds detail or asks a clarification question, address it directly before asking to proceed.
-3. If their latest message sounds uncertain, invite corrections instead of pushing straight to build.
-4. End with a clear next step like "Ready for me to build your Preview Plan?" when appropriate.
-5. Be warm and confident. Make them feel understood.
-6. Respond ONLY with your conversational message. No JSON.`;
+1. Do NOT just list back what they told you. Instead, restate their situation as a narrative: "So your team is dealing with [bottleneck] across [context], and right now you are managing it with [tools]."
+2. Add one sentence of insight — a brief observation about WHY this kind of problem persists or what you typically see in similar businesses. This builds trust.
+3. If their latest message adds detail or asks a question, address it directly before moving to the confirmation ask.
+4. If their message sounds uncertain or vague, invite corrections: "Does that match what you are dealing with, or should I adjust anything?"
+5. If they seem ready, close with: "Want me to build your Preview Plan? It takes about 30 seconds."
+6. Keep total response to 3-4 sentences. Sound like a consultant who has seen this problem before.
+7. Never use bullet points or numbered lists. Write in natural paragraphs.
+8. Respond ONLY with your conversational message. No JSON, no markdown.`;
 }
 
 function buildFollowUpPrompt(
@@ -316,15 +424,15 @@ function buildFollowUpPrompt(
   return `${SYSTEM_IDENTITY}
 
 ## Your task
-The visitor's Preview Plan has been delivered. Answer their follow-up questions about it.
+The visitor's Preview Plan has been delivered. Answer their follow-up questions with specificity, connecting your answers to their actual plan sections.
 
 ## Their situation
-- Industry: ${extracted.industry}
-- Bottleneck: ${extracted.bottleneck}
-- Current tools: ${extracted.current_tools}
+- Industry: ${extracted.industry ?? "Unknown"}
+- Bottleneck: ${extracted.bottleneck ?? "Not specified"}
+- Current tools: ${extracted.current_tools ?? "Not specified"}
 
-## Plan summary
-${planSummary}
+## Plan sections delivered
+${planSummary || "(Plan summary not available)"}
 
 ## Conversation so far
 ${formatHistory(history)}
@@ -332,11 +440,15 @@ ${formatHistory(history)}
 Visitor: ${userMessage}
 
 ## Instructions
-1. Answer their question helpfully and specifically, referencing their plan.
-2. Keep responses concise but thorough (3-5 sentences).
-3. If they ask about implementation, mention that booking a scoping call is the best next step.
-4. If they want to provide their email to receive the plan, encourage them to do so.
-5. Respond ONLY with your conversational message. No JSON.`;
+1. When answering a question, reference the specific plan section it relates to. For example: "The workflow section mapped out 5 stages for your process — the automation trigger on stage 3 is where you would eliminate the manual handoff you mentioned."
+2. If they ask about implementation timeline, reference the plan's implementation phases if available, and mention that a scoping call is the next step to lock in the sequence.
+3. If they ask about cost or pricing, do NOT quote prices. Say that scope and pricing are set during the scoping call based on the plan.
+4. If they ask about a specific section (workflow, automations, KPIs, alerts), give a concise explanation of what that section recommends and WHY it matters for their bottleneck.
+5. If they want to share the plan or provide their email, encourage them to do so.
+6. If they ask something outside the plan's scope, acknowledge it and redirect: "That is worth covering in the scoping call so we can factor it into the implementation plan."
+7. Keep responses to 3-5 sentences. Be specific, not generic.
+8. Never say "I'm glad you asked" or similar filler. Just answer directly.
+9. Respond ONLY with your conversational message. No JSON, no markdown headers.`;
 }
 
 // ---------------------------------------------------------------------------
