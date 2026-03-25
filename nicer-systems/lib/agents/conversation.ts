@@ -16,8 +16,38 @@ import {
   buildSafeConversationFallback,
 } from "./safety";
 import { createTrace, startSpan, endSpan } from "./tracing";
-import { recallVisitorContext, buildMemoryPromptSection } from "./memory";
-import type { MemoryContext } from "./memory";
+// MemoryContext type and buildMemoryPromptSection are inlined here
+// to avoid importing memory.ts (which pulls in firebase-admin via
+// dynamic import — breaks client component bundling).
+// The actual memory operations (recallVisitorContext, storeMemory)
+// are imported only in server-side route handlers.
+
+export interface MemoryContext {
+  isReturningVisitor: boolean;
+  contextSummary: string;
+  preFilled: {
+    industry?: string;
+    bottleneck?: string;
+    current_tools?: string;
+  };
+}
+
+function buildMemoryPromptSection(context: MemoryContext): string {
+  if (!context.isReturningVisitor || !context.contextSummary) return "";
+
+  return `
+---
+## Returning visitor context (from agent memory)
+${context.contextSummary}
+
+Use this context to personalize your response:
+- Greet them by name if known
+- Reference their industry without re-asking
+- Acknowledge their previous plan if they generated one
+- Pre-fill fields you already know (but confirm they're still accurate)
+- Do NOT repeat questions about information you already have
+---`;
+}
 
 const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
   "industry",
