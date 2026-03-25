@@ -76,9 +76,10 @@ export function BookingModal({
               </div>
               <button
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[#65705d] transition-colors hover:bg-[#e8e2d4] hover:text-[#1d2318]"
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8e2d4] text-[#1d2318] transition-colors hover:bg-[#d9d0be] hover:text-[#0a0d08]"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>

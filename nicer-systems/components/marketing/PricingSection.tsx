@@ -18,7 +18,7 @@ export async function PricingSection({
   const tiers = offersData ?? await getPublishedOffers();
 
   return (
-    <section id="pricing" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
+    <section id="pricing" className="scroll-mt-20 border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mb-12 max-w-3xl sm:mb-16">
           <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-muted)] sm:tracking-[0.3em]">
@@ -130,7 +130,7 @@ export async function PricingSection({
                 </ul>
 
                 <Link
-                  href="/contact"
+                  href={/audit/i.test(tier.cta) ? "/audit" : "/contact"}
                   className={`block text-center py-3 rounded-full font-medium text-sm transition-all ${
                     isHighlighted
                       ? "bg-[#f2eadb] text-[#132015] hover:bg-[#f8f4ea] hover:shadow-[0_8px_30px_rgba(242,234,219,0.2)]"

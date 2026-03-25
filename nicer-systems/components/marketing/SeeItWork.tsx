@@ -34,7 +34,7 @@ export function SeeItWork({
   const reducedMotion = useReducedMotion();
 
   return (
-    <section id="see-it-work" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
+    <section id="see-it-work" className="scroll-mt-20 border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

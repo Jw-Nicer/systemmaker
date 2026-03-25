@@ -125,7 +125,7 @@ export function HowItWorks({
   return (
     <section
       id="how-it-works"
-      className="relative overflow-hidden border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 text-[var(--text-heading)] sm:py-24"
+      className="scroll-mt-20 relative overflow-hidden border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 text-[var(--text-heading)] sm:py-24"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(28,54,42,0.20),transparent_20%),radial-gradient(circle_at_20%_50%,rgba(28,54,42,0.10),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(207,188,154,0.14),transparent_30%)]" />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">

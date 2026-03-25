@@ -30,7 +30,7 @@ export async function FAQSection({
   } : null;
 
   return (
-    <section id="faq" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
+    <section id="faq" className="scroll-mt-20 border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">
       {faqJsonLd && (
         <script
           type="application/ld+json"
