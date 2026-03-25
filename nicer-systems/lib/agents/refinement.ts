@@ -1,34 +1,17 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+/**
+ * Refinement Agent — section-level plan refinement via LLM.
+ *
+ * Uses the shared LLM client for unified retry, model fallback, and
+ * observability. All outputs pass through safety guardrails and
+ * schema validation before returning to the caller.
+ */
 import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan, PlanWarning } from "@/types/preview-plan";
 import { buildPlanSummary } from "./conversation";
-import { assertSafeAgentObject } from "./safety";
-import { templateOutputSchemas } from "./schemas";
-
-const MAX_RETRIES = 2;
-const RETRY_BASE_MS = 500;
-const TIMEOUT_MS = 60_000;
-const MAX_OUTPUT_BYTES = 256 * 1024; // 256KB max refinement output
-const MAX_STREAMING_BYTES = 256 * 1024;
-
-function getGeminiClient() {
-  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GOOGLE_GEMINI_API_KEY is not set");
-  return new GoogleGenerativeAI(apiKey);
-}
-
-function getModel() {
-  return process.env.GOOGLE_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-}
-
-function isTransient(msg: string): boolean {
-  const m = msg.toLowerCase();
-  return /429|500|502|503|504|rate limit|quota|timeout|timed out|unavailable|econnreset/.test(m);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
+import { invokeLLM, invokeLLMStreaming, robustJsonParse } from "./llm-client";
+import { enforceOutputSafety } from "./safety";
+import { stageOutputGuardrails } from "./schemas";
+import { createTrace, startSpan, endSpan, finalizeTrace, emitTraceLog } from "./tracing";
 
 /** Map PlanSectionType → template key for schema lookup */
 const SECTION_TO_TEMPLATE: Record<PlanSectionType, string> = {
@@ -108,55 +91,42 @@ export async function refinePlanSection(
   feedback: string,
   fullPlan: PreviewPlan
 ): Promise<{ refined: unknown; summary: string }> {
-  const client = getGeminiClient();
-  const model = client.getGenerativeModel({
-    model: getModel(),
-    generationConfig: { responseMimeType: "application/json" },
+  const trace = createTrace("refinement", {
+    section,
+    feedbackLength: feedback.length,
   });
+  const span = startSpan(trace, `refine:${section}`);
 
   const currentData = getSectionData(fullPlan, section);
   const prompt = buildRefinementPrompt(section, currentData, feedback, fullPlan);
 
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const result = await Promise.race([
-        model.generateContent(prompt),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Refinement timed out")), TIMEOUT_MS)
-        ),
-      ]);
-      const text = result.response.text()?.trim();
+  try {
+    const result = await invokeLLM(prompt, {
+      span,
+      label: `refine:${section}`,
+      responseMimeType: "application/json",
+    });
 
-      if (!text) {
-        throw new Error("Empty response from AI model");
-      }
-      if (new TextEncoder().encode(text).byteLength > MAX_OUTPUT_BYTES) {
-        throw new Error("Refinement response exceeded size limit");
-      }
+    const parsed = robustJsonParse(result.text);
+    enforceOutputSafety(parsed, `refinement:${section}`);
 
-      const cleaned = text
-        .replace(/^```(?:json)?\s*\n?/i, "")
-        .replace(/\n?```\s*$/i, "")
-        .trim();
+    endSpan(span, { status: "completed" });
+    finalizeTrace(trace);
+    emitTraceLog(trace);
 
-  const parsed = JSON.parse(cleaned);
-  assertSafeAgentObject(parsed, `refinement:${section}`);
-
-  return {
-        refined: parsed,
-        summary: `Refined "${SECTION_LABELS[section]}" based on feedback: "${feedback.slice(0, 80)}"`,
-      };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      if (attempt < MAX_RETRIES && isTransient(lastError.message)) {
-        await sleep(RETRY_BASE_MS * 2 ** attempt);
-        continue;
-      }
-    }
+    return {
+      refined: parsed,
+      summary: `Refined "${SECTION_LABELS[section]}" based on feedback: "${feedback.slice(0, 80)}"`,
+    };
+  } catch (err) {
+    endSpan(span, {
+      status: "failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
+    finalizeTrace(trace);
+    emitTraceLog(trace);
+    throw err;
   }
-
-  throw lastError ?? new Error("Refinement failed");
 }
 
 /**
@@ -168,38 +138,37 @@ export async function* refinePlanSectionStreaming(
   feedback: string,
   fullPlan: PreviewPlan
 ): AsyncGenerator<string, unknown, unknown> {
-  const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: getModel() });
+  const trace = createTrace("refinement", {
+    section,
+    feedbackLength: feedback.length,
+    streaming: true,
+  });
+  const span = startSpan(trace, `refine-stream:${section}`);
 
   const currentData = getSectionData(fullPlan, section);
   const prompt = buildRefinementPrompt(section, currentData, feedback, fullPlan);
 
-  const result = await model.generateContentStream(prompt);
   const chunks: string[] = [];
-  let totalBytes = 0;
+  const stream = invokeLLMStreaming(prompt, {
+    span,
+    label: `refine-stream:${section}`,
+  });
 
-  for await (const chunk of result.stream) {
-    const text = chunk.text();
-    if (text) {
-      totalBytes += new TextEncoder().encode(text).byteLength;
-      if (totalBytes > MAX_STREAMING_BYTES) break;
-      chunks.push(text);
-      yield text;
-    }
+  for (;;) {
+    const { value, done } = await stream.next();
+    if (done) break;
+    chunks.push(value);
+    yield value;
   }
 
   const fullText = chunks.join("").trim();
-  const cleaned = fullText
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
 
   try {
-    const parsed = JSON.parse(cleaned);
-    assertSafeAgentObject(parsed, `refinement:${section}`);
+    const parsed = robustJsonParse(fullText);
+    enforceOutputSafety(parsed, `refinement:${section}`);
 
     // Validate against the section's schema if available
-    const schema = templateOutputSchemas[SECTION_TO_TEMPLATE[section]];
+    const schema = stageOutputGuardrails[SECTION_TO_TEMPLATE[section]];
     if (schema) {
       const result = schema.safeParse(parsed);
       if (!result.success) {
@@ -209,12 +178,29 @@ export async function* refinePlanSectionStreaming(
         );
         throw new Error(`Refined "${SECTION_LABELS[section]}" failed validation`);
       }
+      endSpan(span, { status: "completed" });
+      finalizeTrace(trace);
+      emitTraceLog(trace);
       return result.data;
     }
 
+    endSpan(span, { status: "completed" });
+    finalizeTrace(trace);
+    emitTraceLog(trace);
     return parsed;
   } catch (err) {
-    if (err instanceof SyntaxError) return cleaned;
+    if (err instanceof SyntaxError) {
+      endSpan(span, { status: "degraded", error: "JSON parse failed on streamed output" });
+      finalizeTrace(trace);
+      emitTraceLog(trace);
+      return fullText;
+    }
+    endSpan(span, {
+      status: "failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
+    finalizeTrace(trace);
+    emitTraceLog(trace);
     throw err;
   }
 }

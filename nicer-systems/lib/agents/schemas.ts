@@ -1,6 +1,15 @@
 /**
- * Centralized Zod schemas for agent pipeline outputs.
- * Single source of truth — used by runner.ts validation and sendEmailSchema in validation.ts.
+ * Stage Output Guardrails — Zod schemas for agent pipeline outputs.
+ *
+ * Single source of truth for output validation. Each schema defines the
+ * exact structure an agent stage must produce. These are the "output
+ * guardrails" — enforcing structural correctness before safety checks.
+ *
+ * Used by:
+ * - runner.ts (pipeline stage validation)
+ * - self-correction.ts (validation error → correction prompt)
+ * - refinement.ts (refined section validation)
+ * - validation.ts (sendEmailSchema references)
  */
 import { z } from "zod";
 
@@ -144,9 +153,9 @@ export const implementationSequencerOutputSchema = z.object({
   total_estimated_weeks: z.number().min(2).max(12),
 });
 
-// --- Registry: template key → output schema ---
+// --- Stage output guardrails: template key → Zod schema ---
 
-export const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
+export const stageOutputGuardrails: Partial<Record<string, z.ZodTypeAny>> = {
   intake_agent: intakeOutputSchema,
   workflow_mapper: workflowMapperOutputSchema,
   automation_designer: automationDesignerOutputSchema,
@@ -154,3 +163,6 @@ export const templateOutputSchemas: Partial<Record<string, z.ZodTypeAny>> = {
   ops_pulse_writer: opsPulseOutputSchema,
   implementation_sequencer: implementationSequencerOutputSchema,
 };
+
+/** @deprecated Use stageOutputGuardrails */
+export const templateOutputSchemas = stageOutputGuardrails;

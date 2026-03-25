@@ -1,13 +1,23 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+/**
+ * Conversation Agent — multi-phase intake conversation with memory.
+ *
+ * Uses shared LLM client (llm-client.ts) for all model calls, safety module
+ * for output guardrails, tracing for observability, and memory for returning
+ * visitor context.
+ */
 import type {
   ConversationPhase,
   ChatMessage,
   ExtractedIntake,
 } from "@/types/chat";
+import { invokeLLM, invokeLLMStreaming, getFastModel, getPrimaryModel } from "./llm-client";
 import {
-  assertSafeAgentText,
+  enforceTextSafety,
   buildSafeConversationFallback,
 } from "./safety";
+import { createTrace, startSpan, endSpan } from "./tracing";
+import { recallVisitorContext, buildMemoryPromptSection } from "./memory";
+import type { MemoryContext } from "./memory";
 
 const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
   "industry",
@@ -16,7 +26,6 @@ const REQUIRED_FIELDS: (keyof ExtractedIntake)[] = [
 ];
 
 const MAX_CONTEXT_MESSAGES = 20;
-const EXTRACTION_TIMEOUT_MS = 15_000;
 const MAX_FIELD_LENGTH = 2000;
 const MAX_RESPONSE_LENGTH = 10_000; // Max chars for a single conversational response
 
@@ -95,21 +104,6 @@ function getIndustryProbing(industry: string): IndustryProbing | undefined {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getGeminiClient() {
-  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GOOGLE_GEMINI_API_KEY is not set");
-  return new GoogleGenerativeAI(apiKey);
-}
-
-function getModel() {
-  return process.env.GOOGLE_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-}
-
-/** Fast model for simple structured tasks (extraction). */
-function getFastModel() {
-  return "gemini-2.0-flash";
-}
 
 /** Trim history to last N messages to keep context manageable. */
 function trimHistory(messages: ChatMessage[]): ChatMessage[] {
@@ -310,7 +304,8 @@ When someone gives a one-word or vague answer, ask a brief clarifying follow-up 
 function buildGatheringPrompt(
   history: ChatMessage[],
   extracted: ExtractedIntake,
-  userMessage: string
+  userMessage: string,
+  memoryContext?: MemoryContext
 ): string {
   const missing = missingFields(extracted);
   const collected = Object.entries(extracted)
@@ -332,6 +327,9 @@ Use this context to ask smarter, more specific follow-ups. Do NOT list these —
     }
   }
 
+  // Inject memory context for returning visitors
+  const memorySection = memoryContext ? buildMemoryPromptSection(memoryContext) : "";
+
   return `${SYSTEM_IDENTITY}
 
 ## Your task
@@ -343,6 +341,7 @@ ${collected || "(nothing yet)"}
 ## Still needed
 ${missing.map((f) => `- ${f}`).join("\n")}
 ${industryContext}
+${memorySection}
 
 ## Field descriptions
 - industry: What industry or type of business they run (e.g., "property management", "dental clinic", "logistics")
@@ -418,21 +417,25 @@ ${userMessage}
 function buildFollowUpPrompt(
   history: ChatMessage[],
   extracted: ExtractedIntake,
-  planSummary: string,
-  userMessage: string
+  planContext: string,
+  userMessage: string,
+  conversationSummary?: string
 ): string {
   return `${SYSTEM_IDENTITY}
 
 ## Your task
-The visitor's Preview Plan has been delivered. Answer their follow-up questions with specificity, connecting your answers to their actual plan sections.
+The visitor's Preview Plan has been delivered. Answer their follow-up questions with specificity, connecting your answers to their actual plan sections. You have full access to the plan details below — use them to give precise, implementation-specific answers.
 
 ## Their situation
 - Industry: ${extracted.industry ?? "Unknown"}
 - Bottleneck: ${extracted.bottleneck ?? "Not specified"}
 - Current tools: ${extracted.current_tools ?? "Not specified"}
+${extracted.urgency ? `- Urgency: ${extracted.urgency}` : ""}
+${extracted.volume ? `- Scale: ${extracted.volume}` : ""}
+${conversationSummary || ""}
 
-## Plan sections delivered
-${planSummary || "(Plan summary not available)"}
+## Full plan details
+${planContext || "(Plan details not available)"}
 
 ## Conversation so far
 ${formatHistory(history)}
@@ -440,15 +443,16 @@ ${formatHistory(history)}
 Visitor: ${userMessage}
 
 ## Instructions
-1. When answering a question, reference the specific plan section it relates to. For example: "The workflow section mapped out 5 stages for your process — the automation trigger on stage 3 is where you would eliminate the manual handoff you mentioned."
-2. If they ask about implementation timeline, reference the plan's implementation phases if available, and mention that a scoping call is the next step to lock in the sequence.
+1. When answering a question, reference the SPECIFIC plan detail it relates to. Use exact stage names, KPI definitions, automation triggers, and timeline estimates from the plan above. For example: "Stage 3 'Validation Review' is where the automation catches missing fields — the trigger fires on form submission and validates against your required fields list."
+2. If they ask about implementation timeline, reference the EXACT weeks and phases from the roadmap section. Mention quick wins they can do in week 1.
 3. If they ask about cost or pricing, do NOT quote prices. Say that scope and pricing are set during the scoping call based on the plan.
-4. If they ask about a specific section (workflow, automations, KPIs, alerts), give a concise explanation of what that section recommends and WHY it matters for their bottleneck.
+4. If they ask about a specific section (workflow, automations, KPIs, alerts), explain what it recommends using SPECIFIC details from the plan — not generic advice. Reference the actual automation triggers, KPI formulas, stage names, and action items.
 5. If they want to share the plan or provide their email, encourage them to do so.
 6. If they ask something outside the plan's scope, acknowledge it and redirect: "That is worth covering in the scoping call so we can factor it into the implementation plan."
-7. Keep responses to 3-5 sentences. Be specific, not generic.
-8. Never say "I'm glad you asked" or similar filler. Just answer directly.
-9. Respond ONLY with your conversational message. No JSON, no markdown headers.`;
+7. If they reference something from EARLIER in the conversation (before the plan was built), use the conversation summary to recall it.
+8. Keep responses to 3-5 sentences. Be specific, not generic.
+9. Never say "I'm glad you asked" or similar filler. Just answer directly.
+10. Respond ONLY with your conversational message. No JSON, no markdown headers.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -478,11 +482,6 @@ export async function extractIntakeData(
 ): Promise<ExtractedIntake> {
   const heuristic = extractHeuristicIntakeData(userMessage);
   const heuristicMerged = mergeExtractedIntake(existing, heuristic);
-  const client = getGeminiClient();
-  const model = client.getGenerativeModel({
-    model: getFastModel(),
-    generationConfig: { responseMimeType: "application/json" },
-  });
 
   const recentHistory = trimHistory(history)
     .slice(-6)
@@ -500,16 +499,13 @@ ${recentHistory}
 Visitor: ${userMessage}`;
 
   try {
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Extraction timed out")), EXTRACTION_TIMEOUT_MS)
-      ),
-    ]);
-    const text = result.response.text()?.trim();
-    if (!text) return existing;
+    const result = await invokeLLM(prompt, {
+      models: [getFastModel()],
+      responseMimeType: "application/json",
+      label: "conversation:extraction",
+    });
 
-    const cleaned = text
+    const cleaned = result.text
       .replace(/^```(?:json)?\s*\n?/i, "")
       .replace(/\n?```\s*$/i, "")
       .trim();
@@ -553,23 +549,48 @@ Visitor: ${userMessage}`;
 // Conversational response generation (streaming)
 // ---------------------------------------------------------------------------
 
+export interface ConversationContext {
+  /** Plan summary (legacy, for backward compat). */
+  planSummary?: string;
+  /** Detailed plan context (full section details for follow-up accuracy). */
+  detailedPlanContext?: string;
+  /** Memory context for returning visitors. */
+  memoryContext?: MemoryContext;
+  /** Running conversation summary (key facts beyond 20-message window). */
+  conversationSummary?: string;
+  /** Tracked contradictions/corrections. */
+  corrections?: string[];
+}
+
 export async function* generateConversationalResponse(
   phase: ConversationPhase,
   history: ChatMessage[],
   extracted: ExtractedIntake,
   userMessage: string,
-  planSummary?: string
+  planSummaryOrContext?: string | ConversationContext,
+  memoryContext?: MemoryContext
 ): AsyncGenerator<string, void, unknown> {
-  const client = getGeminiClient();
+  // Normalize arguments: support both legacy (string planSummary) and new (ConversationContext)
+  let ctx: ConversationContext = {};
+  if (typeof planSummaryOrContext === "string") {
+    ctx.planSummary = planSummaryOrContext;
+    ctx.memoryContext = memoryContext;
+  } else if (planSummaryOrContext) {
+    ctx = planSummaryOrContext;
+  }
+
   // Use fast model for simple intake questions, full model for follow-up reasoning
-  const modelName = phase === "follow_up" ? getModel() : getFastModel();
-  const model = client.getGenerativeModel({ model: modelName });
+  const modelName = phase === "follow_up" ? getPrimaryModel() : getFastModel();
+
+  // Build conversation summary for context continuity
+  const convSummary = ctx.conversationSummary ||
+    buildConversationSummary(extracted, history, ctx.corrections);
 
   let prompt: string;
 
   switch (phase) {
     case "gathering":
-      prompt = buildGatheringPrompt(history, extracted, userMessage);
+      prompt = buildGatheringPrompt(history, extracted, userMessage, ctx.memoryContext);
       break;
     case "confirming":
       prompt = buildConfirmingPrompt(history, extracted, userMessage);
@@ -578,8 +599,9 @@ export async function* generateConversationalResponse(
       prompt = buildFollowUpPrompt(
         history,
         extracted,
-        planSummary ?? "",
-        userMessage
+        ctx.detailedPlanContext ?? ctx.planSummary ?? "",
+        userMessage,
+        convSummary
       );
       break;
     default:
@@ -588,12 +610,15 @@ export async function* generateConversationalResponse(
   }
 
   try {
-    const result = await model.generateContentStream(prompt);
+    const stream = invokeLLMStreaming(prompt, {
+      models: [modelName],
+      label: `conversation:${phase}`,
+    });
+
     const chunks: string[] = [];
     let totalLength = 0;
 
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
+    for await (const text of stream) {
       if (!text) continue;
 
       // Enforce response size limit across all chunks
@@ -616,7 +641,7 @@ export async function* generateConversationalResponse(
     const fullText = chunks.join("");
     if (fullText) {
       try {
-        assertSafeAgentText(fullText, `conversation:${phase}`);
+        enforceTextSafety(fullText, `conversation:${phase}`);
       } catch {
         console.error("Post-stream safety check failed — content already sent");
       }
@@ -687,4 +712,232 @@ export function buildPlanSummary(plan: {
   }
 
   return parts.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Detailed plan context (for follow-up accuracy)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a detailed plan context for the follow-up phase.
+ *
+ * Unlike buildPlanSummary() which only includes names/triggers,
+ * this includes enough detail for the agent to give specific answers
+ * about implementation, timelines, KPI formulas, and automation logic.
+ *
+ * Truncated to ~8000 chars to fit within context window.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function buildDetailedPlanContext(plan: Record<string, any>): string {
+  const MAX_SECTION_CHARS = 1500;
+  const parts: string[] = [];
+
+  // Intake — full problem + scope
+  if (plan.intake) {
+    parts.push(`### Scope & Problem Analysis
+- Problem: ${plan.intake.clarified_problem ?? "Not specified"}
+- Scope: ${plan.intake.suggested_scope ?? "Not specified"}
+- Assumptions: ${(plan.intake.assumptions ?? []).join("; ")}
+- Constraints: ${(plan.intake.constraints ?? []).join("; ")}`);
+  }
+
+  // Workflow — stages with details
+  if (plan.workflow?.stages) {
+    const stageDetails = plan.workflow.stages
+      .map((s: { name: string; owner_role: string; entry_criteria: string; exit_criteria: string }, i: number) =>
+        `  ${i + 1}. ${s.name} (owner: ${s.owner_role}) — entry: ${s.entry_criteria.slice(0, 100)}, exit: ${s.exit_criteria.slice(0, 100)}`
+      )
+      .join("\n");
+    let workflowSection = `### Workflow Map\n${stageDetails}`;
+    if (plan.workflow.failure_modes?.length) {
+      workflowSection += `\nFailure modes: ${plan.workflow.failure_modes.join("; ")}`;
+    }
+    parts.push(workflowSection.slice(0, MAX_SECTION_CHARS));
+  }
+
+  // Automations — triggers + steps + error handling
+  if (plan.automation?.automations) {
+    const autoDetails = plan.automation.automations
+      .map((a: { trigger: string; steps: string[]; error_handling: string; platform?: string }) =>
+        `- Trigger: ${a.trigger}\n    Steps: ${a.steps.join(" → ")}\n    Error handling: ${a.error_handling}${a.platform ? ` (${a.platform})` : ""}`
+      )
+      .join("\n");
+    let autoSection = `### Automations & Alerts\n${autoDetails}`;
+    if (plan.automation.alerts?.length) {
+      autoSection += `\nAlerts: ${plan.automation.alerts.map((a: { when: string; who: string; escalation: string }) => `${a.when} → notify ${a.who}, escalation: ${a.escalation}`).join("; ")}`;
+    }
+    parts.push(autoSection.slice(0, MAX_SECTION_CHARS));
+  }
+
+  // Dashboard — KPIs with definitions
+  if (plan.dashboard?.kpis) {
+    const kpiDetails = plan.dashboard.kpis
+      .map((k: { name: string; definition: string; why_it_matters: string }) =>
+        `- ${k.name}: ${k.definition} — ${k.why_it_matters}`
+      )
+      .join("\n");
+    let dashSection = `### Dashboard & KPIs\n${kpiDetails}`;
+    if (plan.dashboard.views?.length) {
+      dashSection += `\nViews: ${plan.dashboard.views.map((v: { name: string; filter: string }) => `${v.name} (${v.filter})`).join(", ")}`;
+    }
+    parts.push(dashSection.slice(0, MAX_SECTION_CHARS));
+  }
+
+  // Ops Pulse — executive summary + actions
+  if (plan.ops_pulse) {
+    let opsSection = `### Ops Pulse`;
+    if (plan.ops_pulse.executive_summary) {
+      const es = plan.ops_pulse.executive_summary;
+      opsSection += `\nSummary: ${es.problem} → ${es.solution} → Impact: ${es.impact}. Next step: ${es.next_step}`;
+    }
+    if (plan.ops_pulse.actions?.length) {
+      opsSection += `\nPriority actions: ${plan.ops_pulse.actions.map((a: { priority: string; action: string; owner_role: string }) => `[${a.priority}] ${a.action} (${a.owner_role})`).join("; ")}`;
+    }
+    if (plan.ops_pulse.questions?.length) {
+      opsSection += `\nOpen questions: ${plan.ops_pulse.questions.join("; ")}`;
+    }
+    parts.push(opsSection.slice(0, MAX_SECTION_CHARS));
+  }
+
+  // Roadmap — phases with tasks
+  if (plan.roadmap?.phases) {
+    const phaseDetails = plan.roadmap.phases
+      .map((p: { week: number; title: string; tasks: { task: string; effort: string }[]; quick_wins: string[] }) =>
+        `- Week ${p.week}: ${p.title} — ${p.tasks.map((t: { task: string; effort: string }) => `${t.task} [${t.effort}]`).join("; ")}${p.quick_wins?.length ? ` (Quick wins: ${p.quick_wins.join(", ")})` : ""}`
+      )
+      .join("\n");
+    let roadmapSection = `### Implementation Roadmap\n${phaseDetails}`;
+    if (plan.roadmap.critical_path) {
+      roadmapSection += `\nCritical path: ${plan.roadmap.critical_path}`;
+    }
+    if (plan.roadmap.total_estimated_weeks) {
+      roadmapSection += `\nTotal estimated: ${plan.roadmap.total_estimated_weeks} weeks`;
+    }
+    parts.push(roadmapSection.slice(0, MAX_SECTION_CHARS));
+  }
+
+  return parts.join("\n\n");
+}
+
+// ---------------------------------------------------------------------------
+// Conversation context summary (persists beyond 20-message window)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a running summary of key conversation facts.
+ *
+ * This persists information that would otherwise be lost when the
+ * 20-message context window slides forward. Injected into all prompts
+ * to ensure the agent never "forgets" what was discussed.
+ */
+export function buildConversationSummary(
+  extracted: ExtractedIntake,
+  history: ChatMessage[],
+  corrections: string[] = []
+): string {
+  const parts: string[] = [];
+
+  // Collected facts
+  const facts = Object.entries(extracted)
+    .filter(([, v]) => v !== undefined && v !== "")
+    .map(([k, v]) => `- ${k}: ${v}`);
+
+  if (facts.length > 0) {
+    parts.push(`Confirmed facts:\n${facts.join("\n")}`);
+  }
+
+  // Corrections made during conversation
+  if (corrections.length > 0) {
+    parts.push(`Corrections made:\n${corrections.map((c) => `- ${c}`).join("\n")}`);
+  }
+
+  // Key topics discussed (extract from older messages if beyond window)
+  const messageCount = history.length;
+  if (messageCount > MAX_CONTEXT_MESSAGES) {
+    const oldMessages = history.slice(0, messageCount - MAX_CONTEXT_MESSAGES);
+    const topics = extractTopicsFromMessages(oldMessages);
+    if (topics.length > 0) {
+      parts.push(`Earlier discussion topics: ${topics.join(", ")}`);
+    }
+  }
+
+  if (parts.length === 0) return "";
+
+  return `\n## Conversation context (running summary)\n${parts.join("\n")}`;
+}
+
+/**
+ * Extract key topics from messages outside the context window.
+ * These are keywords/phrases that help the agent recall older context.
+ */
+function extractTopicsFromMessages(messages: ChatMessage[]): string[] {
+  const topics = new Set<string>();
+  const keywordPatterns = [
+    /\b(schedule|scheduling|dispatch)\b/i,
+    /\b(invoice|invoicing|billing|payment)\b/i,
+    /\b(hire|hiring|onboard|onboarding)\b/i,
+    /\b(maintain|maintenance|work order)\b/i,
+    /\b(compliance|HIPAA|regulation)\b/i,
+    /\b(CRM|ERP|accounting)\b/i,
+    /\b(automate|automation|workflow)\b/i,
+    /\b(report|reporting|dashboard)\b/i,
+    /\b(customer|client|patient|tenant)\b/i,
+    /\b(deadline|SLA|turnaround)\b/i,
+  ];
+
+  for (const msg of messages) {
+    if (msg.role !== "user") continue;
+    for (const pattern of keywordPatterns) {
+      const match = msg.content.match(pattern);
+      if (match) topics.add(match[0].toLowerCase());
+    }
+  }
+
+  return Array.from(topics).slice(0, 8);
+}
+
+// ---------------------------------------------------------------------------
+// Contradiction detection (across all phases)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect if the user is correcting previously extracted data.
+ * Returns a description of the contradiction if found.
+ */
+export function detectContradiction(
+  message: string,
+  extracted: ExtractedIntake
+): string | null {
+  // Check if user is overriding industry
+  if (extracted.industry) {
+    const newIndustry = inferIndustry(message);
+    if (
+      newIndustry &&
+      newIndustry.toLowerCase() !== extracted.industry.toLowerCase() &&
+      !newIndustry.toLowerCase().includes(extracted.industry.toLowerCase())
+    ) {
+      return `Industry changed from "${extracted.industry}" to "${newIndustry}"`;
+    }
+  }
+
+  // Check if user is overriding tools
+  if (extracted.current_tools) {
+    const newTools = inferCurrentTools(message);
+    if (newTools && !newTools.toLowerCase().includes(extracted.current_tools.toLowerCase().slice(0, 20))) {
+      const hasContrast = /\b(actually|not|instead|switched|moved to|no longer|replaced|ditched)\b/i.test(message);
+      if (hasContrast) {
+        return `Tools corrected from "${extracted.current_tools}" to "${newTools}"`;
+      }
+    }
+  }
+
+  // Check for explicit contradiction signals
+  if (hasRevisionSignal(message) && extracted.bottleneck) {
+    const newBottleneck = inferBottleneck(message);
+    if (newBottleneck && newBottleneck !== extracted.bottleneck) {
+      return `Bottleneck updated from "${extracted.bottleneck.slice(0, 60)}" to "${newBottleneck.slice(0, 60)}"`;
+    }
+  }
+
+  return null;
 }

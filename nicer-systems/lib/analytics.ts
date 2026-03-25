@@ -42,6 +42,7 @@ export const EVENTS = {
   PLAN_REFINE_MESSAGE: "plan_refine_message",
   PLAN_REFINE_COMPLETE: "plan_refine_complete",
   PLAN_REFINE_VIEW_DIFF: "plan_refine_view_diff",
+  PLAN_REFINE_APPLY: "plan_refine_apply",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

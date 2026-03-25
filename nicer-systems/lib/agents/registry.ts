@@ -1,8 +1,17 @@
 /**
- * Agent Stage Registry — data-driven configuration for the agent pipeline.
+ * Agent Pipeline DAG — data-driven configuration for the agentic workflow.
  *
- * Add new stages by appending to STAGE_REGISTRY. The runner, conversation,
- * and UI layers read from this registry instead of hardcoding stage lists.
+ * The pipeline is defined as a Directed Acyclic Graph (DAG). Each stage
+ * declares its dependencies, output schema, criticality, and context
+ * mapping. The DAG executor in runner.ts walks this registry to
+ * orchestrate execution — adding a new stage requires only a registry
+ * entry + template.
+ *
+ * Terminology:
+ * - AgentStageKey: unique identifier for a pipeline stage
+ * - PipelineStageConfig: full configuration for a stage
+ * - PIPELINE_DAG: the registry of all stages
+ * - computeExecutionTiers(): derives parallel groups from the DAG
  */
 import type { z } from "zod";
 import {
@@ -19,7 +28,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Unique key for each pipeline stage. */
-export type AgentStep =
+export type AgentStageKey =
   | "intake"
   | "workflow"
   | "automation"
@@ -28,26 +37,72 @@ export type AgentStep =
   | "implementation_sequencer";
 
 /** Configuration for a single pipeline stage. */
-export interface AgentStageConfig {
+export interface PipelineStageConfig {
   /** Internal key used in plan objects and SSE events. */
-  key: AgentStep;
+  key: AgentStageKey;
   /** Firestore template document key. */
   templateKey: string;
   /** User-facing label shown while stage is running. */
   label: string;
   /** User-facing label shown when stage completes. */
   completeLabel: string;
-  /** Zod schema to validate the AI output. */
+  /** Zod schema to validate the AI output (guardrail). */
   outputSchema: z.ZodTypeAny;
   /** Keys of stages that must complete before this one starts. */
-  dependencies: AgentStep[];
+  dependencies: AgentStageKey[];
+  /**
+   * If true, failure of this stage aborts the pipeline.
+   * If false, failure produces a fallback output + warning (graceful degradation).
+   */
+  critical: boolean;
+  /** Per-stage timeout in ms. */
+  timeoutMs: number;
+  /** Max self-correction attempts for this stage. */
+  maxCorrections: number;
+  /** Routing signals — conditions that modify downstream behavior. */
+  routingSignals?: RoutingSignal[];
+}
+
+/**
+ * Routing signal — emitted by a stage to influence downstream execution.
+ * Enables dynamic branching based on stage output content.
+ */
+export interface RoutingSignal {
+  /** Unique signal name. */
+  name: string;
+  /** Description of what this signal means. */
+  description: string;
+  /** Predicate: given the stage output, should this signal fire? */
+  condition: (output: unknown) => boolean;
 }
 
 // ---------------------------------------------------------------------------
-// Registry
+// Routing signal definitions
 // ---------------------------------------------------------------------------
 
-export const STAGE_REGISTRY: AgentStageConfig[] = [
+const COMPLEX_WORKFLOW_SIGNAL: RoutingSignal = {
+  name: "complex_workflow",
+  description: "Workflow has 8+ stages — downstream stages should use detailed mode",
+  condition: (output) => {
+    const workflow = output as { stages?: unknown[] };
+    return (workflow?.stages?.length ?? 0) >= 8;
+  },
+};
+
+const HIGH_FAILURE_RISK_SIGNAL: RoutingSignal = {
+  name: "high_failure_risk",
+  description: "Workflow has 5+ failure modes — ops pulse should emphasize risk mitigation",
+  condition: (output) => {
+    const workflow = output as { failure_modes?: unknown[] };
+    return (workflow?.failure_modes?.length ?? 0) >= 5;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Pipeline DAG Registry
+// ---------------------------------------------------------------------------
+
+export const PIPELINE_DAG: PipelineStageConfig[] = [
   {
     key: "intake",
     templateKey: "intake_agent",
@@ -55,6 +110,9 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Bottleneck analysis complete",
     outputSchema: intakeOutputSchema,
     dependencies: [],
+    critical: true,
+    timeoutMs: 15_000,
+    maxCorrections: 2,
   },
   {
     key: "workflow",
@@ -63,6 +121,10 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Workflow mapping complete",
     outputSchema: workflowMapperOutputSchema,
     dependencies: ["intake"],
+    critical: true,
+    timeoutMs: 25_000,
+    maxCorrections: 2,
+    routingSignals: [COMPLEX_WORKFLOW_SIGNAL, HIGH_FAILURE_RISK_SIGNAL],
   },
   {
     key: "automation",
@@ -71,6 +133,9 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Automation design complete",
     outputSchema: automationDesignerOutputSchema,
     dependencies: ["workflow"],
+    critical: false,
+    timeoutMs: 30_000,
+    maxCorrections: 1,
   },
   {
     key: "dashboard",
@@ -79,6 +144,9 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Dashboard KPIs complete",
     outputSchema: dashboardDesignerOutputSchema,
     dependencies: ["workflow"],
+    critical: false,
+    timeoutMs: 30_000,
+    maxCorrections: 1,
   },
   {
     key: "ops_pulse",
@@ -87,6 +155,9 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Ops pulse complete",
     outputSchema: opsPulseOutputSchema,
     dependencies: ["automation", "dashboard"],
+    critical: false,
+    timeoutMs: 25_000,
+    maxCorrections: 1,
   },
   {
     key: "implementation_sequencer",
@@ -95,6 +166,9 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
     completeLabel: "Implementation roadmap complete",
     outputSchema: implementationSequencerOutputSchema,
     dependencies: ["automation", "dashboard"],
+    critical: false,
+    timeoutMs: 30_000,
+    maxCorrections: 1,
   },
 ];
 
@@ -102,29 +176,33 @@ export const STAGE_REGISTRY: AgentStageConfig[] = [
 // Derived helpers
 // ---------------------------------------------------------------------------
 
-/** Ordered step list for progress display (backward-compatible with AGENT_STEPS). */
-export const AGENT_STEPS: { key: AgentStep; label: string }[] =
-  STAGE_REGISTRY.map(({ key, label }) => ({ key, label }));
+/** Ordered step list for progress display. */
+export const PIPELINE_STAGES: { key: AgentStageKey; label: string }[] =
+  PIPELINE_DAG.map(({ key, label }) => ({ key, label }));
 
 /** Lookup a stage config by key. */
-export function getStageConfig(key: AgentStep): AgentStageConfig | undefined {
-  return STAGE_REGISTRY.find((s) => s.key === key);
+export function getStageConfig(key: AgentStageKey): PipelineStageConfig | undefined {
+  return PIPELINE_DAG.find((s) => s.key === key);
 }
 
 /** All stage keys in pipeline order. */
-export const STAGE_KEYS: AgentStep[] = STAGE_REGISTRY.map((s) => s.key);
+export const STAGE_KEYS: AgentStageKey[] = PIPELINE_DAG.map((s) => s.key);
 
 /** Map of template key → Zod schema (used by runner validation). */
-export const templateOutputSchemasByTemplateKey: Partial<Record<string, z.ZodTypeAny>> =
-  Object.fromEntries(STAGE_REGISTRY.map((s) => [s.templateKey, s.outputSchema]));
+export const stageOutputGuardrails: Partial<Record<string, z.ZodTypeAny>> =
+  Object.fromEntries(PIPELINE_DAG.map((s) => [s.templateKey, s.outputSchema]));
 
-/** Stages that can run in parallel (share the same set of dependencies). */
-export function getParallelGroups(): AgentStageConfig[][] {
-  const groups: AgentStageConfig[][] = [];
-  const assigned = new Set<AgentStep>();
+/**
+ * Compute execution tiers from the DAG.
+ * Stages in the same tier can run in parallel.
+ * Returns tiers in dependency order.
+ */
+export function computeExecutionTiers(): PipelineStageConfig[][] {
+  const groups: PipelineStageConfig[][] = [];
+  const assigned = new Set<AgentStageKey>();
 
-  while (assigned.size < STAGE_REGISTRY.length) {
-    const ready = STAGE_REGISTRY.filter(
+  while (assigned.size < PIPELINE_DAG.length) {
+    const ready = PIPELINE_DAG.filter(
       (s) =>
         !assigned.has(s.key) &&
         s.dependencies.every((dep) => assigned.has(dep))
@@ -136,3 +214,44 @@ export function getParallelGroups(): AgentStageConfig[][] {
 
   return groups;
 }
+
+/**
+ * Check routing signals for a completed stage.
+ * Returns the names of fired signals.
+ */
+export function checkRoutingSignals(
+  stageKey: AgentStageKey,
+  output: unknown
+): string[] {
+  const config = getStageConfig(stageKey);
+  if (!config?.routingSignals) return [];
+
+  return config.routingSignals
+    .filter((signal) => {
+      try {
+        return signal.condition(output);
+      } catch {
+        return false;
+      }
+    })
+    .map((signal) => signal.name);
+}
+
+// ---------------------------------------------------------------------------
+// Backward-compatible re-exports
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use AgentStageKey */
+export type AgentStep = AgentStageKey;
+
+/** @deprecated Use PIPELINE_STAGES */
+export const AGENT_STEPS = PIPELINE_STAGES;
+
+/** @deprecated Use PIPELINE_DAG */
+export const STAGE_REGISTRY = PIPELINE_DAG;
+
+/** @deprecated Use computeExecutionTiers */
+export const getParallelGroups = computeExecutionTiers;
+
+/** @deprecated Use stageOutputGuardrails */
+export const templateOutputSchemasByTemplateKey = stageOutputGuardrails;

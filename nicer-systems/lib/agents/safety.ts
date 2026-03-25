@@ -1,3 +1,16 @@
+/**
+ * Output Safety Guardrails — prompt injection detection and secret leak prevention.
+ *
+ * Enforces safety on all agent outputs (both pipeline stages and conversational
+ * responses). Detects:
+ * - Credential/secret requests in generated text
+ * - System access claims (impersonation)
+ * - Secret/token leaks in output
+ *
+ * This is the "output safety guardrail" layer — one of three guardrail layers
+ * in the pipeline (input sanitization, output safety, cross-section coherence).
+ */
+
 import type { ConversationPhase } from "@/types/chat";
 
 export interface SafetyIssue {
@@ -106,7 +119,11 @@ export function collectObjectSafetyIssues(value: unknown): SafetyIssue[] {
   return [];
 }
 
-export function assertSafeAgentText(text: string, context: string): void {
+/**
+ * Enforce text output safety — throws if unsafe patterns detected.
+ * Used on conversational responses after streaming.
+ */
+export function enforceTextSafety(text: string, context: string): void {
   const issues = inspectAgentText(text);
   if (issues.length === 0) return;
 
@@ -118,7 +135,11 @@ export function assertSafeAgentText(text: string, context: string): void {
   );
 }
 
-export function assertSafeAgentObject(value: unknown, context: string): void {
+/**
+ * Enforce structured output safety — recursively scans all string values.
+ * Used on pipeline stage outputs after schema validation.
+ */
+export function enforceOutputSafety(value: unknown, context: string): void {
   const issues = collectObjectSafetyIssues(value);
   if (issues.length === 0) return;
 
@@ -129,6 +150,16 @@ export function assertSafeAgentObject(value: unknown, context: string): void {
       .join("; ")}`
   );
 }
+
+// ---------------------------------------------------------------------------
+// Backward-compatible aliases
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use enforceTextSafety */
+export const assertSafeAgentText = enforceTextSafety;
+
+/** @deprecated Use enforceOutputSafety */
+export const assertSafeAgentObject = enforceOutputSafety;
 
 export function buildSafeConversationFallback(
   phase: ConversationPhase

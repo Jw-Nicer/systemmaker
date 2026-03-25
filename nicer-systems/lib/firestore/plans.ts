@@ -84,33 +84,52 @@ const MAX_PLAN_VERSIONS = 20;
 export async function savePlanRefinement(
   planId: string,
   version: {
-    version: number;
     section: PlanSectionType;
     content: unknown;
-    feedback: string;
-  },
-  currentPlan: PreviewPlan
+    feedback?: string;
+  }
 ): Promise<void> {
   try {
     const db = getAdminDb();
-    const update = buildPlanRefinementUpdate(currentPlan, version);
+    const docRef = db.collection("plans").doc(planId);
 
-    // Read existing versions to enforce limit
-    const doc = await db.collection("plans").doc(planId).get();
-    const existingVersions = (doc.data()?.versions ?? []) as unknown[];
-    let versions = [...existingVersions, update.versionEntry];
-    if (versions.length > MAX_PLAN_VERSIONS) {
-      versions = versions.slice(-MAX_PLAN_VERSIONS);
-    }
+    await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) {
+        throw new Error("Plan not found");
+      }
 
-    await db
-      .collection("plans")
-      .doc(planId)
-      .update({
+      const data = doc.data() as {
+        preview_plan?: PreviewPlan;
+        version?: number;
+        versions?: unknown[];
+      };
+
+      const currentPlan = data.preview_plan;
+      if (!currentPlan) {
+        throw new Error("Stored plan is missing preview_plan");
+      }
+
+      const nextVersion = typeof data.version === "number" ? data.version + 1 : 1;
+      const update = buildPlanRefinementUpdate(currentPlan, {
+        version: nextVersion,
+        section: version.section,
+        content: version.content,
+        feedback: version.feedback ?? "",
+      });
+
+      const existingVersions = (data.versions ?? []) as unknown[];
+      let versions = [...existingVersions, update.versionEntry];
+      if (versions.length > MAX_PLAN_VERSIONS) {
+        versions = versions.slice(-MAX_PLAN_VERSIONS);
+      }
+
+      tx.update(docRef, {
         preview_plan: update.preview_plan,
         version: update.version,
         versions,
       });
+    });
   } catch (error) {
     console.error("Failed to save plan refinement:", error);
     throw new Error("Failed to save plan refinement");

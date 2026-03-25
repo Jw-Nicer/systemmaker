@@ -3,8 +3,8 @@ import {
   enforceRateLimit,
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
-import { planRefinementSchema } from "@/lib/validation";
-import { getPlanById, savePlanRefinement } from "@/lib/firestore/plans";
+import { planRefinementPreviewSchema } from "@/lib/validation";
+import { getPlanById } from "@/lib/firestore/plans";
 import { refinePlanSection } from "@/lib/agents/refinement";
 import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     }
 
-    const parsed = planRefinementSchema.safeParse(body);
+    const parsed = planRefinementPreviewSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid request data" },
@@ -62,15 +62,8 @@ export async function POST(request: Request) {
       fullPlan
     );
 
-    // Save the refinement version
-    await savePlanRefinement(plan_id, {
-      version: storedPlan.version + 1,
-      section: planSection,
-      content: refined,
-      feedback,
-    }, fullPlan);
-
-    // Return as SSE-compatible stream for the hook
+    // Return preview result as SSE-compatible stream. Persistence happens only
+    // after the user explicitly accepts the refined content.
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {

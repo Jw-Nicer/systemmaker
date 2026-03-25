@@ -53,11 +53,13 @@ export function SectionRefiner({
 
   const {
     isRefining,
+    isApplying,
     streamingContent,
     refinedContent,
     error,
     showDiff,
     refine,
+    applyRefinement,
     toggleDiff,
     clearRefinement,
   } = useRefineSection(planId, sectionKey);
@@ -66,20 +68,24 @@ export function SectionRefiner({
     setMessages((prev) => [...prev, { role: "user", content: feedback }]);
     setInput("");
 
-    await refine(feedback, originalContent);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "agent",
-        content: "I've updated this section. You can view the changes or apply them.",
-      },
-    ]);
+    const succeeded = await refine(feedback, originalContent);
+    if (succeeded) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "agent",
+          content: "I've updated this section. You can view the changes or apply them.",
+        },
+      ]);
+    }
   }
 
-  function handleApply() {
-    if (refinedContent) {
-      onRefined(sectionKey, refinedContent);
+  async function handleApply() {
+    if (!refinedContent) return;
+
+    const savedContent = await applyRefinement();
+    if (savedContent) {
+      onRefined(sectionKey, savedContent);
       onClose();
     }
   }
@@ -206,11 +212,11 @@ export function SectionRefiner({
               </button>
               <button
                 onClick={handleApply}
-                disabled={!!error}
-                className="text-xs px-3 py-1 rounded-md bg-primary text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-30"
-              >
-                Apply changes
-              </button>
+                 disabled={!!error || isRefining || isApplying}
+                  className="text-xs px-3 py-1 rounded-md bg-primary text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-30"
+                >
+                 {isApplying ? "Saving..." : "Apply changes"}
+               </button>
             </div>
           )}
 

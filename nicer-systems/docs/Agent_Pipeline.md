@@ -1,158 +1,335 @@
-# Agent Pipeline
-**Doc Date:** 2026-03-09
+# Agentic Workflow Pipeline
+**Doc Date:** 2026-03-25
 
 ## Overview
-Five agents chain together to produce a Preview Plan from visitor intake data. The pipeline runs via Gemini API calls, with each agent receiving structured context from previous agents. Templates are stored as markdown in Firestore (`agent_templates` collection) and assembled into prompts by `lib/agents/prompts.ts`.
 
-## Pipeline Order and Data Flow
+Nicer Systems uses a **DAG-driven agentic workflow** to generate operational Preview Plans from visitor intake data. The pipeline consists of 6 specialized agents orchestrated by a generic DAG executor, with full observability, self-correction, tool use, and graceful degradation.
+
+### Agentic Architecture Patterns
+
+| Pattern | Implementation | Module |
+|---------|---------------|--------|
+| **DAG Orchestration** | Dependency-driven tier execution | `runner.ts` |
+| **Self-Correction (ReAct)** | Schema validation → error feedback → retry | `self-correction.ts` |
+| **Tool Use / RAG** | Case studies, benchmarks, plan search | `tools.ts` |
+| **Guardrails (3-layer)** | Input sanitization, output safety, cross-section coherence | `prompts.ts`, `safety.ts`, `validation.ts` |
+| **Observability / Tracing** | Trace IDs, spans, structured logging | `tracing.ts` |
+| **Human-in-the-Loop (HITL)** | Preview → approve → apply refinement | `refinement.ts` |
+| **Agent Memory** | Episodic memory for returning visitors | `memory.ts` |
+| **Graceful Degradation** | Critical vs non-critical stages, fallback outputs | `runner.ts`, `context.ts` |
+| **Model Routing & Fallback** | Multi-model cascade, token budget | `llm-client.ts` |
+| **Routing Signals** | Dynamic behavior based on stage output | `registry.ts` |
+| **Evaluation (Evals)** | LLM-as-judge quality scoring, golden tests | `evals.ts` |
+| **Streaming Agent UX** | SSE section-by-section delivery | `runner.ts`, `conversation.ts` |
+| **Prompt Versioning** | Template hash tracking, version metadata | `prompts.ts` |
+| **Structured Output** | JSON mode + Zod schema guardrails | `schemas.ts` |
+| **Context Protocol** | Typed data flow between stages | `context.ts` |
+
+## Module Architecture
+
+```
+lib/agents/
+├── runner.ts            # DAG Orchestrator — walks pipeline, manages execution
+├── registry.ts          # Pipeline DAG — stage configs, dependencies, routing signals
+├── context.ts           # Context Protocol — typed data flow between stages
+├── llm-client.ts        # Shared LLM Client — singleton, retry, model routing
+├── self-correction.ts   # ReAct Loop — self-correction on validation failure
+├── tracing.ts           # Observability — traces, spans, structured logging
+├── tools.ts             # Tool Use / RAG — grounded generation via real data
+├── evals.ts             # Evaluation — LLM-as-judge, golden test suite
+├── memory.ts            # Agent Memory — episodic memory for returning visitors
+├── prompts.ts           # Context Assembly — template + context + sanitization
+├── schemas.ts           # Output Guardrails — Zod schemas per stage
+├── safety.ts            # Safety Guardrails — prompt injection, secret detection
+├── validation.ts        # Coherence Guardrails — cross-section consistency
+├── conversation.ts      # Conversation Agent — multi-phase intake chat
+├── refinement.ts        # Refinement Agent — section-level plan updates
+└── email-template.ts    # Email rendering for plan delivery
+```
+
+## Pipeline DAG
 
 ```
 User Input (industry, bottleneck, current_tools, urgency?, volume?)
-    |
-    v
-[1] intake_agent          --> IntakeOutput
-    |
-    v
-[2] workflow_mapper       --> WorkflowMapperOutput
-    |
-    +-----------+-----------+
-    |                       |
-    v                       v
-[3] automation_designer   [4] dashboard_designer    (parallel)
-    |                       |
-    +-----------+-----------+
-                |
-                v
-[5] ops_pulse_writer      --> OpsPulseOutput
-    |
-    v
-PreviewPlan (all 5 sections + consistency warnings)
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Tier 1: [intake_agent]  (critical)                 │
+│  ├── Context: raw visitor input                     │
+│  ├── Tools: searchCaseStudies                       │
+│  ├── Self-correction: up to 2 retries               │
+│  └── Output: IntakeOutput                           │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Tier 2: [workflow_mapper]  (critical)              │
+│  ├── Context: intake.clarified_problem + scope      │
+│  ├── Routing signals: complex_workflow,             │
+│  │   high_failure_risk                              │
+│  ├── Self-correction: up to 2 retries               │
+│  └── Output: WorkflowMapperOutput                   │
+└─────────────────────────────────────────────────────┘
+    │
+    ├───────────────────────┐
+    ▼                       ▼
+┌────────────────────┐ ┌────────────────────┐
+│ Tier 3a:           │ │ Tier 3b:           │
+│ [automation_       │ │ [dashboard_        │
+│  designer]         │ │  designer]         │
+│ (non-critical)     │ │ (non-critical)     │
+│ Parallel execution │ │ Parallel execution │
+│ Tools: searchPlans │ │ Tools: benchmarks  │
+└────────────────────┘ └────────────────────┘
+    │                       │
+    ├───────────────────────┤
+    ▼                       ▼
+┌────────────────────┐ ┌────────────────────┐
+│ Tier 4a:           │ │ Tier 4b:           │
+│ [ops_pulse_writer] │ │ [implementation_   │
+│ (non-critical)     │ │  sequencer]        │
+│ Parallel execution │ │ (non-critical)     │
+└────────────────────┘ └────────────────────┘
+    │                       │
+    └───────────┬───────────┘
+                ▼
+    PreviewPlan (5 sections + optional roadmap + warnings)
 ```
 
-Steps 3 and 4 run in parallel via `Promise.all` since both depend only on the workflow mapper output.
+## DAG Execution Engine
 
-## Input/Output Mapping
+The orchestrator in `runner.ts` executes the pipeline by walking the DAG:
 
-### 1. intake_agent
-| Direction | Fields |
-|-----------|--------|
-| **Receives** | `industry`, `bottleneck`, `current_tools`, `urgency`, `volume` (raw user input) |
-| **Produces** | `clarified_problem`, `assumptions[]`, `constraints[]`, `suggested_scope` |
+```
+1. computeExecutionTiers()     → [[intake], [workflow], [auto, dash], [ops, impl]]
+2. For each tier:
+   a. Filter executable stages  → skip if all dependencies failed
+   b. Execute in parallel       → Promise.all(stages.map(executeStage))
+   c. Collect routing signals   → checkRoutingSignals(output)
+3. assemblePlan(results)        → PreviewPlan from stage outputs
+4. runCrossSectionGuardrails()  → coherence warnings
+5. finalizeTrace()              → structured trace log
+```
 
-Restates the visitor's bottleneck in precise operational terms. All downstream agents depend on `clarified_problem`.
+**Adding a new stage requires:**
+1. Add config to `PIPELINE_DAG` in `registry.ts`
+2. Add context mapping in `context.ts`
+3. Add template in `agents/*.md`
+4. Add Zod schema in `schemas.ts`
+— **No changes to runner.ts needed.**
 
-### 2. workflow_mapper
-| Direction | Fields |
-|-----------|--------|
-| **Receives** | `clarified_problem`, `industry`, `current_tools`, `assumptions`, `suggested_scope` (from intake) |
-| **Produces** | `stages[]` (name, owner_role, entry/exit criteria), `required_fields[]`, `timestamps[]`, `failure_modes[]` |
+## Stage Execution Flow
 
-Central hub of the pipeline. Its output feeds both parallel agents and ops_pulse.
+Each stage goes through this sequence:
 
-### 3. automation_designer
-| Direction | Fields |
-|-----------|--------|
-| **Receives** | `stages`, `required_fields`, `current_tools`, `failure_modes` (from workflow) |
-| **Produces** | `automations[]` (trigger, steps, data_required, error_handling), `alerts[]`, `logging_plan[]` |
+```
+1. assembleStageContext()         → typed context from prior results
+2. getToolContextForStage()       → RAG: query case studies, benchmarks
+3. assembleAgentContext()         → build full prompt (template + context + tools)
+4. Inject routing signal hints    → upstream signals modify behavior
+5. executeStageWithCorrection()   → LLM call with self-correction loop
+6. enforceOutputSafety()          → check for secrets, injection, impersonation
+7. endSpan()                      → record trace metrics
+```
 
-### 4. dashboard_designer
-| Direction | Fields |
-|-----------|--------|
-| **Receives** | `stages`, `timestamps`, `industry`, `required_fields` (from workflow) |
-| **Produces** | `dashboards[]` (name, purpose, widgets), `kpis[]` (name, definition, why_it_matters), `views[]` |
+## Three-Layer Guardrail System
 
-### 5. ops_pulse_writer
-| Direction | Fields |
-|-----------|--------|
-| **Receives** | `kpis`, `dashboards` (from dashboard), `failure_modes` (from workflow) |
-| **Produces** | `executive_summary`, `sections[]`, `scorecard[]`, `actions[]`, `questions[]` |
+### Layer 1: Input Guardrails (`prompts.ts`)
+- Context value sanitization (strips instruction markers, headers, template syntax)
+- Field length limits (5000 chars per value, 100K total prompt)
+- Key sanitization (prevents markdown injection via context keys)
 
-## How runner.ts Executes the Chain
+### Layer 2: Output Safety Guardrails (`safety.ts`)
+- Secret/credential leak detection (API keys, tokens, private keys)
+- Credential request detection ("share your password")
+- System access claim detection ("I accessed your CRM")
+- Impersonation detection ("I am from Nicer Systems")
+- Recursive scan of all string values in structured output
 
-Two entry points in `lib/agents/runner.ts`:
+### Layer 3: Cross-Section Coherence Guardrails (`validation.ts`)
+- Automation triggers → workflow stage references
+- Dashboard KPIs → workflow field references
+- Ops pulse actions → failure mode coverage
+- Coverage validation (min stages, alerts, KPIs, priorities)
 
-- **`runAgentChain()`** -- Synchronous chain. Returns a complete `PreviewPlan` when all 5 stages finish. Used by `/api/agent/run`.
-- **`runAgentChainStreaming()`** -- Streaming variant. Calls `onSection(step, label, data)` as each stage completes. Used by `/api/agent/chat` for SSE delivery.
+## Self-Correction (ReAct Loop)
 
-Each stage calls `runAgentWithTemplate<T>()` which:
-1. Builds the prompt via `buildPrompt(template, context)` from `prompts.ts`
-2. Calls Gemini with JSON response mode and a per-stage timeout
-3. Strips markdown fences, parses JSON, validates against a Zod schema
-4. Runs `assertSafeAgentObject()` to check for prompt injection artifacts
+When a stage's output fails schema validation:
 
-Templates are fetched once per chain run via `getAllTemplates()` (batch Firestore read, cached for 5 minutes).
+```
+Attempt 0: LLM generates output → schema validation fails
+    ↓
+Build correction prompt:
+  - Original prompt
+  - Previous invalid output (truncated)
+  - Specific validation errors
+  - Instructions to fix
+    ↓
+Attempt 1: LLM corrects output → validate again
+    ↓ (if still failing)
+Attempt 2: Final correction attempt
+    ↓ (if still failing)
+Throw error → stage fails (graceful degradation if non-critical)
+```
 
-## How conversation.ts Orchestrates Multi-Phase Chat
+Self-correction is tracked in trace spans: `span.corrections`, `span.metadata.wasAutoFixed`.
 
-The SSE chat at `/api/agent/chat` manages a conversation through five phases:
+## Tool Use / RAG (Grounded Generation)
 
-| Phase | What happens | Model used |
-|-------|-------------|------------|
-| **gathering** | Agent asks intake questions one at a time. Heuristic + LLM extraction fills `ExtractedIntake` fields. | gemini-2.0-flash |
-| **confirming** | All required fields collected. Agent summarizes and asks for confirmation. Revision signals return to gathering. | gemini-2.0-flash |
-| **building** | User confirmed. `runAgentChainStreaming()` executes the 5-agent pipeline, streaming section completions via SSE. | gemini-2.5-flash (chain) |
-| **complete** | Plan delivered inline in chat. | -- |
-| **follow_up** | Post-plan questions answered with plan context. | gemini-2.5-flash |
+Agents can call tools to access real data during generation:
 
-Key mechanisms:
-- **`detectPhase()`** -- Determines phase transitions based on current phase, extracted data, and the latest user message. Required fields: `industry`, `bottleneck`, `current_tools`.
-- **`extractIntakeData()`** -- Two-layer extraction: regex heuristics run first, then Gemini (fast model) parses the conversation for structured data. Heuristic results are used as fallback if Gemini extraction fails.
-- **`generateConversationalResponse()`** -- Async generator that produces the agent's text reply for gathering, confirming, and follow_up phases. Safety checks via `assertSafeAgentText()` with a fallback response on failure.
-- **`hasRevisionSignal()`** -- Detects user corrections ("no", "wait", "actually we use...") to revert from confirming back to gathering.
+| Tool | Stages | Purpose |
+|------|--------|---------|
+| `searchCaseStudies` | intake, ops_pulse | Ground recommendations in real examples |
+| `getIndustryBenchmarks` | dashboard, ops_pulse | Set realistic KPI targets |
+| `searchExistingPlans` | workflow, automation | Reuse patterns from similar plans |
 
-History is trimmed to the last 20 messages to keep prompt size manageable.
+Tool results are injected as a "Grounded context" section in the prompt.
 
-## How refinement.ts Handles Section-Level Updates
+## Agent Memory (Episodic)
 
-Post-plan, users can refine any of the 5 sections individually via `/api/agent/refine`.
+When a visitor is identified by email, the system can recall:
+- Previous industry and bottleneck
+- Prior plan IDs
+- Interaction history (last 20)
+- Known tools and preferences
 
-**`refinePlanSection(section, feedback, fullPlan)`**:
-1. Extracts the current section data from the full plan
-2. Builds a refinement prompt containing the plan summary, current section JSON, and sanitized user feedback
-3. Calls Gemini (JSON mode) with up to 2 retries on transient errors
-4. Parses and returns the updated section data plus a human-readable summary
+Memory is stored in Firestore (`agent_memory` collection) keyed by SHA-256 hash of email.
 
-**`refinePlanSectionStreaming()`** -- Streaming variant using `generateContentStream()`. Yields text chunks for real-time UI updates, then parses the accumulated result.
+Prompt injection for returning visitors:
+```
+## Returning visitor context (from agent memory)
+Visitor name: John
+Known industry: construction
+Previous bottleneck discussed: field crew scheduling
+Has 2 previous plan(s) on file
+This is session #3 (returning visitor)
+```
 
-**`getSectionSuggestions(plan, section)`** -- Deterministic (no LLM call). Analyzes the plan content and returns contextual refinement chip suggestions. For example: if a workflow has generic owner roles, it suggests "Specify role titles". Includes cross-section consistency warnings from `plan.warnings` when relevant. Returns up to 4 suggestions per section.
+## Observability / Tracing
 
-Feedback is sanitized to strip prompt injection patterns (instruction-like prefixes, markdown headers, code fences) and truncated to 2000 characters.
+Every pipeline run creates a **trace** with **spans** per stage:
 
-## Error Handling and Fallback Behavior
+```json
+{
+  "traceId": "abc-123",
+  "pipelineType": "plan_generation",
+  "status": "completed",
+  "totalLatencyMs": 28500,
+  "spans": [
+    { "stage": "intake", "model": "gemini-2.5-flash", "status": "completed", "latencyMs": 4200, "corrections": 0 },
+    { "stage": "workflow", "model": "gemini-2.5-flash", "status": "completed", "latencyMs": 6100, "corrections": 1 },
+    { "stage": "automation", "model": "gemini-2.5-flash", "status": "completed", "latencyMs": 7800, "corrections": 0 },
+    { "stage": "dashboard", "model": "gemini-2.5-flash", "status": "completed", "latencyMs": 7200, "corrections": 0 },
+    { "stage": "ops_pulse", "model": "gemini-2.0-flash", "status": "degraded", "latencyMs": 0, "corrections": 0, "error": "Timeout" },
+    { "stage": "implementation_sequencer", "model": "gemini-2.5-flash", "status": "completed", "latencyMs": 8100, "corrections": 0 }
+  ]
+}
+```
 
-### Model fallback (runner.ts)
-- Default model cascade: `gemini-2.5-flash` then `gemini-2.0-flash`
-- Per-model: up to 2 retries with exponential backoff (300ms base + jitter) for transient errors (429, 500-504, timeouts, rate limits)
-- Model availability errors (not found, permission denied) skip immediately to the next model
-- Non-transient, non-availability errors also skip to the next model
+Traces are buffered in memory (last 100) and logged as structured JSON.
 
-### Per-stage timeouts
-| Stage | Timeout |
-|-------|---------|
-| intake_agent | 15s |
-| workflow_mapper | 25s |
-| automation_designer | 30s |
-| dashboard_designer | 30s |
-| ops_pulse_writer | 25s |
+## Evaluation Framework
 
-### Graceful degradation (streaming variant)
-- **Critical stages** (intake, workflow): Failure throws and aborts the entire chain. The pipeline cannot continue without them.
-- **Non-critical stages** (automation, dashboard): Failure is caught. The plan is returned with empty placeholder data for the failed section, plus a warning.
-- **ops_pulse**: Skipped entirely if both automation AND dashboard failed (no meaningful input). Otherwise runs with whatever data is available.
-- Failed sections include a warning: `"This section failed to generate and contains placeholder data. You can try refining it with feedback."`
+### LLM-as-Judge
+Evaluates plan quality across 4 dimensions:
+1. **Specificity** — concrete, industry-specific recommendations
+2. **Completeness** — all required aspects covered
+3. **Actionability** — clear, immediate next steps
+4. **Realism** — realistic for SMB context
 
-### JSON parsing fallback
-If the Gemini response does not parse as JSON directly, `runAgentWithTemplate` attempts to extract the outermost `{...}` block from the response text before failing.
+### Golden Test Suite
+5 pre-defined test cases covering key industry × bottleneck combos:
+- construction + scheduling
+- healthcare + intake
+- property management + maintenance
+- staffing + timesheets
+- legal + client intake
 
-### Conversation extraction fallback
-If Gemini extraction times out or fails, `extractIntakeData()` falls back to regex heuristic results. The conversation continues without interruption.
+Each test case has a minimum score threshold. Used for regression detection when prompts change.
 
-### Safety and size limits
-- All agent outputs pass through `assertSafeAgentObject()` (prompt injection detection)
-- Conversational responses pass through `assertSafeAgentText()` with a safe fallback message on failure
-- Max response size: 512KB per agent stage, 256KB per refinement
-- Max prompt size: 100KB (context truncated if exceeded)
-- Refinement feedback: sanitized and truncated to 2000 chars
+## Routing Signals
 
-### Plan consistency validation
-After the chain completes, `validatePlanConsistency(plan)` checks for cross-section issues (e.g., KPIs referencing fields not in the workflow). Warnings are attached to `plan.warnings[]`.
+Stages can emit routing signals based on output content:
+
+| Signal | Emitted By | Condition | Effect |
+|--------|-----------|-----------|--------|
+| `complex_workflow` | workflow | 8+ stages | Downstream uses detailed mode |
+| `high_failure_risk` | workflow | 5+ failure modes | Ops pulse emphasizes risk mitigation |
+
+Signals are injected as hints in downstream prompts:
+```
+## Routing context
+Upstream signals: complex_workflow, high_failure_risk. Adjust detail level accordingly.
+```
+
+## Conversation Flow
+
+The SSE chat at `/api/agent/chat` uses a **5-phase conversation agent**:
+
+| Phase | Purpose | Agent Model |
+|-------|---------|-------------|
+| `gathering` | Collect industry, bottleneck, tools | gemini-2.0-flash |
+| `confirming` | Confirm understanding, add insight | gemini-2.0-flash |
+| `building` | Run 6-stage pipeline, emit sections | gemini-2.5-flash |
+| `complete` | Present plan, offer email capture | — |
+| `follow_up` | Answer questions about the plan | gemini-2.5-flash |
+
+The conversation agent includes **industry-aware probing** (20+ industry mappings with specific bottlenecks, tools, and follow-up questions).
+
+## Refinement Agent (HITL)
+
+Two-step preview + apply flow:
+
+```
+1. POST /api/agent/refine     → stream refined section (no persistence)
+2. User reviews diff
+3. POST /api/agent/refine/apply → persist accepted refinement to Firestore
+```
+
+Smart suggestions are generated deterministically (no LLM call) by analyzing plan content for gaps and inconsistencies.
+
+## Graceful Degradation
+
+| Stage | Critical | On Failure |
+|-------|----------|------------|
+| `intake` | Yes | Pipeline aborts |
+| `workflow` | Yes | Pipeline aborts |
+| `automation` | No | Empty placeholder + warning |
+| `dashboard` | No | Empty placeholder + warning |
+| `ops_pulse` | No | Skipped if both auto + dash failed |
+| `implementation_sequencer` | No | Skipped if both auto + dash failed |
+
+Degraded stages are tracked in the trace and flagged in plan warnings.
+
+## LLM Client
+
+All LLM calls go through the shared client (`llm-client.ts`):
+
+- **Singleton** Gemini client (avoids re-instantiation)
+- **Retry** with exponential backoff + jitter (300ms base, 2 retries per model)
+- **Model fallback** cascade (gemini-2.5-flash → gemini-2.0-flash)
+- **Token budget** tracking (60 requests/minute bucket)
+- **Error classification** (transient vs availability vs permanent)
+- **Output size** enforcement (512KB default, 256KB for refinement)
+- **Usage stats** accumulation for monitoring
+
+## File Reference
+
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `runner.ts` | DAG orchestrator | `orchestrateAgentPipeline()`, `orchestrateAgentPipelineStreaming()` |
+| `registry.ts` | Pipeline DAG config | `PIPELINE_DAG`, `computeExecutionTiers()`, `checkRoutingSignals()` |
+| `context.ts` | Typed context protocol | `assembleStageContext()`, `CONTEXT_MAPPINGS`, `getFallbackOutput()` |
+| `llm-client.ts` | Shared LLM client | `invokeLLM()`, `invokeLLMStreaming()`, `robustJsonParse()` |
+| `self-correction.ts` | ReAct loop | `executeWithSelfCorrection()`, `executeStageWithCorrection()` |
+| `tracing.ts` | Observability | `createTrace()`, `startSpan()`, `endSpan()`, `emitTraceLog()` |
+| `tools.ts` | Tool use / RAG | `AGENT_TOOLS`, `getToolContextForStage()`, `executeTool()` |
+| `evals.ts` | Evaluation | `evaluatePlan()`, `evaluateSection()`, `GOLDEN_TEST_CASES` |
+| `memory.ts` | Episodic memory | `recallVisitorContext()`, `storeMemory()`, `buildMemoryPromptSection()` |
+| `prompts.ts` | Context assembly | `assembleAgentContext()`, `getPromptVersion()` |
+| `schemas.ts` | Output guardrails | `stageOutputGuardrails`, `intakeOutputSchema`, etc. |
+| `safety.ts` | Safety guardrails | `enforceOutputSafety()`, `enforceTextSafety()` |
+| `validation.ts` | Coherence guardrails | `runCrossSectionGuardrails()` |
+| `conversation.ts` | Conversation agent | `generateConversationalResponse()`, `extractIntakeData()` |
+| `refinement.ts` | Refinement agent | `refinePlanSection()`, `refinePlanSectionStreaming()` |

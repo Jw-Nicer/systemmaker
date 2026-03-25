@@ -214,13 +214,31 @@ export const agentChatSchema = z.object({
 
 export type AgentChatInput = z.infer<typeof agentChatSchema>;
 
-export const planRefinementSchema = z.object({
+const planRefinementSectionSchema = z.enum([
+  "scope",
+  "workflow",
+  "kpis",
+  "alerts",
+  "actions",
+  "roadmap",
+]);
+
+export const planRefinementPreviewSchema = z.object({
   plan_id: z.string().min(1, "Plan ID is required").max(100),
-  section: z.enum(["scope", "workflow", "kpis", "alerts", "actions"]),
+  section: planRefinementSectionSchema,
   feedback: z.string().min(1, "Feedback is required").max(2000),
 });
 
-export type PlanRefinementInput = z.infer<typeof planRefinementSchema>;
+export type PlanRefinementPreviewInput = z.infer<typeof planRefinementPreviewSchema>;
+
+export const planRefinementApplySchema = z.object({
+  plan_id: z.string().min(1, "Plan ID is required").max(100),
+  section: planRefinementSectionSchema,
+  refined_content: z.unknown(),
+  feedback: z.string().max(2000).optional(),
+});
+
+export type PlanRefinementApplyInput = z.infer<typeof planRefinementApplySchema>;
 
 // --- Experiments ---
 

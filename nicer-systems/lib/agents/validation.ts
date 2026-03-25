@@ -1,7 +1,8 @@
 /**
- * Cross-section validation for agent pipeline outputs.
+ * Cross-Section Guardrails — coherence validation for agent pipeline outputs.
  *
- * After all 5 stages complete, this module checks consistency across sections:
+ * After all pipeline stages complete, this module checks consistency
+ * across sections (the "coherence guardrail" layer):
  * - Automation triggers should reference workflow stages
  * - Dashboard KPIs should reference data fields from workflow
  * - Ops pulse actions should relate to identified failure modes
@@ -174,10 +175,13 @@ function validateCoverage(plan: PreviewPlan): PlanWarning[] {
 }
 
 /**
- * Run all cross-section validation checks and return warnings.
+ * Run all cross-section guardrails and return warnings.
  * These are informational — the plan is still usable even with warnings.
+ *
+ * This is the "coherence guardrail" layer — it checks that sections
+ * reference each other consistently after the pipeline completes.
  */
-export function validatePlanConsistency(plan: PreviewPlan): PlanWarning[] {
+export function runCrossSectionGuardrails(plan: PreviewPlan): PlanWarning[] {
   return [
     ...validateAutomationRefsWorkflow(plan),
     ...validateDashboardRefsWorkflow(plan),
@@ -185,3 +189,6 @@ export function validatePlanConsistency(plan: PreviewPlan): PlanWarning[] {
     ...validateCoverage(plan),
   ];
 }
+
+/** @deprecated Use runCrossSectionGuardrails */
+export const validatePlanConsistency = runCrossSectionGuardrails;

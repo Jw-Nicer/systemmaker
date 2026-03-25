@@ -10,7 +10,16 @@ import {
   extractIntakeData,
   generateConversationalResponse,
   buildPlanSummary,
+  buildDetailedPlanContext,
+  buildConversationSummary,
+  detectContradiction,
+  type ConversationContext,
 } from "@/lib/agents/conversation";
+import {
+  recallVisitorContext,
+  storeMemory,
+  recordInteraction,
+} from "@/lib/agents/memory";
 import { computeLeadScore } from "@/lib/leads/scoring";
 import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
 import { renderPreviewPlanHTML } from "@/lib/agents/email-template";
@@ -194,17 +203,28 @@ export async function POST(request: Request) {
   }
 
   const stream = createSSEStream(async (write, close) => {
+    // Step 0: Recall memory for returning visitors (non-blocking)
+    const visitorEmail = extracted.email ?? "";
+    const memoryPromise = visitorEmail
+      ? recallVisitorContext(visitorEmail).catch(() => null)
+      : Promise.resolve(null);
+
     // Step 1: Extract intake data and detect phase
-    // Run extraction in parallel with an optimistic phase check
     let updatedExtracted: ExtractedIntake = { ...extracted };
 
     if (clientPhase === "gathering" || clientPhase === "confirming") {
-      // Extraction uses gemini-2.0-flash (fast) — runs quickly
       updatedExtracted = await extractIntakeData(
         history as ChatMessage[],
         message,
         extracted
       );
+    }
+
+    // Step 1b: Detect contradictions (corrections to previously extracted data)
+    const corrections: string[] = [];
+    const contradiction = detectContradiction(message, extracted);
+    if (contradiction) {
+      corrections.push(contradiction);
     }
 
     // Step 2: Detect the correct phase
@@ -215,6 +235,9 @@ export async function POST(request: Request) {
       message,
       messageCount
     );
+
+    // Resolve memory context (should be done by now)
+    const memoryContext = await memoryPromise;
 
     // Emit phase change if it changed
     if (nextPhase !== clientPhase) {
@@ -430,6 +453,21 @@ export async function POST(request: Request) {
         }
       }
 
+      // Store memory for returning visitor context (fire-and-forget)
+      if (extractedEmail) {
+        storeMemory(extractedEmail, {
+          name: extractedName || undefined,
+          industry: input.industry,
+          bottleneck: input.bottleneck,
+          planId: planId,
+          tools: input.current_tools ? input.current_tools.split(",").map((t: string) => t.trim()) : undefined,
+          interaction: {
+            type: "plan_generated",
+            summary: `Generated plan for ${input.industry}: ${input.bottleneck.slice(0, 80)}`,
+          },
+        }).catch(() => {});
+      }
+
       write("plan_complete", {
         plan_id: planId ?? "",
         lead_id: leadId ?? "",
@@ -458,21 +496,43 @@ export async function POST(request: Request) {
     }
 
     // For conversational phases (gathering, confirming, follow_up):
-    // Stream the response token by token
-    let planSummary: string | undefined;
-    if (nextPhase === "follow_up" && clientPlan && typeof clientPlan === "object") {
-      planSummary = buildPlanSummary(
-        clientPlan as Parameters<typeof buildPlanSummary>[0]
-      );
+    // Build full conversation context for accurate, consistent responses
+    const conversationCtx: ConversationContext = {
+      corrections,
+      conversationSummary: buildConversationSummary(
+        updatedExtracted,
+        history as ChatMessage[],
+        corrections
+      ),
+    };
+
+    // Add memory context for returning visitors
+    if (memoryContext) {
+      conversationCtx.memoryContext = memoryContext;
     }
 
-    // Stream conversational response
+    // For follow-up: build detailed plan context (not just summary)
+    if (nextPhase === "follow_up" && clientPlan && typeof clientPlan === "object") {
+      conversationCtx.detailedPlanContext = buildDetailedPlanContext(
+        clientPlan as Record<string, unknown>
+      );
+      conversationCtx.planSummary = buildPlanSummary(
+        clientPlan as Parameters<typeof buildPlanSummary>[0]
+      );
+
+      // Record follow-up interaction in memory
+      if (visitorEmail) {
+        recordInteraction(visitorEmail, "question_asked", message.slice(0, 100)).catch(() => {});
+      }
+    }
+
+    // Stream conversational response with full context
     for await (const chunk of generateConversationalResponse(
       nextPhase,
       history as ChatMessage[],
       updatedExtracted,
       message,
-      planSummary
+      conversationCtx
     )) {
       write("message", { content: chunk, is_chunk: true });
     }

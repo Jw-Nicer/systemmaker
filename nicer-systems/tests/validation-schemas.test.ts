@@ -8,6 +8,8 @@ import {
   experimentConfigSchema,
   experimentVariantSchema,
   guidedAuditSchema,
+  planRefinementApplySchema,
+  planRefinementPreviewSchema,
   variantSchema,
 } from "../lib/validation";
 
@@ -400,4 +402,58 @@ test("guidedAuditSchema rejects empty tool selection", () => {
   });
 
   assert.equal(result.success, false);
+});
+
+test("planRefinementPreviewSchema accepts roadmap refinements", () => {
+  const result = planRefinementPreviewSchema.safeParse({
+    plan_id: "plan-123",
+    section: "roadmap",
+    feedback: "Make week two simpler and reduce dependencies.",
+  });
+
+  assert.ok(result.success);
+});
+
+test("planRefinementApplySchema accepts structured refined content", () => {
+  const result = planRefinementApplySchema.safeParse({
+    plan_id: "plan-123",
+    section: "roadmap",
+    refined_content: {
+      phases: [
+        {
+          week: 1,
+          title: "Foundation and setup",
+          tasks: [
+            {
+              task: "Audit the current spreadsheet and clean required fields.",
+              effort: "medium",
+              owner_role: "Operations Coordinator",
+            },
+          ],
+          dependencies: ["None — this is the first phase"],
+          risks: ["Source data may be incomplete and require manual review."],
+          quick_wins: ["Send an automated confirmation on new intake submission."],
+        },
+        {
+          week: 2,
+          title: "Build and validate the new flow",
+          tasks: [
+            {
+              task: "Launch the intake form and test routing rules with sample requests.",
+              effort: "large",
+              owner_role: "Operations Lead",
+            },
+          ],
+          dependencies: ["Week 1 data cleanup complete"],
+          risks: ["Routing logic may miss exception cases on the first pass."],
+          quick_wins: [],
+        },
+      ],
+      critical_path: "Data cleanup → Intake form launch → Routing validation",
+      total_estimated_weeks: 2,
+    },
+    feedback: "Keep the rollout to two weeks.",
+  });
+
+  assert.ok(result.success);
 });

@@ -7,6 +7,7 @@ import type { RefineSectionKey } from "@/lib/plans/refinement";
 
 interface RefinementState {
   isRefining: boolean;
+  isApplying: boolean;
   streamingContent: string;
   refinedContent: string | null;
   originalContent: string | null;
@@ -16,6 +17,7 @@ interface RefinementState {
 
 const initialState: RefinementState = {
   isRefining: false,
+  isApplying: false,
   streamingContent: "",
   refinedContent: null,
   originalContent: null,
@@ -36,16 +38,17 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
 
   const refine = useCallback(
     async (feedback: string, currentContent: string) => {
-      if (state.isRefining || !feedback.trim()) return;
+      if (state.isRefining || !feedback.trim()) return false;
 
       track(EVENTS.PLAN_REFINE_START, { section, feedback_length: feedback.length });
 
-      setState((prev) => ({
-        ...prev,
-        isRefining: true,
-        error: null,
-        streamingContent: "",
-        originalContent: currentContent,
+        setState((prev) => ({
+          ...prev,
+          isRefining: true,
+          isApplying: false,
+          error: null,
+          streamingContent: "",
+          originalContent: currentContent,
         refinedContent: null,
         showDiff: false,
       }));
@@ -135,10 +138,12 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
                 setState((prev) => ({
                   ...prev,
                   isRefining: false,
+                  isApplying: false,
                   streamingContent: "",
                   refinedContent: prev.refinedContent || accumulated,
                 }));
                 track(EVENTS.PLAN_REFINE_COMPLETE, { section });
+                return true;
               }
             } catch (parseErr) {
               if (parseErr instanceof Error && parseErr.message !== "message") {
@@ -154,20 +159,24 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
             return {
               ...prev,
               isRefining: false,
+              isApplying: false,
               streamingContent: "",
               refinedContent: prev.refinedContent || accumulated,
             };
           }
           return prev;
         });
+        return true;
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         setState((prev) => ({
           ...prev,
           isRefining: false,
+          isApplying: false,
           error: err instanceof Error ? err.message : "Refinement failed",
           streamingContent: "",
         }));
+        return false;
       }
     },
     [planId, section, state.isRefining]
@@ -188,17 +197,65 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
     setState(initialState);
   }, []);
 
+  const applyRefinement = useCallback(async () => {
+    if (!state.refinedContent || state.isApplying) {
+      return null;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      isApplying: true,
+      error: null,
+    }));
+
+    try {
+      const res = await fetch("/api/agent/refine/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_id: planId,
+          section,
+          refined_content: JSON.parse(state.refinedContent),
+        }),
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        throw new Error(errorBody?.error || `Failed to save refinement (${res.status})`);
+      }
+
+      const body = await res.json();
+      track(EVENTS.PLAN_REFINE_APPLY, { section });
+
+      setState((prev) => ({
+        ...prev,
+        isApplying: false,
+      }));
+
+      return JSON.stringify(body.refined_content);
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        isApplying: false,
+        error: err instanceof Error ? err.message : "Failed to save refinement",
+      }));
+      return null;
+    }
+  }, [planId, section, state.isApplying, state.refinedContent]);
+
   const abort = useCallback(() => {
     abortRef.current?.abort();
     setState((prev) => ({
       ...prev,
       isRefining: false,
+      isApplying: false,
       streamingContent: "",
     }));
   }, []);
 
   return {
     isRefining: state.isRefining,
+    isApplying: state.isApplying,
     streamingContent: state.streamingContent,
     refinedContent: state.refinedContent,
     originalContent: state.originalContent,
@@ -206,6 +263,7 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
     showDiff: state.showDiff,
 
     refine,
+    applyRefinement,
     toggleDiff,
     clearRefinement,
     abort,

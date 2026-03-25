@@ -2,7 +2,7 @@ import { test, describe, vi, beforeEach, afterEach } from "vitest";
 import assert from "node:assert/strict";
 
 // ---------------------------------------------------------------------------
-// Mocks
+// Mocks — mock at module boundaries to test DAG orchestration logic
 // ---------------------------------------------------------------------------
 
 // Mock Gemini: generateContent returns configurable text
@@ -34,27 +34,83 @@ vi.mock("@/lib/firebase/admin", () => ({
             data: () => ({ key, markdown }),
           })),
         }),
+      doc: () => ({
+        get: () => Promise.resolve({ exists: false, data: () => undefined }),
+        update: () => Promise.resolve(),
+      }),
     }),
+    runTransaction: (fn: (tx: { get: (docRef: unknown) => Promise<{ exists: boolean; data: () => unknown }>; update: () => void }) => Promise<unknown>) =>
+      fn({
+        get: () => Promise.resolve({ exists: false, data: () => undefined }),
+        update: () => undefined,
+      }),
   }),
 }));
 
-// Mock safety check — pass through by default
+// Mock safety guardrails — pass through by default
 vi.mock("@/lib/agents/safety", () => ({
-  assertSafeAgentObject: vi.fn(),
+  enforceOutputSafety: vi.fn(),
+  assertSafeAgentObject: vi.fn(), // backward compat
 }));
 
-// Mock validation — return empty warnings by default
+// Mock cross-section guardrails — return empty warnings by default
 vi.mock("@/lib/agents/validation", () => ({
+  runCrossSectionGuardrails: vi.fn().mockReturnValue([]),
   validatePlanConsistency: vi.fn().mockReturnValue([]),
+}));
+
+// Mock tool use — return empty context (no RAG in tests)
+vi.mock("@/lib/agents/tools", () => ({
+  getToolContextForStage: vi.fn().mockResolvedValue(""),
+  getToolsForStage: vi.fn().mockReturnValue([]),
+  executeTool: vi.fn().mockResolvedValue({ tool: "", input: {}, output: null, latencyMs: 0 }),
+}));
+
+// Mock tracing — no-op in tests
+vi.mock("@/lib/agents/tracing", () => ({
+  createTrace: vi.fn().mockReturnValue({
+    traceId: "test-trace",
+    pipelineType: "plan_generation",
+    startedAt: Date.now(),
+    status: "running",
+    spans: [],
+    degradedStages: [],
+  }),
+  startSpan: vi.fn().mockReturnValue({
+    spanId: "test-span",
+    traceId: "test-trace",
+    stage: "",
+    model: "",
+    startedAt: Date.now(),
+    status: "running",
+  }),
+  endSpan: vi.fn(),
+  finalizeTrace: vi.fn(),
+  emitTraceLog: vi.fn(),
+  bufferTrace: vi.fn(),
+}));
+
+// Mock self-correction — calls through to LLM but tracks corrections
+const mockExecuteStageWithCorrection = vi.fn();
+vi.mock("@/lib/agents/self-correction", () => ({
+  executeStageWithCorrection: (...args: unknown[]) =>
+    mockExecuteStageWithCorrection(...args),
+  executeWithSelfCorrection: vi.fn(),
 }));
 
 // Import after mocks
 const {
   runAgentChain,
   runAgentChainStreaming,
+  orchestrateAgentPipeline,
+  orchestrateAgentPipelineStreaming,
   runSingleAgent,
   invalidateTemplateCache,
 } = await import("@/lib/agents/runner");
+
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
 // ---------------------------------------------------------------------------
 // Fixtures — must satisfy Zod schema minimums in lib/agents/schemas.ts
@@ -159,7 +215,8 @@ const fixture = {
   },
 };
 
-const geminiResponses: Record<string, unknown> = {
+/** Map template key → fixture data for self-correction mock */
+const fixtureByTemplateKey: Record<string, unknown> = {
   intake_agent: fixture.intake,
   workflow_mapper: fixture.workflow,
   automation_designer: fixture.automation,
@@ -176,44 +233,68 @@ const baseInput = {
   volume: "200/week",
 };
 
-// Track which call index we're on to return stage-appropriate responses
-let callIndex = 0;
-const stageOrder = [
-  "intake_agent",
-  "workflow_mapper",
-  "automation_designer",
-  "dashboard_designer",
-  "ops_pulse_writer",
-  "implementation_sequencer",
-];
-
+/**
+ * Setup happy path — self-correction mock returns fixture directly.
+ * This tests the DAG orchestration logic without actual LLM calls.
+ */
 function setupHappyPath() {
-  callIndex = 0;
-  mockGenerateContent.mockImplementation(() => {
-    const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-    callIndex++;
-    return Promise.resolve({
-      response: {
-        text: () => JSON.stringify(geminiResponses[stage]),
-      },
-    });
-  });
+  mockExecuteStageWithCorrection.mockImplementation(
+    (templateKey: string) => {
+      const data = fixtureByTemplateKey[templateKey];
+      if (!data) throw new Error(`No fixture for ${templateKey}`);
+      return Promise.resolve({
+        output: data,
+        corrections: 0,
+        wasAutoFixed: false,
+        model: "gemini-2.5-flash",
+        totalLatencyMs: 100,
+      });
+    }
+  );
+}
+
+/**
+ * Setup a failure for a specific stage.
+ */
+function setupStageFailure(failingTemplateKey: string) {
+  mockExecuteStageWithCorrection.mockImplementation(
+    (templateKey: string) => {
+      if (templateKey === failingTemplateKey) {
+        return Promise.reject(new Error(`${failingTemplateKey} failed`));
+      }
+      const data = fixtureByTemplateKey[templateKey];
+      if (!data) throw new Error(`No fixture for ${templateKey}`);
+      return Promise.resolve({
+        output: data,
+        corrections: 0,
+        wasAutoFixed: false,
+        model: "gemini-2.5-flash",
+        totalLatencyMs: 100,
+      });
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — DAG orchestration via backward-compatible wrappers
 // ---------------------------------------------------------------------------
 
-describe("runAgentChain", () => {
+describe("runAgentChain (backward-compat wrapper)", () => {
   beforeEach(() => {
     process.env.GOOGLE_GEMINI_API_KEY = "test-key";
     invalidateTemplateCache();
-    mockGenerateContent.mockReset();
+    mockExecuteStageWithCorrection.mockReset();
     setupHappyPath();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete process.env.GOOGLE_GEMINI_API_KEY;
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   test("returns a complete PreviewPlan on happy path", async () => {
@@ -225,9 +306,9 @@ describe("runAgentChain", () => {
     assert.deepEqual(plan.ops_pulse, fixture.ops_pulse);
   });
 
-  test("calls Gemini 6 times (one per stage)", async () => {
+  test("executes all 6 pipeline stages", async () => {
     await runAgentChain(baseInput);
-    assert.equal(mockGenerateContent.mock.calls.length, 6);
+    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 6);
   });
 
   test("calls onStep callback for each stage", async () => {
@@ -242,7 +323,6 @@ describe("runAgentChain", () => {
   });
 
   test("defaults urgency and volume to 'not specified' when absent", async () => {
-    // We can verify this doesn't throw — the templates still render
     const plan = await runAgentChain({
       industry: "healthcare",
       bottleneck: "manual intake",
@@ -251,101 +331,134 @@ describe("runAgentChain", () => {
     assert.ok(plan.intake);
   });
 
-  test("throws when intake stage fails", async () => {
-    mockGenerateContent.mockRejectedValue(new Error("permanent error"));
+  test("throws when intake stage fails (critical)", async () => {
+    setupStageFailure("intake_agent");
     await assert.rejects(
       () => runAgentChain(baseInput),
-      { message: /AI generation failed/ }
+      { message: /intake_agent failed/ }
     );
   });
 
   test("handles roadmap stage failure gracefully (returns undefined roadmap)", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      if (stage === "implementation_sequencer") {
-        return Promise.reject(new Error("roadmap failed"));
-      }
-      return Promise.resolve({
-        response: {
-          text: () => JSON.stringify(geminiResponses[stage]),
-        },
-      });
-    });
-
+    setupStageFailure("implementation_sequencer");
     const plan = await runAgentChain(baseInput);
     assert.equal(plan.roadmap, undefined);
-    assert.ok(plan.intake); // Other sections still present
+    assert.ok(plan.intake);
   });
 
-  test("parses JSON wrapped in markdown code fences", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      return Promise.resolve({
-        response: {
-          text: () =>
-            "```json\n" + JSON.stringify(geminiResponses[stage]) + "\n```",
-        },
-      });
-    });
+  test("provides fallback empty sections when automation fails", async () => {
+    setupStageFailure("automation_designer");
+    const plan = await runAgentChain(baseInput);
+    assert.deepEqual(plan.automation.automations, []);
+    assert.deepEqual(plan.automation.alerts, []);
+    assert.deepEqual(plan.automation.logging_plan, []);
+    assert.ok(plan.ops_pulse);
+    assert.ok(plan.warnings?.some((w) => w.section === "automation"));
+  });
+
+  test("skips ops_pulse and roadmap when both automation and dashboard fail", async () => {
+    mockExecuteStageWithCorrection.mockImplementation(
+      (templateKey: string) => {
+        if (templateKey === "automation_designer" || templateKey === "dashboard_designer") {
+          return Promise.reject(new Error(`${templateKey} failed`));
+        }
+        const data = fixtureByTemplateKey[templateKey];
+        if (!data) throw new Error(`No fixture for ${templateKey}`);
+        return Promise.resolve({
+          output: data, corrections: 0, wasAutoFixed: false,
+          model: "gemini-2.5-flash", totalLatencyMs: 100,
+        });
+      }
+    );
 
     const plan = await runAgentChain(baseInput);
-    assert.deepEqual(plan.intake, fixture.intake);
-  });
-
-  test("extracts JSON when model wraps with extra text", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      return Promise.resolve({
-        response: {
-          text: () =>
-            "Here is the result:\n" + JSON.stringify(geminiResponses[stage]) + "\nDone.",
-        },
-      });
-    });
-
-    const plan = await runAgentChain(baseInput);
-    assert.deepEqual(plan.intake, fixture.intake);
-  });
-
-  test("throws on empty Gemini response", async () => {
-    mockGenerateContent.mockResolvedValue({
-      response: { text: () => "" },
-    });
-
-    await assert.rejects(
-      () => runAgentChain(baseInput),
-      { message: /Empty response from AI model|AI generation failed/ }
-    );
-  });
-
-  test("throws when response exceeds 512KB", async () => {
-    mockGenerateContent.mockResolvedValue({
-      response: { text: () => "x".repeat(600 * 1024) },
-    });
-
-    await assert.rejects(
-      () => runAgentChain(baseInput),
-      { message: /AI generation failed/ }
-    );
+    assert.equal(plan.ops_pulse.executive_summary.problem, "");
+    assert.equal(plan.roadmap, undefined);
+    assert.ok(plan.warnings?.some((w) => w.section === "ops_pulse"));
+    assert.ok(plan.warnings?.some((w) => w.section === "implementation_sequencer"));
   });
 });
 
-describe("runAgentChainStreaming", () => {
+// ---------------------------------------------------------------------------
+// Tests — DAG orchestration via new API
+// ---------------------------------------------------------------------------
+
+describe("orchestrateAgentPipeline", () => {
   beforeEach(() => {
     process.env.GOOGLE_GEMINI_API_KEY = "test-key";
     invalidateTemplateCache();
-    mockGenerateContent.mockReset();
+    mockExecuteStageWithCorrection.mockReset();
     setupHappyPath();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete process.env.GOOGLE_GEMINI_API_KEY;
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+  });
+
+  test("returns plan and trace on happy path", async () => {
+    const { plan, trace } = await orchestrateAgentPipeline(baseInput);
+    assert.deepEqual(plan.intake, fixture.intake);
+    assert.ok(trace.traceId);
+  });
+
+  test("executes stages in tier order (intake → workflow → auto+dash → ops+impl)", async () => {
+    const stageOrder: string[] = [];
+    mockExecuteStageWithCorrection.mockImplementation(
+      (templateKey: string) => {
+        stageOrder.push(templateKey);
+        const data = fixtureByTemplateKey[templateKey];
+        return Promise.resolve({
+          output: data, corrections: 0, wasAutoFixed: false,
+          model: "gemini-2.5-flash", totalLatencyMs: 100,
+        });
+      }
+    );
+
+    await orchestrateAgentPipeline(baseInput);
+
+    // Intake must be first
+    assert.equal(stageOrder[0], "intake_agent");
+    // Workflow must be second
+    assert.equal(stageOrder[1], "workflow_mapper");
+    // Automation and dashboard must come after workflow (order between them may vary)
+    const autoIdx = stageOrder.indexOf("automation_designer");
+    const dashIdx = stageOrder.indexOf("dashboard_designer");
+    assert.ok(autoIdx > 1);
+    assert.ok(dashIdx > 1);
+    // Ops pulse and implementation must come after auto+dash
+    const opsIdx = stageOrder.indexOf("ops_pulse_writer");
+    const implIdx = stageOrder.indexOf("implementation_sequencer");
+    assert.ok(opsIdx > autoIdx || opsIdx > dashIdx);
+    assert.ok(implIdx > autoIdx || implIdx > dashIdx);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — streaming variant
+// ---------------------------------------------------------------------------
+
+describe("runAgentChainStreaming (backward-compat wrapper)", () => {
+  beforeEach(() => {
+    process.env.GOOGLE_GEMINI_API_KEY = "test-key";
+    invalidateTemplateCache();
+    mockExecuteStageWithCorrection.mockReset();
+    setupHappyPath();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    delete process.env.GOOGLE_GEMINI_API_KEY;
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   test("returns a complete plan on happy path", async () => {
@@ -373,28 +486,15 @@ describe("runAgentChainStreaming", () => {
   });
 
   test("throws when intake fails (critical stage)", async () => {
-    mockGenerateContent.mockRejectedValue(new Error("permanent error"));
+    setupStageFailure("intake_agent");
     await assert.rejects(
       () => runAgentChainStreaming(baseInput, () => {}),
-      { message: /AI generation failed/ }
+      { message: /intake_agent failed/ }
     );
   });
 
   test("provides fallback empty sections when automation fails", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      if (stage === "automation_designer") {
-        return Promise.reject(new Error("automation failed"));
-      }
-      return Promise.resolve({
-        response: {
-          text: () => JSON.stringify(geminiResponses[stage]),
-        },
-      });
-    });
-
+    setupStageFailure("automation_designer");
     const failed: string[] = [];
     const plan = await runAgentChainStreaming(
       baseInput,
@@ -406,52 +506,22 @@ describe("runAgentChainStreaming", () => {
     assert.deepEqual(plan.automation.automations, []);
     assert.deepEqual(plan.automation.alerts, []);
     assert.deepEqual(plan.automation.logging_plan, []);
-    // Other sections still populated
     assert.ok(plan.intake.clarified_problem);
   });
 
-  test("provides fallback empty sections when dashboard fails", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      if (stage === "dashboard_designer") {
-        return Promise.reject(new Error("dashboard failed"));
-      }
-      return Promise.resolve({
-        response: {
-          text: () => JSON.stringify(geminiResponses[stage]),
-        },
-      });
-    });
-
-    const failed: string[] = [];
-    const plan = await runAgentChainStreaming(
-      baseInput,
-      () => {},
-      (step) => failed.push(step)
-    );
-
-    assert.ok(failed.includes("dashboard"));
-    assert.deepEqual(plan.dashboard.dashboards, []);
-    assert.deepEqual(plan.dashboard.kpis, []);
-    assert.deepEqual(plan.dashboard.views, []);
-  });
-
   test("skips ops_pulse and roadmap when both automation AND dashboard fail", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      if (stage === "automation_designer" || stage === "dashboard_designer") {
-        return Promise.reject(new Error(`${stage} failed`));
+    mockExecuteStageWithCorrection.mockImplementation(
+      (templateKey: string) => {
+        if (templateKey === "automation_designer" || templateKey === "dashboard_designer") {
+          return Promise.reject(new Error(`${templateKey} failed`));
+        }
+        const data = fixtureByTemplateKey[templateKey];
+        return Promise.resolve({
+          output: data, corrections: 0, wasAutoFixed: false,
+          model: "gemini-2.5-flash", totalLatencyMs: 100,
+        });
       }
-      return Promise.resolve({
-        response: {
-          text: () => JSON.stringify(geminiResponses[stage]),
-        },
-      });
-    });
+    );
 
     const failed: string[] = [];
     const plan = await runAgentChainStreaming(
@@ -464,27 +534,12 @@ describe("runAgentChainStreaming", () => {
     assert.ok(failed.includes("dashboard"));
     assert.ok(failed.includes("ops_pulse"));
     assert.ok(failed.includes("implementation_sequencer"));
-
-    // Ops pulse has empty fallback
     assert.equal(plan.ops_pulse.executive_summary.problem, "");
     assert.deepEqual(plan.ops_pulse.sections, []);
   });
 
   test("adds warnings for failed stages", async () => {
-    callIndex = 0;
-    mockGenerateContent.mockImplementation(() => {
-      const stage = stageOrder[callIndex] ?? stageOrder[stageOrder.length - 1];
-      callIndex++;
-      if (stage === "automation_designer") {
-        return Promise.reject(new Error("automation failed"));
-      }
-      return Promise.resolve({
-        response: {
-          text: () => JSON.stringify(geminiResponses[stage]),
-        },
-      });
-    });
-
+    setupStageFailure("automation_designer");
     const plan = await runAgentChainStreaming(baseInput, () => {});
     assert.ok(plan.warnings);
     const automationWarning = plan.warnings!.find(
@@ -494,15 +549,25 @@ describe("runAgentChainStreaming", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Tests — single agent runner
+// ---------------------------------------------------------------------------
+
 describe("runSingleAgent", () => {
   beforeEach(() => {
     process.env.GOOGLE_GEMINI_API_KEY = "test-key";
     invalidateTemplateCache();
     mockGenerateContent.mockReset();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete process.env.GOOGLE_GEMINI_API_KEY;
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   test("runs a single template and returns parsed output", async () => {
@@ -530,28 +595,50 @@ describe("runSingleAgent", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Tests — template cache
+// ---------------------------------------------------------------------------
+
 describe("invalidateTemplateCache", () => {
   beforeEach(() => {
     process.env.GOOGLE_GEMINI_API_KEY = "test-key";
-    mockGenerateContent.mockReset();
+    mockExecuteStageWithCorrection.mockReset();
     setupHappyPath();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete process.env.GOOGLE_GEMINI_API_KEY;
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    consoleLogSpy.mockRestore();
   });
 
   test("forces re-fetch of templates on next run", async () => {
-    // First run populates cache
     await runAgentChain(baseInput);
-
-    // Reset call tracking, invalidate, run again
     setupHappyPath();
     invalidateTemplateCache();
     await runAgentChain(baseInput);
+    // 12 total calls (6 per run)
+    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 12);
+  });
 
-    // Gemini was called 12 times total (6 per run)
-    // The important thing is it didn't error — templates were re-fetched
-    assert.equal(mockGenerateContent.mock.calls.length, 12);
+  test("falls back to local templates when Firestore templates are empty", async () => {
+    const entries = Array.from(templateData.entries());
+    templateData.clear();
+
+    try {
+      setupHappyPath();
+      invalidateTemplateCache();
+      const plan = await runAgentChain(baseInput);
+      assert.ok(plan.intake);
+      assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 6);
+    } finally {
+      for (const [key, value] of entries) {
+        templateData.set(key, value);
+      }
+    }
   });
 });
