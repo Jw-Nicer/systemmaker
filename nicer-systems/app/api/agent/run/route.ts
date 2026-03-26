@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { agentRunSchema } from "@/lib/validation";
-import { runAgentChain } from "@/lib/agents/runner";
+import { orchestrateAgentPipeline } from "@/lib/agents/runner";
 import { savePlan } from "@/lib/firestore/plans";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { computeLeadScore } from "@/lib/leads/scoring";
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
     // Run the agent chain
     const completedSteps: string[] = [];
-    const plan = await runAgentChain(
+    const { plan } = await orchestrateAgentPipeline(
       { industry, bottleneck, current_tools, urgency, volume },
       (step) => {
         lastStep = step;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { guidedAuditSchema } from "@/lib/validation";
-import { runAgentChain } from "@/lib/agents/runner";
+import { orchestrateAgentPipeline } from "@/lib/agents/runner";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { computeLeadScore } from "@/lib/leads/scoring";
 import {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     }).catch(() => {});
 
     const agentInput = buildAuditAgentInput(input);
-    const plan = await runAgentChain(agentInput);
+    const { plan } = await orchestrateAgentPipeline(agentInput);
 
     const planRef = await db.collection("plans").add({
       preview_plan: JSON.parse(JSON.stringify(plan)),

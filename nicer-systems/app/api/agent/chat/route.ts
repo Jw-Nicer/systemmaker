@@ -4,7 +4,7 @@ import {
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
 import { agentChatSchema } from "@/lib/validation";
-import { runAgentChainStreaming, type AgentStep } from "@/lib/agents/runner";
+import { orchestrateAgentPipelineStreaming, type AgentStep } from "@/lib/agents/runner";
 import {
   detectPhase,
   extractIntakeData,
@@ -289,7 +289,7 @@ export async function POST(request: Request) {
       });
 
       // Run the streaming agent chain (starts immediately, doesn't wait for lead write)
-      const plan = await runAgentChainStreaming(
+      const { plan } = await orchestrateAgentPipelineStreaming(
         input,
         (step: AgentStep, label: string, data: unknown) => {
           write("plan_section", {
