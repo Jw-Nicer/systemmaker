@@ -243,7 +243,7 @@ async function executeStage<T>(
 
 /** Map stage results into the PreviewPlan structure. */
 function assemblePlan(results: Map<string, unknown>): PreviewPlan {
-  return {
+  const plan: PreviewPlan = {
     intake: (results.get("intake") as IntakeOutput) ?? {
       clarified_problem: "",
       assumptions: [],
@@ -278,10 +278,18 @@ function assemblePlan(results: Map<string, unknown>): PreviewPlan {
       actions: [],
       questions: [],
     },
-    roadmap: results.get("implementation_sequencer") as
-      | ImplementationSequencerOutput
-      | undefined,
   };
+
+  // Only set roadmap if implementation_sequencer produced a result.
+  // Firestore rejects `undefined` values — omitting the key entirely is safe.
+  const roadmap = results.get("implementation_sequencer") as
+    | ImplementationSequencerOutput
+    | undefined;
+  if (roadmap) {
+    plan.roadmap = roadmap;
+  }
+
+  return plan;
 }
 
 // ---------------------------------------------------------------------------

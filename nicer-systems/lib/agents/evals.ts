@@ -175,7 +175,7 @@ export async function evaluateSection(
     const result = await invokeLLM(prompt, {
       label: `eval:${section}`,
       // Use a different model for evaluation to avoid self-bias
-      models: ["gemini-2.0-flash"],
+      models: ["gemini-2.5-flash-lite"],
       timeoutMs: 30_000,
     });
 
@@ -262,7 +262,7 @@ async function evaluateCoherence(
     const prompt = buildCoherenceEvalPrompt(plan);
     const result = await invokeLLM(prompt, {
       label: "eval:coherence",
-      models: ["gemini-2.0-flash"],
+      models: ["gemini-2.5-flash-lite"],
       timeoutMs: 30_000,
     });
 

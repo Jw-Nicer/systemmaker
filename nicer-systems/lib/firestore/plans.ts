@@ -33,8 +33,10 @@ export async function savePlan(params: {
 }): Promise<string> {
   try {
     const db = getAdminDb();
+    // JSON round-trip strips undefined values (Firestore rejects them)
+    const cleanPlan = JSON.parse(JSON.stringify(params.preview_plan));
     const docRef = await db.collection("plans").add({
-      preview_plan: params.preview_plan,
+      preview_plan: cleanPlan,
       input_summary: params.input_summary,
       lead_id: params.lead_id ?? null,
       created_at: FieldValue.serverTimestamp(),

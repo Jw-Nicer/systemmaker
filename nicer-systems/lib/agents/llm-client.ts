@@ -21,7 +21,7 @@ import { endSpan } from "./tracing";
 // Configuration
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
+const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"] as const;
 const MAX_RETRIES_PER_MODEL = 2;
 const BASE_RETRY_DELAY_MS = 300;
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -400,7 +400,7 @@ export async function* invokeLLMStreaming(
 
 /** Get the fast model name for lightweight tasks (extraction, classification). */
 export function getFastModel(): string {
-  return "gemini-2.0-flash";
+  return "gemini-2.5-flash-lite";
 }
 
 /** Get the primary model name for complex reasoning tasks. */
