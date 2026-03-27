@@ -64,9 +64,11 @@ app/
     booking/route.ts           # POST: book scoping call (Google Calendar integration)
     agent/run/route.ts         # POST: run agent chain via Gemini
     agent/chat/route.ts        # POST: SSE streaming agent chat (multi-phase conversation)
-    agent/refine/route.ts      # POST: refine a specific plan section with feedback
+    agent/refine/route.ts      # POST: stream refined section preview (no persistence)
+    agent/refine/apply/route.ts # POST: persist accepted refinement to Firestore
     agent/send-email/route.ts  # POST: send email via Resend
     agent/audit/route.ts       # POST: run guided audit agent chain
+    admin/analytics/route.ts   # GET: dashboard metrics (auth required)
     plans/route.ts             # GET: fetch stored plan by ID
     plans/export/route.ts      # GET: export plan as PDF
 
@@ -94,11 +96,22 @@ lib/
   firestore/experiments.ts   # getRunningExperiments(), getExperimentByTarget()
   firestore/plans.ts         # storePlan(), getPlanById() — agent preview plans
   actions/lead-activity.ts   # Server actions: activity timeline (notes, status changes, emails)
-  agents/runner.ts       # Agent chain runner (Gemini API)
-  agents/conversation.ts # Multi-phase SSE chat (gathering → confirming → building → complete → follow_up)
-  agents/prompts.ts      # Prompt builder from templates + context
-  agents/refinement.ts   # Section-level plan refinement via Gemini
-  agents/email-template.ts # Email template for agent outputs
+  agents/runner.ts           # DAG-driven pipeline orchestrator (walks PIPELINE_DAG, parallel tiers)
+  agents/registry.ts         # Pipeline DAG config (stage keys, dependencies, routing signals, criticality)
+  agents/context.ts          # Typed context protocol (data flow between stages, fallback outputs)
+  agents/llm-client.ts       # Shared LLM client (singleton Gemini, retry, model fallback, token budget)
+  agents/self-correction.ts  # ReAct self-correction loop (schema validation → error feedback → retry)
+  agents/tracing.ts          # Observability (traces, spans, structured logging per pipeline run)
+  agents/tools.ts            # Tool use / RAG (searchCaseStudies, getIndustryBenchmarks, searchExistingPlans)
+  agents/evals.ts            # LLM-as-judge evaluation (quality scoring, golden test suite)
+  agents/memory.ts           # Episodic memory (Firestore-backed visitor recall across sessions)
+  agents/conversation.ts     # Multi-phase SSE chat (gathering → confirming → building → complete → follow_up)
+  agents/prompts.ts          # Context assembly (template + context + input sanitization + versioning)
+  agents/schemas.ts          # Stage output guardrails (Zod schemas per pipeline stage)
+  agents/safety.ts           # Output safety guardrails (prompt injection, secret leak, impersonation detection)
+  agents/validation.ts       # Cross-section coherence guardrails (automation↔workflow, KPIs↔fields)
+  agents/refinement.ts       # Refinement agent (section-level plan updates via streaming LLM)
+  agents/email-template.ts   # Email HTML rendering for preview plan delivery
   email/nurture-sequence.ts  # 5-email automated nurture via Resend scheduledAt
   email/nurture-templates.ts # Nurture email content templates
   email/admin-notification.ts # Admin email alerts on new leads
@@ -219,6 +232,7 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `variants` | is_published=true | none | auth | slug, industry, headline, subheadline, cta_text, meta_title, meta_description, featured_industries[], sections (LandingVariantSections) |
 | `experiments` | status=running | none | auth | name, target, variants[], status, winner |
 | `plans` | is_public=true | none | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
+| `agent_memory` | none | none | auth | visitorId (email hash), industry, lastBottleneck, planIds[], interactions[], preferences, sessionCount |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -289,6 +303,21 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [x] CSP security headers + Permissions-Policy on all routes
 - [x] Admin dashboard Suspense loading with skeleton UI
 - [x] Firebase Admin SDK init unit tests
+
+## What's Built (Phase 7 — Agentic Workflow Architecture, complete)
+- [x] DAG-driven pipeline orchestrator (runner.ts walks PIPELINE_DAG, adding stages = config + template only)
+- [x] Shared LLM client (singleton, retry with exponential backoff, multi-model fallback cascade)
+- [x] Self-correction / ReAct loops (schema validation failure → error fed back to LLM → retry, max 2 corrections)
+- [x] Tool use / RAG (agents query case studies, industry benchmarks, existing plans for grounded output)
+- [x] Observability / tracing (trace IDs, spans per stage, structured logging, trace buffer)
+- [x] Agent episodic memory (Firestore-backed visitor recall across sessions, interaction history)
+- [x] Typed context protocol (each stage declares data dependencies, fallback outputs for graceful degradation)
+- [x] Routing signals (complex_workflow, high_failure_risk signals modify downstream behavior)
+- [x] LLM-as-judge evaluation framework (quality scoring, 5 golden test cases for regression detection)
+- [x] Prompt versioning (template hash tracking, version metadata)
+- [x] Conversation context improvements (detailed plan context for follow-up, contradiction detection, conversation summary)
+- [x] Production hardening (gemini-2.5-flash-lite fallback, undefined-safe Firestore writes, template seeding)
+- [x] Comprehensive test coverage (549 tests across 63 files)
 
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
