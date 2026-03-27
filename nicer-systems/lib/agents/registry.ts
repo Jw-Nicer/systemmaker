@@ -156,8 +156,8 @@ export const PIPELINE_DAG: PipelineStageConfig[] = [
     outputSchema: opsPulseOutputSchema,
     dependencies: ["automation", "dashboard"],
     critical: false,
-    timeoutMs: 25_000,
-    maxCorrections: 1,
+    timeoutMs: 30_000,
+    maxCorrections: 2,
   },
   {
     key: "implementation_sequencer",
