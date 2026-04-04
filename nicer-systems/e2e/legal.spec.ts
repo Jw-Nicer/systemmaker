@@ -22,6 +22,45 @@ test("privacy page renders legal content and links to terms", async ({ page }) =
   );
 });
 
+test("legacy privacy-policy route redirects to /privacy", async ({ page }) => {
+  const response = await page.goto("/privacy-policy");
+  await dismissConsentBanner(page);
+
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page).toHaveTitle(/Privacy Policy/i);
+});
+
+test("faq page renders placeholder content", async ({ page }) => {
+  await page.goto("/faq");
+  await dismissConsentBanner(page);
+
+  await expect(page).toHaveTitle(/FAQ/i);
+  await expect(
+    page.getByRole("heading", { name: /Got questions\? We've got answers\./i })
+  ).toBeVisible();
+
+  const faqSection = page.locator("#faq");
+  await expect(faqSection).toBeVisible();
+  await expect(faqSection.getByRole("button").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Try the Demo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Contact us/i })).toBeVisible();
+});
+
+test("case studies page renders an empty state instead of 404", async ({ page }) => {
+  const response = await page.goto("/case-studies");
+  await dismissConsentBanner(page);
+
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveTitle(/Case Studies/i);
+  await expect(
+    page.getByText(/Case studies coming soon/i)
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "See a live preview plan" })
+  ).toBeVisible();
+});
+
 test("terms page renders legal content and links to privacy and contact", async ({ page }) => {
   await page.goto("/terms");
   await dismissConsentBanner(page);
@@ -69,7 +108,18 @@ test("footer legal links route correctly from the homepage", async ({ page }) =>
 
   await clickAndWaitForUrl(
     page,
-    footer2.getByRole("link", { name: "Terms" }),
+    footer2.getByRole("link", { name: "FAQ" }),
+    /\/faq$/
+  );
+
+  await page.goto("/");
+  await dismissConsentBanner(page);
+  const footer3 = page.getByRole("contentinfo");
+  await footer3.scrollIntoViewIfNeeded();
+
+  await clickAndWaitForUrl(
+    page,
+    footer3.getByRole("link", { name: "Terms" }),
     /\/terms$/
   );
 });

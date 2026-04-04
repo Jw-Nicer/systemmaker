@@ -33,7 +33,7 @@ const footerColumns = [
     links: [
       { label: "Contact", href: "/contact" },
       { label: "Case Studies", href: "/case-studies" },
-      { label: "FAQ", href: "/#faq" },
+      { label: "FAQ", href: "/faq" },
     ],
   },
   {
