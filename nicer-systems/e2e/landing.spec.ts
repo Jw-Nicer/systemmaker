@@ -96,8 +96,39 @@ test.describe("Landing page", () => {
     await dismissConsentBanner(page);
 
     const footer = page.getByRole("contentinfo");
+    await expect(footer.getByRole("link", { name: "FAQ" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "Privacy Policy" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
+  });
+
+  test("primary marketing routes load without same-origin document or asset 404s", async ({ page }) => {
+    const failures = new Set<string>();
+
+    page.on("response", (response) => {
+      const request = response.request();
+      const resourceType = request.resourceType();
+      const url = new URL(response.url());
+
+      if (url.origin !== "http://127.0.0.1:3000") {
+        return;
+      }
+
+      if (!["document", "script", "stylesheet"].includes(resourceType)) {
+        return;
+      }
+
+      if (response.status() >= 400) {
+        failures.add(`${response.status()} ${resourceType} ${url.pathname}`);
+      }
+    });
+
+    for (const route of ["/", "/faq", "/privacy", "/terms", "/case-studies", "/contact"]) {
+      const response = await page.goto(route);
+      expect(response?.status(), `Unexpected status for ${route}`).toBe(200);
+      await dismissConsentBanner(page);
+    }
+
+    expect([...failures]).toEqual([]);
   });
 
   test("landing page fires analytics events after consent", async ({ page }) => {
