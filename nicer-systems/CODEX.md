@@ -17,6 +17,7 @@
   /(marketing)
     page.tsx                   # Landing page (7 sections)
     contact/page.tsx           # Lead capture form
+    faq/page.tsx               # FAQ landing page with placeholders/fallbacks
     case-studies/page.tsx      # Case study listing
     case-studies/[slug]/page.tsx # Case study detail + related recommendations
     [industry]/page.tsx        # Industry variant landing pages
@@ -85,6 +86,15 @@
 - Admin CRUD uses Next.js server actions (in `lib/actions/`), not REST API routes.
 - SSE streaming for agent chat uses `ReadableStream` with `text/event-stream` content type.
 - Plan refinement preserves version history in the `versions[]` array on plan documents.
+- Legacy route support belongs in framework routing (`next.config.ts` redirects) rather than duplicate page implementations when the canonical destination already exists.
+- Browser E2E tests run against an isolated Playwright dev server on port `3217` by default; use `PLAYWRIGHT_PORT` to override locally.
+
+## Verification
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
+- `npm run test:e2e` for browser flows and route smoke coverage
 
 ## Security
 - Firebase Auth (email/password) + HTTP-only session cookies.

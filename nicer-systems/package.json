@@ -7,7 +7,7 @@
     "build": "next build && node scripts/fix-turbopack-externals.js",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "node scripts/typecheck.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

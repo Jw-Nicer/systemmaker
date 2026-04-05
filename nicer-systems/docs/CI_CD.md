@@ -9,12 +9,14 @@
 - Secrets/config: local development uses `.env.local`; the live runtime must not depend on `apphosting.yaml` secrets unless the site is explicitly migrated to Firebase App Hosting
 
 ## Pre-Deploy Checklist
-1. Run `npm run typecheck` — runs `next typegen` then `tsc --noEmit`, zero errors required
-2. Run `npm run test` — all unit tests pass (vitest)
-3. Run `npm run build` — successful production build
-4. Check `git status` — no uncommitted changes
-5. Check Firestore indexes — `npm run deploy:indexes` if schema changed
-6. Check security rules — `npm run deploy:rules` if access patterns changed
+1. Run `npm run lint`
+2. Run `npm run typecheck` — wraps `next typegen` + `tsc --noEmit` and retries once for the intermittent `.next/types/cache-life.d.ts` generation race
+3. Run `npm run test` — all unit tests pass (vitest)
+4. Run `npm run build` — successful production build
+5. Run `npm run test:e2e` for route-critical or UX-critical changes
+6. Check `git status` — no uncommitted changes
+7. Check Firestore indexes — `npm run deploy:indexes` if schema changed
+8. Check security rules — `npm run deploy:rules` if access patterns changed
 
 ## Deploy Commands
 ```bash
@@ -72,9 +74,14 @@ After every deploy, manually verify:
 ```bash
 npm run test             # Unit tests (vitest)
 npm run test:watch       # Unit tests in watch mode
-npm run test:e2e         # End-to-end tests (Playwright)
+npm run test:e2e         # End-to-end tests (Playwright, isolated dev server on port 3217 by default)
 npm run test:e2e:ui      # E2E tests with Playwright UI
 ```
+
+## Local Test Environment Notes
+- `npm run dev` uses port `3000` by default for normal local development.
+- Playwright uses its own dedicated dev server and port so it cannot accidentally attach to another Next.js project already running locally.
+- Override the E2E port with `PLAYWRIGHT_PORT=<port>` when running multiple Playwright sessions in parallel.
 
 ## Future: GitHub Actions Pipeline (not yet implemented)
 When ready to automate:

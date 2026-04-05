@@ -1,8 +1,9 @@
 # Sitemap & Routes
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-12
+**Doc Date:** 2026-02-27 | **Updated:** 2026-04-04
 
 ## Public (Marketing)
 - `/` — Landing page (hero, demo, proof, personas, testimonials, how it works, why not DIY, features, pricing, FAQ, final CTA)
+- `/faq` — Dedicated FAQ page with Firestore-backed entries and placeholder fallbacks
 - `/case-studies` — Case study listing with filter
 - `/case-studies/[slug]` — Case study detail + related recommendations
 - `/contact` — Lead capture form
@@ -10,6 +11,7 @@
 - `/[industry]` — Industry variant landing pages (healthcare, construction, property-management, staffing, legal, home-services)
 - `/plan/[id]` — Shareable preview plan (public link with view tracking)
 - `/privacy` — Privacy policy
+- `/privacy-policy` — Permanent redirect to `/privacy`
 - `/terms` — Terms of service
 
 ## Admin (Auth-Protected)

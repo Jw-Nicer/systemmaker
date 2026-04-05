@@ -92,16 +92,18 @@ docs/              Product specification documents
 ```bash
 npm run dev              # Start Next.js dev server (port 3000)
 npm run lint             # Run ESLint
-npm run typecheck        # Run TypeScript type-checking
+npm run typecheck        # Run Next route typegen + TypeScript type-checking
 npm test                 # Run the test suite
+npm run test:e2e         # Run Playwright end-to-end tests
 npm run build            # Production build
 ```
 
 ## Repo Health
 
 - `.env.example` documents the required runtime configuration.
-- `npm run typecheck` generates Next route/layout types before running `tsc --noEmit`, so it works on a fresh clone.
-- `npm run lint`, `npm run typecheck`, and `npm test` are the baseline verification commands.
+- `npm run typecheck` retries once after `next typegen` to work around the intermittent `.next/types/cache-life.d.ts` first-pass race in this repo.
+- `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` are the baseline verification commands.
+- Playwright uses a dedicated local port (`3217` by default) so browser tests do not attach to unrelated Next.js dev servers already running on `3000`. Override with `PLAYWRIGHT_PORT` if needed.
 - Firebase seed scripts are idempotent setup helpers for local/dev environments.
 
 ## Deployment
@@ -136,6 +138,7 @@ npm run deploy:indexes   # Deploy Firestore indexes
 Detailed product specs are in the `docs/` directory:
 - `PRD.md` — Product requirements
 - `Architecture.md` — System architecture
+- `CI_CD.md` — Deployment and verification workflow
 - `Data_Model.md` — Firestore schema
 - `API_Spec.md` — API endpoints
 - `Agents_Spec.md` — AI agent specifications

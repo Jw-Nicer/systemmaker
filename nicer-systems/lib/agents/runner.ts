@@ -101,8 +101,7 @@ async function getRemoteTemplates(): Promise<Map<string, string>> {
     const db = getAdminDb();
     const snap = await db.collection("agent_templates").get();
     const map = new Map<string, string>();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    snap.docs.forEach((doc: any) => {
+    snap.docs.forEach((doc) => {
       const data = doc.data() as AgentTemplate;
       map.set(data.key, data.markdown);
     });

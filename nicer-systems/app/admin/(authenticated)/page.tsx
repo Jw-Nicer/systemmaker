@@ -24,8 +24,7 @@ async function getDashboardMetrics() {
       db.collection("experiments").count().get(),
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recentLeads = recentLeadsSnap.docs.map((doc: any) => ({
+    const recentLeads = recentLeadsSnap.docs.map((doc) => ({
       id: doc.id,
       name: doc.data().name || "—",
       email: doc.data().email || "—",

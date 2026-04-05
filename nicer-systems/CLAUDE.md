@@ -29,6 +29,7 @@ app/
     page.tsx             # Landing page — assembles all section components
     layout.tsx           # Header + footer + nav
     contact/page.tsx     # Contact form (lead capture → Firestore)
+    faq/page.tsx         # Dedicated FAQ page with Firestore fallback content
     case-studies/page.tsx            # Case study listing
     case-studies/[slug]/page.tsx     # Case study detail (dynamic) + related recommendations
     case-studies/CaseStudiesListClient.tsx # Client-side case studies filter/grid
@@ -216,6 +217,8 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - **Auth guard**: Admin pages go inside `app/admin/(authenticated)/` — the layout calls `getSessionUser()`
 - **Theme**: CSS variables in `globals.css` (`--theme-primary`, `--theme-secondary`, `--theme-glow-intensity`, `--theme-motion-intensity`)
 - **Fallback data**: ProofOfWork and FAQ sections render hardcoded fallbacks when Firestore is empty
+- **Canonical marketing routes**: `/privacy` is canonical and `/privacy-policy` is handled via redirect in `next.config.ts`
+- **Playwright isolation**: browser tests run their own dev server on port `3217` by default; override with `PLAYWRIGHT_PORT` when needed
 
 ## Firestore Collections
 | Collection | Public Read | Public Write | Auth Write | Key Fields |
@@ -330,6 +333,9 @@ Clear, confident, practical, business-friendly. No hype. Minimal jargon. Transla
 ```bash
 npm run dev              # Start Next.js dev server (port 3000)
 npx tsc --watch --noEmit # TypeScript watch mode
+npm run typecheck        # Route typegen + tsc (includes one retry for the .next/types cache-life race)
+npm run test             # Vitest suite
+npm run test:e2e         # Playwright suite on isolated local port
 npm run deploy           # Full Firebase deploy (hosting + functions)
 npm run deploy:hosting   # Deploy hosting + SSR Cloud Function only
 npm run deploy:rules     # Deploy Firestore security rules
