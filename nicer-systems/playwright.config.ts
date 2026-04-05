@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-const PORT = 3000;
+const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3217);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -21,7 +21,7 @@ export default defineConfig({
     command: `npm run dev -- --hostname 127.0.0.1 --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     {

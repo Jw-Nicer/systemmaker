@@ -103,13 +103,14 @@ test.describe("Landing page", () => {
 
   test("primary marketing routes load without same-origin document or asset 404s", async ({ page }) => {
     const failures = new Set<string>();
+    const isAppOrigin = (url: URL) => url.hostname === "127.0.0.1";
 
     page.on("response", (response) => {
       const request = response.request();
       const resourceType = request.resourceType();
       const url = new URL(response.url());
 
-      if (url.origin !== "http://127.0.0.1:3000") {
+      if (!isAppOrigin(url)) {
         return;
       }
 

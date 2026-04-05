@@ -264,7 +264,7 @@ function EmailCaptureInline({
         disabled={status === "sending" || !name.trim() || !email.trim()}
         className="w-full px-4 py-2 rounded-full bg-gradient-to-r from-primary to-secondary text-background text-sm font-medium hover:shadow-[var(--shadow-soft-sm)] active:scale-[0.97] transition-all disabled:opacity-50"
       >
-        {status === "sending" ? "Sending..." : "Send me the full plan + follow-up tips"}
+        {status === "sending" ? "Sending..." : "Email me the preview plan"}
       </button>
       <p className="text-center text-[11px] leading-5 text-[#65705d]">
         We use these details to send your plan and follow up on your request.
