@@ -69,7 +69,8 @@ function createMessage(
   };
 }
 
-const SSE_TIMEOUT_MS = 30_000; // 30 seconds with no data = stall
+const SSE_TIMEOUT_MS = 30_000; // 30 seconds with no data = stall (gathering/confirming)
+const SSE_BUILDING_TIMEOUT_MS = 180_000; // 3 minutes for building phase (pipeline takes 60-120s)
 
 const initialState: ChatState = {
   phase: "gathering",
@@ -321,17 +322,23 @@ export function useSSEChat() {
         let currentEvent = "message";
         const MAX_BUFFER_SIZE = 64 * 1024; // 64KB
 
-        // Timeout: if no data arrives for 30s, treat as stall
+        // Timeout: stall detection adapts to phase
+        // - gathering/confirming: 30s (fast conversational responses)
+        // - building: 3 minutes (pipeline runs 6 stages with Gemini calls)
+        let isBuilding = stateRef.current.phase === "building";
+        const getTimeoutMs = () => isBuilding ? SSE_BUILDING_TIMEOUT_MS : SSE_TIMEOUT_MS;
         const resetTimeout = () => {
           if (timeoutId) clearTimeout(timeoutId);
           timeoutId = setTimeout(() => {
             controller.abort();
             dispatch({
               type: "ERROR",
-              message: "The agent is taking longer than expected. Try again?",
+              message: isBuilding
+                ? "Plan generation is taking longer than expected. Try again?"
+                : "The agent is taking longer than expected. Try again?",
               isTimeout: true,
             });
-          }, SSE_TIMEOUT_MS);
+          }, getTimeoutMs());
         };
         resetTimeout();
 
@@ -401,6 +408,8 @@ export function useSSEChat() {
 
                 case "phase_change": {
                   const phaseData = sseEvent.data as SSEPhaseChangeData;
+                  isBuilding = phaseData.to === "building";
+                  resetTimeout();
                   dispatch({
                     type: "PHASE_CHANGE",
                     from: phaseData.from,
