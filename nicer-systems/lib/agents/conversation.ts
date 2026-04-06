@@ -10,6 +10,7 @@ import type {
   ChatMessage,
   ExtractedIntake,
 } from "@/types/chat";
+import type { PreviewPlan } from "@/types/preview-plan";
 import { invokeLLM, invokeLLMStreaming, getFastModel, getPrimaryModel } from "./llm-client";
 import {
   enforceTextSafety,
@@ -757,8 +758,7 @@ export function buildPlanSummary(plan: {
  *
  * Truncated to ~8000 chars to fit within context window.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildDetailedPlanContext(plan: Record<string, any>): string {
+export function buildDetailedPlanContext(plan: Partial<PreviewPlan>): string {
   const MAX_SECTION_CHARS = 1500;
   const parts: string[] = [];
 
