@@ -46,3 +46,11 @@ users.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# gcloud sandbox state (contains access_tokens.db, credentials.db — MUST NOT be committed)
+.gcloud-tmp/
+
+# dev server + test run scratch output
+tmp/
+tmp-devserver.out.log
+tmp-devserver.err.log

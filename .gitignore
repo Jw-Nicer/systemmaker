@@ -30,3 +30,6 @@ Glass_orb_on_wildflower_meadow_aa1f9cad35.mp4
 
 # temporary screenshots
 tmp-screens/
+
+# Playwright MCP scratch output (console logs, page snapshots)
+.playwright-mcp/
