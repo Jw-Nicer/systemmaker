@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Cancel in-flight runs for the same branch so a rapid force-push doesn't
+# run N redundant jobs in parallel.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck + Lint + Tests + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: nicer-systems
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: nicer-systems/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Static checks ---------------------------------------------------
+      - name: TypeScript — strict typecheck
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      # --- Unit tests ------------------------------------------------------
+      # Runs the full 736-test vitest suite. The opt-in LLM eval harness
+      # (tests/chat-evals.test.ts) is gated by RUN_LLM_EVALS=1 and stays
+      # skipped here so CI doesn't burn Gemini credits on every push.
+      - name: Vitest — unit tests
+        run: npm test
+
+      # --- Production build ------------------------------------------------
+      # Catches Turbopack SSR issues, the kind of bundle-time breakage that
+      # unit tests can't see. The predeploy hook (fix-turbopack-externals.js)
+      # runs automatically as part of `next build` via postbuild.
+      - name: Next.js production build
+        run: npm run build
+        env:
+          # Build needs to succeed without real Firebase/Gemini/Resend
+          # credentials. The code falls back to safe defaults in dev/CI
+          # when these are missing.
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+          NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder.appspot.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0"
+          NEXT_PUBLIC_FIREBASE_APP_ID: ci-placeholder
+
+      # --- Artifact retention on failure -----------------------------------
+      # If the build failed, upload the .next/trace and any log output so
+      # you can diagnose without having to re-run locally.
+      - name: Upload build artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-${{ github.run_id }}
+          path: |
+            nicer-systems/.next/trace
+            nicer-systems/.next/server/**/*.log
+          retention-days: 7
+          if-no-files-found: ignore
