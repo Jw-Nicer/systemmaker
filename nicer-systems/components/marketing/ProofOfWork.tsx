@@ -1,6 +1,7 @@
 import { getPublishedCaseStudies, getIndustries } from "@/lib/firestore/case-studies";
 import { ProofOfWorkClient } from "./ProofOfWorkClient";
 import { matchesIndustryKey } from "@/lib/marketing/industry-key";
+import { FALLBACK_CASE_STUDIES } from "@/lib/marketing/fallback-case-studies";
 import type { CaseStudy } from "@/types/case-study";
 
 interface ProofOfWorkProps {
@@ -18,7 +19,8 @@ export async function ProofOfWork({
   description,
   caseStudiesData,
 }: ProofOfWorkProps = {}) {
-  let caseStudies = caseStudiesData ?? await getPublishedCaseStudies();
+  const liveCaseStudies = caseStudiesData ?? await getPublishedCaseStudies();
+  let caseStudies = liveCaseStudies.length > 0 ? liveCaseStudies : FALLBACK_CASE_STUDIES;
 
   // Filter to featured industries if provided (variant pages)
   if (featuredIndustries && featuredIndustries.length > 0) {
@@ -29,10 +31,6 @@ export async function ProofOfWork({
   }
 
   const industries = await getIndustries(caseStudies);
-  if (caseStudies.length === 0) {
-    return null;
-  }
-
   const workflowTypes = Array.from(
     new Set(caseStudies.map((cs) => cs.workflow_type).filter(Boolean))
   ).sort();

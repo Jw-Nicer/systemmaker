@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { track, EVENTS } from "@/lib/analytics";
 
 const AgentChat = dynamic(
   () => import("./AgentChat").then((m) => ({ default: m.AgentChat })),
@@ -95,6 +96,7 @@ export function SeeItWork({
             </div>
             <Link
               href="/audit"
+              onClick={() => track(EVENTS.CTA_CLICK_GUIDED_AUDIT, { source: "see_it_work" })}
               className="inline-flex shrink-0 rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02]"
             >
               Try the Guided Audit &rarr;

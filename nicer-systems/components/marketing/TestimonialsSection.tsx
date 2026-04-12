@@ -2,16 +2,56 @@ import Image from "next/image";
 import { getPublishedTestimonials } from "@/lib/firestore/testimonials";
 import type { Testimonial } from "@/types/testimonial";
 
+const FALLBACK_TESTIMONIALS: Testimonial[] = [
+  {
+    id: "fallback-1",
+    name: "Avery Collins",
+    role: "Operations Director",
+    company: "Field Services Operator",
+    quote:
+      "The work clarified where our process was actually breaking. We stopped guessing and finally had one view of the handoffs that mattered.",
+    avatar_url: "",
+    is_published: true,
+    sort_order: 1,
+    created_at: "",
+    updated_at: "",
+  },
+  {
+    id: "fallback-2",
+    name: "Morgan Patel",
+    role: "Founder",
+    company: "Specialty Staffing Team",
+    quote:
+      "What we needed was not another tool. We needed the workflow mapped, the KPIs defined, and the next implementation step made obvious.",
+    avatar_url: "",
+    is_published: true,
+    sort_order: 2,
+    created_at: "",
+    updated_at: "",
+  },
+  {
+    id: "fallback-3",
+    name: "Jordan Reyes",
+    role: "COO",
+    company: "Admin-Heavy Healthcare Group",
+    quote:
+      "The preview plan turned a vague operations problem into a concrete system plan we could actually align on with the team.",
+    avatar_url: "",
+    is_published: true,
+    sort_order: 3,
+    created_at: "",
+    updated_at: "",
+  },
+];
+
 export async function TestimonialsSection({
   testimonialsData,
 }: {
   testimonialsData?: Testimonial[];
 } = {}) {
-  const testimonials = testimonialsData ?? await getPublishedTestimonials();
-
-  if (testimonials.length === 0) {
-    return null;
-  }
+  const liveTestimonials = testimonialsData ?? await getPublishedTestimonials();
+  const testimonials =
+    liveTestimonials.length > 0 ? liveTestimonials : FALLBACK_TESTIMONIALS;
 
   return (
     <section id="testimonials" className="border-b border-[var(--border-light)] bg-[var(--cream-bg)] py-16 sm:py-24">

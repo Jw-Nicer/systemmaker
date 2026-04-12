@@ -24,8 +24,8 @@ describe("computeLeadScore", () => {
     assert.equal(computeLeadScore({ bottleneck: long }), 10);
   });
 
-  test("urgency critical adds 20", () => {
-    assert.equal(computeLeadScore({ urgency: "critical" }), 20);
+  test("urgency urgent adds 20", () => {
+    assert.equal(computeLeadScore({ urgency: "urgent" }), 20);
   });
 
   test("urgency high adds 15", () => {
@@ -42,7 +42,7 @@ describe("computeLeadScore", () => {
 
   test("urgency is case-insensitive", () => {
     assert.equal(computeLeadScore({ urgency: "HIGH" }), 15);
-    assert.equal(computeLeadScore({ urgency: "Critical" }), 20);
+    assert.equal(computeLeadScore({ urgency: "Urgent" }), 20);
   });
 
   test("urgency ignores surrounding whitespace", () => {
@@ -51,6 +51,33 @@ describe("computeLeadScore", () => {
 
   test("unknown urgency adds 0", () => {
     assert.equal(computeLeadScore({ urgency: "someday" }), 0);
+  });
+
+  test("'critical' (legacy / no longer in any form schema) adds 0", () => {
+    // Regression net for D9: scoring.ts used to recognize "critical" as a
+    // synonym for the highest tier, but no form has ever emitted that value
+    // — leadSchema/agentChatSchema/guidedAuditSchema all enum
+    // ["low","medium","high","urgent"]. The dead branch was removed; this
+    // pin ensures it stays removed.
+    assert.equal(computeLeadScore({ urgency: "critical" }), 0);
+  });
+
+  test("every canonical urgency value scores correctly (regression net)", () => {
+    // Mirrors the z.enum in lib/validation.ts. If you add a value there,
+    // add it here AND extend URGENCY_SCORES in lib/leads/scoring.ts.
+    const expected: Record<string, number> = {
+      low: 5,
+      medium: 10,
+      high: 15,
+      urgent: 20,
+    };
+    for (const [value, score] of Object.entries(expected)) {
+      assert.equal(
+        computeLeadScore({ urgency: value }),
+        score,
+        `urgency=${value} should score ${score}`
+      );
+    }
   });
 
   test("completed_agent_demo adds 15", () => {
@@ -82,7 +109,7 @@ describe("computeLeadScore", () => {
       email: "test@example.com",
       company: "Acme Corp",
       bottleneck: "Our team spends 20 hours a week on manual data entry and reconciliation",
-      urgency: "critical",
+      urgency: "urgent",
       completed_agent_demo: true,
       preview_plan_sent: true,
       booked_call: true,

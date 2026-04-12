@@ -1,0 +1,70 @@
+import type { CaseStudy } from "@/types/case-study";
+
+export const FALLBACK_CASE_STUDIES: CaseStudy[] = [
+  {
+    id: "fallback-dispatch",
+    title: "Dispatch workflow rebuilt around one operating queue",
+    slug: "dispatch-workflow-rebuilt",
+    client_name: "Regional Field Services Team",
+    industry: "Field Services",
+    workflow_type: "Dispatch",
+    tools: ["Airtable", "Slack", "Email"],
+    challenge:
+      "Job handoffs were splitting across inboxes, spreadsheets, and text threads, which made same-day scheduling unreliable.",
+    solution:
+      "Centralized intake, owner assignment, and escalation rules into one dispatch workflow with a live exception queue.",
+    metrics: [{ label: "Scheduling lag", before: "2-3 hours", after: "20 minutes" }],
+    result_categories: ["time_saved", "visibility_gained"],
+    thumbnail_url: "",
+    status: "published",
+    is_published: true,
+    published_at: null,
+    created_at: "",
+    updated_at: "",
+    sort_order: 1,
+  },
+  {
+    id: "fallback-staffing",
+    title: "Recruiting handoffs cleaned up before placements stalled",
+    slug: "recruiting-handoffs-cleaned-up",
+    client_name: "Specialty Staffing Firm",
+    industry: "Staffing",
+    workflow_type: "Candidate Pipeline",
+    tools: ["HubSpot", "Sheets", "Gmail"],
+    challenge:
+      "Recruiters were manually checking pipeline stages and missing follow-ups between screening, client review, and placement.",
+    solution:
+      "Defined pipeline states, weekly KPI review, and trigger-based reminders for stalled candidates and client feedback gaps.",
+    metrics: [{ label: "Candidate stall rate", before: "18%", after: "7%" }],
+    result_categories: ["throughput_increase", "error_reduction"],
+    thumbnail_url: "",
+    status: "published",
+    is_published: true,
+    published_at: null,
+    created_at: "",
+    updated_at: "",
+    sort_order: 2,
+  },
+  {
+    id: "fallback-healthcare",
+    title: "Referral intake mapped before work disappeared between teams",
+    slug: "referral-intake-mapped",
+    client_name: "Multi-site Healthcare Operator",
+    industry: "Healthcare",
+    workflow_type: "Referral Intake",
+    tools: ["Forms", "Sheets", "Slack"],
+    challenge:
+      "Referral requests bounced between staff without clear ownership, causing missed follow-up and weak reporting.",
+    solution:
+      "Introduced stage definitions, intake ownership, dashboard metrics, and exception alerts for aging requests.",
+    metrics: [{ label: "Unowned referrals", before: "Weekly backlog", after: "Same-day review" }],
+    result_categories: ["visibility_gained", "compliance_achieved"],
+    thumbnail_url: "",
+    status: "published",
+    is_published: true,
+    published_at: null,
+    created_at: "",
+    updated_at: "",
+    sort_order: 3,
+  },
+];

@@ -3,29 +3,27 @@
 import { useState } from "react";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { track, EVENTS } from "@/lib/analytics";
+import { PlanDisplay } from "./PlanDisplay";
 
 interface Props {
   plan: PreviewPlan;
   leadId: string;
   onReset: () => void;
+  planId?: string;
+  showShare?: boolean;
 }
 
-export function AgentDemoResults({ plan, leadId, onReset }: Props) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    scope: true,
-    workflow: true,
-    kpis: false,
-    alerts: false,
-    actions: false,
-  });
+export function AgentDemoResults({
+  plan,
+  leadId,
+  onReset,
+  planId,
+  showShare = false,
+}: Props) {
   const [emailForm, setEmailForm] = useState({ name: "", email: "" });
   const [emailStatus, setEmailStatus] = useState<
     "idle" | "sending" | "sent" | "error"
   >("idle");
-
-  function toggle(key: string) {
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +45,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
       setEmailStatus("sent");
       track(EVENTS.PREVIEW_PLAN_EMAIL_CAPTURE, {
         lead_id: leadId,
+        plan_id: planId,
         source: "agent_demo",
       });
       track(EVENTS.CTA_CLICK_PREVIEW_PLAN);
@@ -56,144 +55,14 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
   }
 
   return (
-    <div className="space-y-3 font-sans">
-      {/* Scope */}
-      <Section
-        title="Suggested Scope"
-        expanded={expanded.scope}
-        onToggle={() => toggle("scope")}
-      >
-        <p className="font-medium text-primary mb-2">
-          {plan.intake.suggested_scope}
-        </p>
-        <p className="text-sm text-muted">{plan.intake.clarified_problem}</p>
-        {plan.intake.assumptions.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs text-muted uppercase mb-1">Assumptions</p>
-            <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {plan.intake.assumptions.map((a, i) => (
-                <li key={i}>{a}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </Section>
+    <div className="space-y-4 font-sans">
+      <PlanDisplay
+        plan={plan}
+        planId={planId}
+        showShare={showShare}
+      />
 
-      {/* Workflow */}
-      <Section
-        title={`Workflow Map (${plan.workflow.stages.length} stages)`}
-        expanded={expanded.workflow}
-        onToggle={() => toggle("workflow")}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted border-b border-border">
-                <th className="pb-2 pr-4">#</th>
-                <th className="pb-2 pr-4">Stage</th>
-                <th className="pb-2 pr-4">Owner</th>
-                <th className="pb-2">Exit Criteria</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plan.workflow.stages.map((s, i) => (
-                <tr key={i} className="border-b border-border/50">
-                  <td className="py-2 pr-4 text-muted">{i + 1}</td>
-                  <td className="py-2 pr-4 font-medium">{s.name}</td>
-                  <td className="py-2 pr-4 text-muted">{s.owner_role}</td>
-                  <td className="py-2 text-muted text-xs">
-                    {s.exit_criteria}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      {/* KPIs */}
-      <Section
-        title={`Dashboard KPIs (${plan.dashboard.kpis.length})`}
-        expanded={expanded.kpis}
-        onToggle={() => toggle("kpis")}
-      >
-        <div className="grid sm:grid-cols-2 gap-3">
-          {plan.dashboard.kpis.map((k, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-border bg-background p-4"
-            >
-              <p className="font-medium text-sm">{k.name}</p>
-              <p className="text-xs text-muted mt-1">{k.definition}</p>
-              <p className="text-xs text-muted/60 mt-1 italic">
-                {k.why_it_matters}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Alerts */}
-      <Section
-        title={`Automated Alerts (${plan.automation.alerts.length})`}
-        expanded={expanded.alerts}
-        onToggle={() => toggle("alerts")}
-      >
-        <ul className="space-y-2">
-          {plan.automation.alerts.map((a, i) => (
-            <li
-              key={i}
-              className="text-sm rounded-lg border border-border bg-background p-3"
-            >
-              <span className="font-medium">{a.when}</span>
-              <span className="text-muted"> → notify </span>
-              <span className="text-primary">{a.who}</span>
-              <p className="text-xs text-muted mt-1">&ldquo;{a.message}&rdquo;</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      {/* Actions */}
-      <Section
-        title="Recommended Actions"
-        expanded={expanded.actions}
-        onToggle={() => toggle("actions")}
-      >
-        <div className="space-y-2">
-          {plan.ops_pulse.actions.map((a, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 text-sm"
-            >
-              <span
-                className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  a.priority === "high"
-                    ? "bg-red-500/10 text-red-400"
-                    : a.priority === "medium"
-                      ? "bg-yellow-500/10 text-yellow-400"
-                      : "bg-green-500/10 text-green-400"
-                }`}
-              >
-                {a.priority}
-              </span>
-              <div>
-                <span className="text-muted">{a.owner_role}:</span>{" "}
-                {a.action}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Disclaimer */}
-      <p className="text-xs text-muted/60 italic text-center pt-2">
-        This is a draft preview &mdash; not a final recommendation. Assumptions
-        may not match your exact setup.
-      </p>
-
-      {/* Email CTA */}
-      <div className="rounded-xl border border-primary/30 bg-surface p-6 mt-4">
+      <div className="rounded-xl border border-primary/30 bg-surface p-6">
         {emailStatus === "sent" ? (
           <div className="text-center">
             <p className="text-primary font-medium">Plan sent to your inbox!</p>
@@ -247,8 +116,7 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
         )}
       </div>
 
-      {/* Start over */}
-      <div className="text-center pt-2">
+      <div className="text-center pt-1">
         <button
           onClick={onReset}
           className="text-sm text-muted hover:text-foreground transition-colors"
@@ -256,31 +124,6 @@ export function AgentDemoResults({ plan, leadId, onReset }: Props) {
           Start over with a new bottleneck
         </button>
       </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  expanded,
-  onToggle,
-  children,
-}: {
-  title: string;
-  expanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-light/50 transition-colors"
-      >
-        <span className="text-sm font-medium">{title}</span>
-        <span className="text-muted text-xs">{expanded ? "−" : "+"}</span>
-      </button>
-      {expanded && <div className="px-4 pb-4">{children}</div>}
     </div>
   );
 }

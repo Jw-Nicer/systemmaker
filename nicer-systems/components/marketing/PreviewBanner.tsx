@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 interface PreviewBannerProps {
   draftCounts: {
     caseStudies: number;
@@ -17,12 +19,12 @@ export function PreviewBanner({ draftCounts }: PreviewBannerProps) {
       <strong>Preview Mode</strong> — Showing all content including{" "}
       <strong>{totalDrafts} unpublished</strong>{" "}
       {totalDrafts === 1 ? "item" : "items"}.{" "}
-      <a
+      <Link
         href="/admin"
         className="font-medium underline underline-offset-2 transition-colors hover:text-amber-700"
       >
         Back to Admin
-      </a>
+      </Link>
     </div>
   );
 }

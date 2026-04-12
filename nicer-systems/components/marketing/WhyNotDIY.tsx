@@ -50,7 +50,7 @@ export function WhyNotDIY() {
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-body)]">
               You can configure tools yourself, hire someone to advise, or get a
-              scoped system built around the actual bottleneck. Here's how they compare.
+              scoped system built around the actual bottleneck. Here&apos;s how they compare.
             </p>
           </div>
         </ScrollReveal>

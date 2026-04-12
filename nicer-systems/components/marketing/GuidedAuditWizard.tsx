@@ -238,6 +238,8 @@ export function GuidedAuditWizard() {
         <AgentDemoResults
           plan={result.plan}
           leadId={result.leadId}
+          planId={result.planId}
+          showShare
           onReset={resetWizard}
         />
       </div>

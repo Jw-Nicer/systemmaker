@@ -2,7 +2,11 @@
 
 import { useState, Fragment } from "react";
 import Link from "next/link";
-import { LEAD_STATUSES } from "@/types/lead";
+import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  LEAD_STATUS_COLORS,
+} from "@/types/lead";
 import type { Lead, LeadStatus } from "@/types/lead";
 import {
   updateLeadStatus,
@@ -16,11 +20,6 @@ import {
 import { formatDateLabel, isPastDate, parseDateValue } from "@/lib/date";
 
 const STATUSES = LEAD_STATUSES;
-
-const STATUS_COLORS: Record<string, string> = {
-  nurture: "border-purple-300 bg-purple-50 text-purple-700",
-  lost: "border-gray-300 bg-gray-100 text-gray-500",
-};
 
 function toSearchValue(value: unknown) {
   return typeof value === "string" ? value.toLowerCase() : "";
@@ -114,7 +113,7 @@ export default function LeadsManager({
       <AdminPanel className="mt-8">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1">
-          {["all", ...STATUSES].map((s) => (
+          {(["all", ...STATUSES] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -124,7 +123,7 @@ export default function LeadsManager({
                   : "border border-[#d7d0c1] bg-white/55 text-[#596351] hover:bg-white"
               }`}
             >
-              {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === "all" ? "All" : LEAD_STATUS_LABELS[s]}
             </button>
           ))}
         </div>
@@ -228,11 +227,11 @@ export default function LeadsManager({
                           handleStatusChange(lead.id, e.target.value as LeadStatus);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${STATUS_COLORS[lead.status] ?? "border-[#d7d0c1] bg-[#fbf7ef] text-[#27311f]"}`}
+                        className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] ?? "border-[#d7d0c1] bg-[#fbf7ef] text-[#27311f]"}`}
                       >
                         {STATUSES.map((s) => (
                           <option key={s} value={s}>
-                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                            {LEAD_STATUS_LABELS[s]}
                           </option>
                         ))}
                       </select>

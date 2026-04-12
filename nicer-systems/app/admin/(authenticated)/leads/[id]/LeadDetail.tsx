@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LEAD_STATUSES } from "@/types/lead";
+import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  LEAD_STATUS_COLORS,
+} from "@/types/lead";
 import type { Lead, LeadStatus } from "@/types/lead";
 import {
   updateLeadStatus,
@@ -20,11 +24,6 @@ import {
 } from "@/lib/date";
 
 const STATUSES = LEAD_STATUSES;
-
-const STATUS_COLORS: Record<string, string> = {
-  nurture: "border-purple-300 bg-purple-50 text-purple-700",
-  lost: "border-gray-300 bg-gray-100 text-gray-500",
-};
 
 const ACTIVITY_ICONS: Record<string, string> = {
   note: "N",
@@ -194,11 +193,11 @@ export default function LeadDetail({
             <select
               value={lead.status}
               onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-              className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${STATUS_COLORS[lead.status] ?? "border-[#d7d0c1] bg-[#fbf7ef] text-[#27311f]"}`}
+              className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] ?? "border-[#d7d0c1] bg-[#fbf7ef] text-[#27311f]"}`}
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {LEAD_STATUS_LABELS[s]}
                 </option>
               ))}
             </select>

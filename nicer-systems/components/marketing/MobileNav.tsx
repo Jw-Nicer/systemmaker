@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { BookingCTAButton } from "./BookingCTAButton";
 
 interface NavLink {
   href: string;
@@ -192,17 +193,16 @@ export function MobileNav({ links }: MobileNavProps) {
               </div>
 
               <div className="border-t border-[var(--border-light)]/80 p-4">
-                <Link
-                  href="/contact"
-                  onClick={handleLinkClick}
+                <BookingCTAButton
+                  source="nav_mobile"
+                  onOpen={handleLinkClick}
+                  ctaText="Book a Scoping Call"
                   className="block w-full rounded-full bg-[var(--green-dark)] px-5 py-3 text-center text-sm font-medium text-[var(--cream-warm)] transition-all duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green-accent)] focus-visible:ring-offset-2"
-                >
-                  Book a Scoping Call
-                </Link>
+                />
               </div>
             </motion.nav>
           </>
-        )}
+      )}
       </AnimatePresence>
     </>
   );

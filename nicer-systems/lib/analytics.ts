@@ -13,6 +13,7 @@ export const EVENTS = {
   CTA_CLICK_BOOK: "cta_click_book",
   CTA_CLICK_PREVIEW_PLAN: "cta_click_preview_plan",
   CTA_CLICK_DEMO: "cta_click_demo",
+  CTA_CLICK_GUIDED_AUDIT: "cta_click_guided_audit",
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
   BOOKING_SUBMIT: "booking_submit",
@@ -28,6 +29,7 @@ export const EVENTS = {
   AGENT_CHAT_PLAN_COMPLETE: "agent_chat_plan_complete",
   AGENT_CHAT_FOLLOW_UP: "agent_chat_follow_up",
   AGENT_CHAT_EMAIL_CAPTURE: "agent_chat_email_capture",
+  AGENT_CHAT_VIEW_FULL_PLAN: "agent_chat_view_full_plan",
 
   // Phase 4B: Shareable Plans
   PLAN_SHARED_COPY_LINK: "plan_shared_copy_link",

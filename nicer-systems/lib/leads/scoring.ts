@@ -9,6 +9,17 @@ export interface LeadScoringInput {
   utm_source?: string;
 }
 
+// Canonical urgency values — must stay in lockstep with the
+// `urgency: z.enum([...])` declarations in lib/validation.ts (leadSchema,
+// agentChatSchema, guidedAuditSchema, sendEmailSchema). Any new value
+// added there must also be handled here.
+const URGENCY_SCORES: Record<string, number> = {
+  urgent: 20,
+  high: 15,
+  medium: 10,
+  low: 5,
+};
+
 export function computeLeadScore(lead: LeadScoringInput): number {
   let score = 0;
   const normalizedUrgency = lead.urgency?.trim().toLowerCase();
@@ -17,20 +28,8 @@ export function computeLeadScore(lead: LeadScoringInput): number {
   if (lead.company) score += 5;
   if (lead.bottleneck && lead.bottleneck.length > 20) score += 10;
 
-  switch (normalizedUrgency) {
-    case "critical":
-    case "urgent":
-      score += 20;
-      break;
-    case "high":
-      score += 15;
-      break;
-    case "medium":
-      score += 10;
-      break;
-    case "low":
-      score += 5;
-      break;
+  if (normalizedUrgency && URGENCY_SCORES[normalizedUrgency] !== undefined) {
+    score += URGENCY_SCORES[normalizedUrgency];
   }
 
   if (lead.completed_agent_demo) score += 15;

@@ -7,6 +7,7 @@ import { leadSchema, type LeadInput } from "@/lib/validation";
 import { track, EVENTS } from "@/lib/analytics";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
 import { PrivacyPreferencesButton } from "@/components/ui/AnalyticsConsentControls";
+import { PUBLIC_BOOKING_URL } from "@/lib/booking";
 
 type FormErrors = Partial<Record<keyof LeadInput, string>>;
 
@@ -33,7 +34,7 @@ function ContactFormSkeleton() {
   );
 }
 
-const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL;
+const BOOKING_URL = PUBLIC_BOOKING_URL;
 
 function ContactForm() {
   const searchParams = useSearchParams();

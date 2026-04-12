@@ -16,7 +16,7 @@ export interface NavLink {
 
 function buildNavLinks(hasCaseStudies: boolean): NavLink[] {
   return [
-    { href: "/#see-it-work", label: "Demo" },
+    { href: "/#see-it-work", label: "Preview Plan" },
     { href: "/#how-it-works", label: "How it works" },
     { href: "/#pricing", label: "Pricing" },
     {

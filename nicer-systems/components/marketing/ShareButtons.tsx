@@ -9,7 +9,9 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ planId }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState("");
+  const [origin, setOrigin] = useState(() =>
+    typeof window !== "undefined" ? window.location.origin : ""
+  );
 
   useEffect(() => {
     setOrigin(window.location.origin);

@@ -15,8 +15,6 @@ const BrushRevealCanvas = lazy(() =>
   }))
 );
 
-const bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL;
-
 const queryCards = [
   {
     id: "01",

@@ -86,6 +86,49 @@ export const faqSchema = z.object({
 
 export type FAQInput = z.infer<typeof faqSchema>;
 
+// IndustryProbing — per-industry context for the chat agent
+const stringList = (max: number, itemMax = 200) =>
+  z
+    .array(z.string().min(1).max(itemMax))
+    .max(max)
+    .default([]);
+
+// HomepageLayout — admin-managed section ordering + visibility
+import { HOMEPAGE_SECTION_KEYS } from "@/types/homepage-layout";
+
+export const homepageSectionSchema = z.object({
+  key: z.enum(HOMEPAGE_SECTION_KEYS),
+  enabled: z.boolean(),
+  sort_order: z.number().int().min(0).max(100),
+});
+
+export const homepageLayoutSchema = z.object({
+  sections: z
+    .array(homepageSectionSchema)
+    .min(1, "At least one section is required")
+    .max(50, "Too many sections"),
+});
+
+export type HomepageLayoutInput = z.infer<typeof homepageLayoutSchema>;
+
+export const industryProbingSchema = z.object({
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .max(80)
+    .regex(/^[a-z0-9 \-&]+$/i, "Slug can only contain letters, numbers, spaces, hyphens, and &")
+    .transform((s) => s.toLowerCase().trim()),
+  display_name: z.string().min(1, "Display name is required").max(120),
+  common_bottlenecks: stringList(20, 200),
+  common_tools: stringList(20, 200),
+  probing_angles: stringList(20, 400),
+  aliases: stringList(30, 80),
+  is_published: z.boolean(),
+  sort_order: z.number().int().min(0).default(0),
+});
+
+export type IndustryProbingInput = z.infer<typeof industryProbingSchema>;
+
 export const offerSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   price: z.string().min(1, "Price is required").max(100),
