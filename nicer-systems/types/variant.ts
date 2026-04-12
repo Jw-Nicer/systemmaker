@@ -22,6 +22,7 @@ export interface LandingFeatureItem {
   title: string;
   description: string;
   visual: string;
+  imageUrl?: string;
 }
 
 export interface LandingProofConfig extends LandingSectionIntroConfig {

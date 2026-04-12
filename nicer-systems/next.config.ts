@@ -6,7 +6,7 @@ const cspDirectives = [
   "default-src 'self'",
   // Scripts: self + Firebase + PostHog + inline (Next.js hydration).
   // 'unsafe-eval' is needed by the Firebase JS SDK and PostHog in prod.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseio.com https://*.googleapis.com https://us.i.posthog.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseio.com https://*.googleapis.com https://us.i.posthog.com https://us-assets.i.posthog.com",
   // Styles: self + Google Fonts + inline (Tailwind / framer-motion).
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // Images: self + Firebase Storage + GCS + Unsplash + PostHog + data URIs.
@@ -14,7 +14,7 @@ const cspDirectives = [
   // Fonts: self + Google Fonts CDN.
   "font-src 'self' https://fonts.gstatic.com",
   // Connect: self + Firebase + Firestore + PostHog + Resend.
-  "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://us.i.posthog.com https://api.resend.com",
+  "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://us.i.posthog.com https://us-assets.i.posthog.com https://api.resend.com",
   // Frames: self + Firebase Auth helpers.
   "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
   "object-src 'none'",
