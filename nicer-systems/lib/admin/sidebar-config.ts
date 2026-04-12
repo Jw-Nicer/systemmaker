@@ -36,6 +36,8 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     title: "System",
     links: [
       { href: "/admin/agent-templates", label: "Agent Templates" },
+      { href: "/admin/industry-probing", label: "Industry Probing" },
+      { href: "/admin/homepage-layout", label: "Homepage Layout" },
       { href: "/admin/settings", label: "Settings" },
     ],
   },
