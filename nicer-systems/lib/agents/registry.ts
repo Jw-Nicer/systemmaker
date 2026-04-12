@@ -190,8 +190,8 @@ export const PIPELINE_DAG: PipelineStageConfig[] = [
 // ---------------------------------------------------------------------------
 
 /** Ordered step list for progress display. */
-export const PIPELINE_STAGES: { key: AgentStageKey; label: string }[] =
-  PIPELINE_DAG.map(({ key, label }) => ({ key, label }));
+export const PIPELINE_STAGES: { key: AgentStageKey; label: string; completeLabel: string }[] =
+  PIPELINE_DAG.map(({ key, label, completeLabel }) => ({ key, label, completeLabel }));
 
 /** Lookup a stage config by key. */
 export function getStageConfig(key: AgentStageKey): PipelineStageConfig | undefined {

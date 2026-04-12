@@ -647,7 +647,7 @@ export function GuidedAuditWizard() {
               ? "Generate the same preview-plan output, but from structured intake."
               : "You can go back and tighten the answers before generating the plan."}
           </div>
-          {status === "submitting" && completedSections.size > 0 && (
+          {status === "submitting" && (
             <PlanBuildProgress completedStages={completedSections} />
           )}
           <div className="flex gap-3">
