@@ -25,6 +25,7 @@ const SECTION_TO_TEMPLATE: Record<PlanSectionType, string> = {
   dashboard: "dashboard_designer",
   ops_pulse: "ops_pulse_writer",
   implementation_sequencer: "implementation_sequencer",
+  proposal_writer: "proposal_writer",
 };
 
 const SECTION_LABELS: Record<PlanSectionType, string> = {
@@ -34,11 +35,13 @@ const SECTION_LABELS: Record<PlanSectionType, string> = {
   dashboard: "Dashboard KPIs",
   ops_pulse: "Ops Pulse & Actions",
   implementation_sequencer: "Implementation Roadmap",
+  proposal_writer: "Executive Proposal",
 };
 
 function getSectionData(plan: PreviewPlan, section: PlanSectionType): unknown {
   if (section === "implementation_sequencer") return plan.roadmap;
-  return plan[section];
+  if (section === "proposal_writer") return plan.proposal;
+  return plan[section as keyof Omit<PreviewPlan, "roadmap" | "proposal" | "warnings">];
 }
 
 /** Sanitize feedback to prevent prompt injection */

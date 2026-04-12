@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AgentDemoResults } from "@/components/marketing/AgentDemoResults";
+import { PlanBuildProgress } from "@/components/marketing/PlanBuildProgress";
 import { track, EVENTS } from "@/lib/analytics";
 import { guidedAuditSchema, type GuidedAuditInput } from "@/lib/validation";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
@@ -82,6 +83,7 @@ export function GuidedAuditWizard() {
   const [form, setForm] = useState<GuidedAuditInput>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
+  const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
   const [serverError, setServerError] = useState("");
   const [result, setResult] = useState<{
     plan: PreviewPlan;
@@ -160,30 +162,93 @@ export function GuidedAuditWizard() {
 
     setStatus("submitting");
     setServerError("");
+    setCompletedSections(new Set());
 
     try {
       const response = await fetch("/api/agent/audit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
         body: JSON.stringify(parsed.data),
       });
 
-      const body = await response.json().catch(() => null);
-      if (!response.ok || !body?.preview_plan) {
-        throw new Error(body?.error || "Failed to generate audit");
-      }
+      // SSE streaming path (2B)
+      if (response.headers.get("content-type")?.includes("text/event-stream")) {
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No response body");
 
-      setResult({
-        plan: body.preview_plan,
-        leadId: body.lead_id,
-        planId: body.plan_id,
-        shareUrl: body.share_url,
-      });
-      setStatus("idle");
-      track(EVENTS.GUIDED_AUDIT_COMPLETE, {
-        lead_id: body.lead_id,
-        plan_id: body.plan_id,
-      });
+        const decoder = new TextDecoder();
+        let currentEvent = "";
+        let buffer = "";
+        let planData: Record<string, unknown> = {};
+        let planCompleteData: { lead_id?: string; plan_id?: string; share_url?: string } = {};
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              currentEvent = line.slice(7).trim();
+            } else if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (currentEvent === "plan_section" && data.content) {
+                  const section = data.section as string;
+                  const planKey = section === "implementation_sequencer" ? "roadmap"
+                    : section === "proposal_writer" ? "proposal"
+                    : section;
+                  planData[planKey] = JSON.parse(data.content);
+                  setCompletedSections((prev) => new Set([...prev, section]));
+                } else if (currentEvent === "plan_complete") {
+                  planCompleteData = data;
+                }
+              } catch {
+                // skip malformed
+              }
+            }
+          }
+        }
+
+        if (planCompleteData.plan_id) {
+          setResult({
+            plan: planData as unknown as PreviewPlan,
+            leadId: planCompleteData.lead_id ?? "",
+            planId: planCompleteData.plan_id,
+            shareUrl: planCompleteData.share_url ?? "",
+          });
+          setStatus("idle");
+          track(EVENTS.GUIDED_AUDIT_COMPLETE, {
+            lead_id: planCompleteData.lead_id,
+            plan_id: planCompleteData.plan_id,
+          });
+        } else {
+          throw new Error("Plan generation incomplete");
+        }
+      } else {
+        // JSON fallback path
+        const body = await response.json().catch(() => null);
+        if (!response.ok || !body?.preview_plan) {
+          throw new Error(body?.error || "Failed to generate audit");
+        }
+        setResult({
+          plan: body.preview_plan,
+          leadId: body.lead_id,
+          planId: body.plan_id,
+          shareUrl: body.share_url,
+        });
+        setStatus("idle");
+        track(EVENTS.GUIDED_AUDIT_COMPLETE, {
+          lead_id: body.lead_id,
+          plan_id: body.plan_id,
+        });
+      }
     } catch (error) {
       setStatus("error");
       setServerError(
@@ -582,6 +647,9 @@ export function GuidedAuditWizard() {
               ? "Generate the same preview-plan output, but from structured intake."
               : "You can go back and tighten the answers before generating the plan."}
           </div>
+          {status === "submitting" && completedSections.size > 0 && (
+            <PlanBuildProgress completedStages={completedSections} />
+          )}
           <div className="flex gap-3">
             <button
               type="button"
@@ -598,7 +666,7 @@ export function GuidedAuditWizard() {
                 disabled={status === "submitting"}
                 className="inline-flex rounded-full bg-[#171d13] px-5 py-3 text-sm font-semibold text-[#f7f2e8] transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {status === "submitting" ? "Generating audit..." : "Generate audit plan"}
+                {status === "submitting" ? "Generating..." : "Generate audit plan"}
               </button>
             ) : (
               <button

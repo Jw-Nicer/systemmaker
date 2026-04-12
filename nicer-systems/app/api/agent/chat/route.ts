@@ -5,6 +5,11 @@ import {
 } from "@/lib/security/request-guards";
 import { agentChatSchema } from "@/lib/validation";
 import { orchestrateAgentPipelineStreaming, type AgentStep } from "@/lib/agents/runner";
+import { hashAgentInput } from "@/lib/agents/input-hash";
+import { findRecentPlanByHash } from "@/lib/firestore/plans";
+import { scorePlanQuality } from "@/lib/agents/plan-quality";
+import { PIPELINE_DAG } from "@/lib/agents/registry";
+import type { PreviewPlan } from "@/types/preview-plan";
 import {
   detectPhase,
   extractIntakeData,
@@ -14,6 +19,7 @@ import {
   buildDetailedPlanContext,
   buildConversationSummary,
   detectContradiction,
+  detectRefinementIntent,
   type ConversationContext,
 } from "@/lib/agents/conversation";
 import { getIndustryProbingsFromFirestore } from "@/lib/firestore/industry-probing";
@@ -35,7 +41,6 @@ import type {
   ExtractedIntake,
   SSEEventType,
 } from "@/types/chat";
-import type { PreviewPlan } from "@/types/preview-plan";
 import type { ExperimentAssignment } from "@/types/experiment";
 
 // ---------------------------------------------------------------------------
@@ -97,60 +102,8 @@ export function resetSSEConnectionTracking() {
   activeConnections.clear();
 }
 
-function sseEncode(type: SSEEventType, data: Record<string, unknown>): string {
-  return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
-function createSSEStream(
-  handler: (
-    write: (type: SSEEventType, data: Record<string, unknown>) => void,
-    close: () => void
-  ) => Promise<void>,
-  onClose?: () => void
-): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  let finalized = false;
-
-  const finalize = () => {
-    if (finalized) return;
-    finalized = true;
-    onClose?.();
-  };
-
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const write = (type: SSEEventType, data: Record<string, unknown>) => {
-        try {
-          controller.enqueue(encoder.encode(sseEncode(type, data)));
-        } catch {
-          // Stream may have been closed by the client
-        }
-      };
-
-      const close = () => {
-        try {
-          write("done", {});
-          controller.close();
-        } catch {
-          // Already closed
-        } finally {
-          finalize();
-        }
-      };
-
-      try {
-        await handler(write, close);
-      } catch (err) {
-        console.error("SSE handler error:", err);
-        write("error", { message: "Something went wrong. Please try again." });
-        close();
-      }
-    },
-    cancel() {
-      finalize();
-    },
-  });
-}
+// SSE utilities — shared with the audit route via lib/sse/create-stream.ts
+import { createSSEStream, SSE_HEADERS } from "@/lib/sse/create-stream";
 
 // ---------------------------------------------------------------------------
 // Route handler
@@ -257,21 +210,94 @@ export async function POST(request: Request) {
 
     // Step 3: Handle based on phase
     if (nextPhase === "building") {
-      // Transition to building — run the full agent chain with streaming
-      write("message", {
-        content:
-          "Great, let me build your Preview Plan now. This takes about 30 seconds — I'll show each section as it's ready.",
-      });
-
       const input = {
         industry: updatedExtracted.industry ?? "Unknown",
         bottleneck: updatedExtracted.bottleneck ?? "Not specified",
         current_tools: updatedExtracted.current_tools ?? "Not specified",
         urgency: updatedExtracted.urgency,
         volume: updatedExtracted.volume,
+        // Pass experiment assignments for prompt A/B testing (5E)
+        experimentAssignments: experimentAssignments?.map((a) => ({
+          experiment_id: a.experiment_id,
+          variant_id: a.variant_key,
+          experiment_target: a.target,
+          variant_value: (a as unknown as Record<string, unknown>).variant_value as string | undefined,
+        })),
       };
 
-      // Create lead record (non-blocking — don't delay plan generation)
+      // 3C — plan dedup: compute input hash and check the cache.
+      const inputHash = hashAgentInput(input);
+      const cached = inputHash
+        ? await findRecentPlanByHash(inputHash).catch(() => null)
+        : null;
+
+      let plan: PreviewPlan;
+      let cachedPlanId: string | undefined;
+
+      if (cached) {
+        // ── Cache hit — replay the cached plan via SSE ──
+        plan = cached.plan;
+        cachedPlanId = cached.id;
+
+        write("message", {
+          content:
+            "I've already built a Preview Plan for a very similar scenario — let me show you.",
+        });
+
+        // Replay each section in the same shape the client expects
+        for (const stage of PIPELINE_DAG) {
+          const planKey = stage.key === "implementation_sequencer" ? "roadmap"
+            : stage.key === "proposal_writer" ? "proposal"
+            : stage.key;
+          const sectionData = (plan as unknown as Record<string, unknown>)[planKey];
+          write("plan_section", {
+            section: stage.key,
+            label: stage.completeLabel,
+            content: sectionData ? JSON.stringify(sectionData) : null,
+          });
+        }
+
+        // Fire analytics event (server-side)
+        try {
+          const db = getAdminDb();
+          db.collection("events").add({
+            event_name: "agent_plan_cache_hit",
+            payload: {
+              input_hash: inputHash,
+              cached_plan_id: cached.id,
+              source: "agent_chat",
+            },
+            created_at: new Date(),
+          }).catch(() => {});
+        } catch { /* non-critical */ }
+      } else {
+        // ── Cache miss — run the full pipeline ──
+        write("message", {
+          content:
+            "Great, let me build your Preview Plan now. This takes about 30 seconds — I'll show each section as it's ready.",
+        });
+
+        const result = await orchestrateAgentPipelineStreaming(
+          input,
+          (step: AgentStep, label: string, data: unknown) => {
+            write("plan_section", {
+              section: step,
+              label,
+              content: data ? JSON.stringify(data) : null,
+            });
+          },
+          (step: AgentStep, errorMsg: string) => {
+            write("error", {
+              message: `Section "${step}" failed to generate. The rest of your plan is still available.`,
+              section: step,
+              recoverable: true,
+            });
+          }
+        );
+        plan = result.plan;
+      }
+
+      // Create lead record (non-blocking — don't delay plan delivery)
       const db = getAdminDb();
       const leadWritePromise = db.collection("leads").add({
         name: "",
@@ -299,26 +325,7 @@ export async function POST(request: Request) {
         return null;
       });
 
-      // Run the streaming agent chain (starts immediately, doesn't wait for lead write)
-      const { plan } = await orchestrateAgentPipelineStreaming(
-        input,
-        (step: AgentStep, label: string, data: unknown) => {
-          write("plan_section", {
-            section: step,
-            label,
-            content: data ? JSON.stringify(data) : null,
-          });
-        },
-        (step: AgentStep, errorMsg: string) => {
-          write("error", {
-            message: `Section "${step}" failed to generate. The rest of your plan is still available.`,
-            section: step,
-            recoverable: true,
-          });
-        }
-      );
-
-      // Resolve lead write (should be done by now since agent chain took ~30s)
+      // Resolve lead write
       const leadRef = await leadWritePromise;
       const leadId = leadRef?.id;
 
@@ -335,33 +342,39 @@ export async function POST(request: Request) {
         }).catch(() => {});
       }
 
-      // Save plan to Firestore (for shareable URLs)
-      let planId: string | undefined;
-      try {
-        const planRef = await db.collection("plans").add({
-          preview_plan: JSON.parse(JSON.stringify(plan)),
-          input_summary: {
-            industry: input.industry,
-            bottleneck_summary:
-              input.bottleneck.length > 100
-                ? input.bottleneck.slice(0, 100) + "..."
-                : input.bottleneck,
-          },
-          lead_id: leadId ?? null,
-          created_at: new Date(),
-          view_count: 0,
-          is_public: true,
-          version: 1,
-          versions: [],
-        });
-        planId = planRef.id;
-
-        // Link plan to lead (fire-and-forget)
-        if (leadId) {
-          db.collection("leads").doc(leadId).update({ plan_id: planId }).catch(() => {});
+      // Save plan to Firestore (for shareable URLs).
+      // On cache hit we reuse the cached plan's ID instead of creating a
+      // duplicate document — the lead still gets linked to it.
+      let planId: string | undefined = cachedPlanId;
+      if (!planId) {
+        try {
+          const planRef = await db.collection("plans").add({
+            preview_plan: JSON.parse(JSON.stringify(plan)),
+            input_summary: {
+              industry: input.industry,
+              bottleneck_summary:
+                input.bottleneck.length > 100
+                  ? input.bottleneck.slice(0, 100) + "..."
+                  : input.bottleneck,
+            },
+            lead_id: leadId ?? null,
+            input_hash: inputHash || null,
+            heuristic_score: scorePlanQuality(plan).score,
+            created_at: new Date(),
+            view_count: 0,
+            is_public: true,
+            version: 1,
+            versions: [],
+          });
+          planId = planRef.id;
+        } catch (err) {
+          console.error("Failed to save plan:", err);
         }
-      } catch (err) {
-        console.error("Failed to save plan:", err);
+      }
+
+      // Link plan to lead (fire-and-forget)
+      if (leadId && planId) {
+        db.collection("leads").doc(leadId).update({ plan_id: planId }).catch(() => {});
       }
 
       // Auto-send plan email if we have the visitor's email
@@ -558,6 +571,17 @@ export async function POST(request: Request) {
       write("message", { content: chunk, is_chunk: true });
     }
 
+    // 5C — In follow_up phase, detect refinement intent and emit suggestion
+    if (nextPhase === "follow_up") {
+      const intent = detectRefinementIntent(message);
+      if (intent.detected) {
+        write("refinement_suggestion", {
+          section: intent.sectionHint ?? null,
+          feedback: intent.feedback ?? message,
+        });
+      }
+    }
+
     // Send the updated extracted data to the client only when there's an
     // actual change. Previously this fired every gathering turn even when
     // extraction produced no new fields, wasting bandwidth and forcing
@@ -577,11 +601,6 @@ export async function POST(request: Request) {
   }, () => releaseSSEConnection(ip));
 
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
+    headers: SSE_HEADERS,
   });
 }

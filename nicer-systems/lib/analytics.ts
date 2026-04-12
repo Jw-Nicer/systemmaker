@@ -30,6 +30,10 @@ export const EVENTS = {
   AGENT_CHAT_FOLLOW_UP: "agent_chat_follow_up",
   AGENT_CHAT_EMAIL_CAPTURE: "agent_chat_email_capture",
   AGENT_CHAT_VIEW_FULL_PLAN: "agent_chat_view_full_plan",
+  /** Fired when a fresh plan request hits the input-hash cache (3C). */
+  AGENT_PLAN_CACHE_HIT: "agent_plan_cache_hit",
+  /** Fired when an agent prompt template is overridden by an A/B experiment variant (5E). */
+  AGENT_PROMPT_VARIANT_USED: "agent_prompt_variant_used",
 
   // Phase 4B: Shareable Plans
   PLAN_SHARED_COPY_LINK: "plan_shared_copy_link",

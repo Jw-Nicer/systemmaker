@@ -10,8 +10,8 @@ import {
   templateOutputSchemasByTemplateKey,
 } from "../lib/agents/registry";
 
-test("STAGE_REGISTRY has 6 stages in pipeline order", () => {
-  assert.equal(STAGE_REGISTRY.length, 6);
+test("STAGE_REGISTRY has 7 stages in pipeline order", () => {
+  assert.equal(STAGE_REGISTRY.length, 7);
   assert.deepEqual(STAGE_KEYS, [
     "intake",
     "workflow",
@@ -19,6 +19,7 @@ test("STAGE_REGISTRY has 6 stages in pipeline order", () => {
     "dashboard",
     "ops_pulse",
     "implementation_sequencer",
+    "proposal_writer",
   ]);
 });
 

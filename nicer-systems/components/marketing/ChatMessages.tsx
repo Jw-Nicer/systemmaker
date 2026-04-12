@@ -8,6 +8,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { ChatPlanCard } from "./ChatPlanCard";
 import { BookingModal } from "./BookingModal";
 import { EVENTS, track } from "@/lib/analytics";
+import { InlineMarkdown } from "@/lib/markdown/inline";
 import type { PlanSectionType } from "@/types/chat";
 
 export interface ChatMessage {
@@ -132,7 +133,7 @@ export function ChatMessages({ messages, isTyping, streamingContent, emailForm }
       {streamingContent && (
         <div className="flex justify-start">
           <div className="max-w-[92%] rounded-[24px] rounded-bl-md border border-[#cfd8c9] bg-[linear-gradient(180deg,#faf7ef,#f1ecdf)] px-4 py-3 text-sm leading-6 text-[#283123] shadow-[0_14px_30px_rgba(56,67,45,0.08)] sm:max-w-[85%] sm:px-5 sm:py-3.5 sm:text-base sm:leading-7">
-            <p className="whitespace-pre-wrap">{streamingContent}</p>
+            <InlineMarkdown source={streamingContent} />
           </div>
         </div>
       )}
@@ -171,7 +172,11 @@ function MessageBubble({
         }`}
       >
         {message.content && (
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          isUser ? (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <InlineMarkdown source={message.content} />
+          )
         )}
 
         {message.planSection && (

@@ -9,6 +9,7 @@ import type {
   ConversationPhase,
   ChatMessage,
   ExtractedIntake,
+  PlanSectionType,
 } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
 import {
@@ -454,6 +455,100 @@ export function extractHeuristicIntakeData(message: string): Partial<ExtractedIn
 }
 
 // ---------------------------------------------------------------------------
+// Extraction confidence (3D)
+// ---------------------------------------------------------------------------
+
+/**
+ * Score how confident we are in the current extracted intake.
+ *
+ * Returns 0.0–1.0. A value below 0.7 means the confirming prompt should
+ * explicitly invite corrections ("Did I get that right?").
+ *
+ * Factors:
+ * - 0.33 per required field present (industry, bottleneck, current_tools)
+ * - Penalty when a field is suspiciously short (< 3 chars industry,
+ *   < 10 chars bottleneck) — suggests a vague capture
+ * - Small bonus when urgency or volume are also filled
+ */
+export function computeExtractionConfidence(
+  extracted: ExtractedIntake
+): number {
+  let score = 0;
+
+  // Industry
+  if (extracted.industry && extracted.industry.trim().length > 0) {
+    score += extracted.industry.trim().length >= 3 ? 0.33 : 0.15;
+  }
+
+  // Bottleneck
+  if (extracted.bottleneck && extracted.bottleneck.trim().length > 0) {
+    score += extracted.bottleneck.trim().length >= 10 ? 0.33 : 0.15;
+  }
+
+  // Current tools
+  if (extracted.current_tools && extracted.current_tools.trim().length > 0) {
+    score += 0.33;
+  }
+
+  // Bonus for optional fields (cap total at 1.0)
+  if (extracted.urgency) score += 0.01;
+  if (extracted.volume) score += 0.01;
+
+  return Math.min(score, 1.0);
+}
+
+// ---------------------------------------------------------------------------
+// Refinement intent detection (5C)
+// ---------------------------------------------------------------------------
+
+const REFINE_KEYWORDS =
+  /\b(change|update|improve|refine|redo|fix|adjust|modify|revise|simplify|more detail|too vague|not quite|not right|different|instead|expand|shorten|rethink)\b/i;
+
+const SECTION_HINTS: [RegExp, PlanSectionType][] = [
+  [/\b(workflows?|stages?|handoffs?|process)\b/i, "workflow"],
+  [/\b(automat\w*|triggers?|zapier|make\.com|n8n)\b/i, "automation"],
+  [/\b(dashboards?|kpis?|metrics?|tracking)\b/i, "dashboard"],
+  [/\b(alerts?|notifications?|escalat\w*)\b/i, "automation"],
+  [/\b(roadmap|timeline|implementation|phases?|weeks?)\b/i, "implementation_sequencer"],
+  [/\b(ops pulse|executive|summary|action items?|next steps?)\b/i, "ops_pulse"],
+  [/\b(scope|intake|problem|bottleneck)\b/i, "intake"],
+  [/\b(proposal|pitch|roi|engagement|value prop\w*)\b/i, "proposal_writer"],
+];
+
+export interface RefinementIntent {
+  detected: boolean;
+  sectionHint?: PlanSectionType;
+  feedback?: string;
+}
+
+/**
+ * Detect whether a user message in the follow_up phase expresses intent
+ * to refine a specific plan section. Pure keyword matching — no LLM.
+ */
+export function detectRefinementIntent(message: string): RefinementIntent {
+  if (!REFINE_KEYWORDS.test(message)) {
+    return { detected: false };
+  }
+
+  // Try to extract which section the user is referring to
+  for (const [pattern, sectionType] of SECTION_HINTS) {
+    if (pattern.test(message)) {
+      return {
+        detected: true,
+        sectionHint: sectionType,
+        feedback: message,
+      };
+    }
+  }
+
+  // Refinement keyword present but no section hint → generic intent
+  return {
+    detected: true,
+    feedback: message,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Phase detection
 // ---------------------------------------------------------------------------
 
@@ -630,12 +725,23 @@ Based on your knowledge of ${extracted.industry} operations and their stated bot
 
   const memorySection = memoryContext ? buildMemoryPromptSection(memoryContext) : "";
 
+  // 3D — when extraction confidence is low, the agent should explicitly
+  // invite corrections before offering to build the plan.
+  const confidence = computeExtractionConfidence(extracted);
+  const lowConfidence = confidence < 0.7;
+
   const phaseInstructions = [
     'Do NOT just list back what they told you. Instead, restate their situation as a narrative: "So your team is dealing with [bottleneck] across [context], and right now you are managing it with [tools]."',
     "Add one sentence of insight — a brief observation about WHY this kind of problem persists or what you typically see in similar businesses. This builds trust.",
     "If their latest message adds detail or asks a question, address it directly before moving to the confirmation ask.",
     'If their message sounds uncertain or vague, invite corrections: "Does that match what you are dealing with, or should I adjust anything?"',
-    'If they seem ready, close with: "Want me to build your Preview Plan? It takes about 30 seconds."',
+    ...(lowConfidence
+      ? [
+          'IMPORTANT: The information gathered may be vague or incomplete. Before offering to build the plan, explicitly ask "Did I get that right?" and invite them to correct or add detail. Do NOT ask if they are ready to build yet — first confirm understanding.',
+        ]
+      : [
+          'If they seem ready, close with: "Want me to build your Preview Plan? It takes about 30 seconds."',
+        ]),
     "Never use bullet points or numbered lists. Write in natural paragraphs.",
   ];
   const allInstructions = [

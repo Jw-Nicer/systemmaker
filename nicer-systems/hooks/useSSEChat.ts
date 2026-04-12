@@ -32,6 +32,9 @@ type ChatAction =
   | { type: "STREAM_DONE" }
   | { type: "ERROR"; message: string; isTimeout?: boolean }
   | { type: "CLEAR_ERROR" }
+  | { type: "RECONNECTING" }
+  | { type: "REFINEMENT_SUGGESTION"; section: string | null; feedback: string }
+  | { type: "CLEAR_REFINEMENT_SUGGESTION" }
   | { type: "RESET" };
 
 interface ChatState extends ConversationState {
@@ -42,6 +45,16 @@ interface ChatState extends ConversationState {
   share_url: string | null;
   streamedPlan: Partial<PreviewPlan>;
   email_auto_sent: boolean;
+  /** Stages that have completed during the building phase (2A progress tracker). */
+  completedStages: Set<string>;
+  /** Stages that failed during the building phase (2A progress tracker). */
+  failedStages: Set<string>;
+  /** True while attempting automatic SSE reconnection (3E). */
+  isReconnecting: boolean;
+  /** Number of auto-reconnect attempts in the current building phase (3E). */
+  reconnectAttempts: number;
+  /** Refinement suggestion detected in follow_up phase (5C). */
+  refinementSuggestion: { section: string | null; feedback: string } | null;
 }
 
 export function isPreviewPlanComplete(
@@ -91,6 +104,11 @@ const initialState: ChatState = {
   share_url: null,
   streamedPlan: {},
   email_auto_sent: false,
+  completedStages: new Set(),
+  failedStages: new Set(),
+  isReconnecting: false,
+  reconnectAttempts: 0,
+  refinementSuggestion: null,
 };
 
 export function createInitialChatState(): ChatState {
@@ -99,6 +117,8 @@ export function createInitialChatState(): ChatState {
     messages: [],
     extracted: {},
     streamedPlan: {},
+    completedStages: new Set(),
+    failedStages: new Set(),
   };
 }
 
@@ -152,12 +172,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "PLAN_SECTION": {
       let nextPlan = state.plan;
       let nextStreamedPlan = state.streamedPlan;
+      const nextCompleted = new Set(state.completedStages);
 
       if (action.content) {
         try {
           const parsed = JSON.parse(action.content) as unknown;
           // Map server section names to PreviewPlan field names
-          const planKey = action.section === "implementation_sequencer" ? "roadmap" : action.section;
+          const planKey = action.section === "implementation_sequencer" ? "roadmap"
+            : action.section === "proposal_writer" ? "proposal"
+            : action.section;
           nextStreamedPlan = {
             ...state.streamedPlan,
             [planKey]: parsed,
@@ -166,6 +189,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           if (isPreviewPlanComplete(nextStreamedPlan)) {
             nextPlan = nextStreamedPlan;
           }
+
+          // Track stage completion for the progress tracker (2A)
+          nextCompleted.add(action.section);
         } catch {
           // Keep the message even if section parsing fails.
         }
@@ -180,6 +206,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         messages: [...state.messages, sectionMsg],
         streamedPlan: nextStreamedPlan,
         plan: nextPlan,
+        completedStages: nextCompleted,
       };
     }
 
@@ -241,6 +268,25 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
     case "CLEAR_ERROR":
       return { ...state, error: null, isTimeout: false };
+
+    case "RECONNECTING":
+      return {
+        ...state,
+        isReconnecting: true,
+        reconnectAttempts: state.reconnectAttempts + 1,
+        error: null,
+        isTimeout: false,
+        isStreaming: true,
+      };
+
+    case "REFINEMENT_SUGGESTION":
+      return {
+        ...state,
+        refinementSuggestion: { section: action.section, feedback: action.feedback },
+      };
+
+    case "CLEAR_REFINEMENT_SUGGESTION":
+      return { ...state, refinementSuggestion: null };
 
     case "RESET":
       return { ...initialState };
@@ -481,6 +527,16 @@ export function useSSEChat() {
                   break;
                 }
 
+                case "refinement_suggestion": {
+                  const refData = sseEvent.data as unknown as { section: string | null; feedback: string };
+                  dispatch({
+                    type: "REFINEMENT_SUGGESTION",
+                    section: refData.section,
+                    feedback: refData.feedback,
+                  });
+                  break;
+                }
+
                 case "error": {
                   const errorData = sseEvent.data as SSEErrorData;
                   dispatch({ type: "ERROR", message: errorData.message });
@@ -507,6 +563,32 @@ export function useSSEChat() {
       } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
         if ((err as Error).name === "AbortError") return;
+
+        // 3E — Auto-reconnect during building phase (max 2 retries)
+        const MAX_RECONNECT = 2;
+        const currentState = stateRef.current;
+        if (
+          currentState.phase === "building" &&
+          currentState.reconnectAttempts < MAX_RECONNECT
+        ) {
+          dispatch({ type: "RECONNECTING" });
+          // Delay 2s before retrying — server dedup cache may already have
+          // the completed plan from the first attempt.
+          await new Promise((r) => setTimeout(r, 2000));
+          // Re-send the same message (sendMessage will be called by the
+          // component via the retry flow). For now, dispatch the error
+          // only if we've exhausted retries — the component shows a banner
+          // while isReconnecting is true and the user can trigger retry.
+          const lastUserMsg = [...currentState.messages]
+            .reverse()
+            .find((m) => m.role === "user");
+          if (lastUserMsg) {
+            // Recursive retry — sendMessage is stable
+            sendMessage(lastUserMsg.content);
+            return;
+          }
+        }
+
         dispatch({
           type: "ERROR",
           message:
@@ -554,12 +636,20 @@ export function useSSEChat() {
     lead_id: state.lead_id,
     share_url: state.share_url,
     email_auto_sent: state.email_auto_sent,
+    completedStages: state.completedStages,
+    failedStages: state.failedStages,
+    isReconnecting: state.isReconnecting,
+    refinementSuggestion: state.refinementSuggestion,
 
     // Actions
     sendMessage,
     setPlan,
     markEmailCaptured,
     clearError,
+    clearRefinementSuggestion: useCallback(
+      () => dispatch({ type: "CLEAR_REFINEMENT_SUGGESTION" }),
+      []
+    ),
     reset,
     abort,
   };

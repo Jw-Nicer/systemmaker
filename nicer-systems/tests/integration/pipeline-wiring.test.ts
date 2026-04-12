@@ -78,6 +78,7 @@ const templateData = new Map<string, string>([
   ["dashboard_designer", "dashboard template"],
   ["ops_pulse_writer", "ops pulse template"],
   ["implementation_sequencer", "implementation template"],
+  ["proposal_writer", "proposal template"],
 ]);
 
 vi.mock("@/lib/firebase/admin", () => ({
@@ -161,6 +162,16 @@ const fixtureByTemplateKey: Record<string, unknown> = {
   dashboard_designer: fixture.dashboard,
   ops_pulse_writer: fixture.ops_pulse,
   implementation_sequencer: fixture.roadmap,
+  proposal_writer: {
+    executive_pitch: "Your intake process is costing your team 20 hours per week in manual data entry.",
+    value_propositions: [
+      { claim: "Reduce intake time by 60%", evidence: "Based on current 4-stage manual process", metric: "Hours saved per week" },
+      { claim: "Eliminate data entry errors", evidence: "Automated validation catches missing fields at submission", metric: "Error rate reduction" },
+    ],
+    risk_of_inaction: ["Continued 20hr/week manual overhead", "Growing backlog as volume increases"],
+    recommended_engagement: "4-week implementation: Foundation (week 1), Automation build (weeks 2-3), Dashboard + go-live (week 4).",
+    estimated_roi: "Estimated 20 hours/week recovered at ~$35/hr = $36,400/year in labor savings. Assumes 80% of intake forms are automatable.",
+  },
 };
 
 const baseInput = {
@@ -276,8 +287,8 @@ describe("Pipeline wiring: tool context injection", () => {
 
     await orchestrateAgentPipeline(baseInput);
 
-    // getToolContextForStage should be called once per stage (6 times)
-    assert.equal(mockGetToolContextForStage.mock.calls.length, 6);
+    // getToolContextForStage should be called once per stage (7 stages)
+    assert.equal(mockGetToolContextForStage.mock.calls.length, 7);
   });
 
   test("tool errors do not block stage execution", async () => {

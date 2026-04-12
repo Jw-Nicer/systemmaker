@@ -6,6 +6,7 @@ import { findLeadByEmail, normalizeEmail } from "@/lib/leads/dedup";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
 import { enrollInNurture } from "@/lib/email/nurture-sequence";
 import { sendConfirmationEmail } from "@/lib/email/confirmation-email";
+import { dispatchCRMWebhook } from "@/lib/crm/sync";
 import {
   enforceRateLimit,
   hasFilledHoneypot,
@@ -102,6 +103,17 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       email,
       bottleneck: parsed.data.bottleneck,
+    }).catch(() => {});
+
+    // Fire-and-forget CRM webhook (5D)
+    dispatchCRMWebhook("lead_created", {
+      lead_id: leadId,
+      name: parsed.data.name,
+      email,
+      company: parsed.data.company,
+      bottleneck: parsed.data.bottleneck,
+      score,
+      source: "contact",
     }).catch(() => {});
 
     return NextResponse.json(

@@ -8,6 +8,7 @@ import type { RefineSectionKey } from "@/lib/plans/refinement";
 import { mapRefineSectionKeyToPlanSection } from "@/lib/plans/refinement";
 import { getSectionSuggestions } from "@/lib/agents/refinement-suggestions";
 import type { PreviewPlan } from "@/types/preview-plan";
+import { PlanVersionDiff } from "./PlanVersionDiff";
 
 interface SectionRefinerProps {
   sectionKey: RefineSectionKey;
@@ -223,79 +224,15 @@ export function SectionRefiner({
           {/* Inline diff */}
           {showDiff && refinedContent && (
             <div className="mt-2">
-              <PlanVersionDiffInline
+              <PlanVersionDiff
                 original={originalContent}
                 refined={refinedContent}
+                compact
               />
             </div>
           )}
         </div>
       )}
     </AnimatePresence>
-  );
-}
-
-/** Inline diff component — lightweight version used inside SectionRefiner */
-function PlanVersionDiffInline({
-  original,
-  refined,
-}: {
-  original: string;
-  refined: string;
-}) {
-  const [view, setView] = useState<"split" | "refined">("split");
-
-  return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <div className="flex border-b border-border bg-surface-light/50">
-        <button
-          onClick={() => setView("split")}
-          className={`flex-1 text-xs py-1.5 transition-colors ${
-            view === "split"
-              ? "text-foreground bg-surface"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Side by side
-        </button>
-        <button
-          onClick={() => setView("refined")}
-          className={`flex-1 text-xs py-1.5 transition-colors ${
-            view === "refined"
-              ? "text-foreground bg-surface"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Refined only
-        </button>
-      </div>
-
-      {view === "split" ? (
-        <div className="grid grid-cols-2 divide-x divide-border">
-          <div className="p-3">
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-1.5">
-              Original
-            </p>
-            <p className="text-xs text-muted/80 leading-relaxed whitespace-pre-wrap">
-              {original}
-            </p>
-          </div>
-          <div className="p-3">
-            <p className="text-[10px] text-primary uppercase tracking-wide mb-1.5">
-              Refined
-            </p>
-            <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-              {refined}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="p-3">
-          <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-            {refined}
-          </p>
-        </div>
-      )}
-    </div>
   );
 }

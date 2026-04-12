@@ -16,6 +16,8 @@ import type {
   WorkflowMapperOutput,
   AutomationDesignerOutput,
   DashboardDesignerOutput,
+  OpsPulseOutput,
+  ImplementationSequencerOutput,
 } from "@/types/preview-plan";
 
 // ---------------------------------------------------------------------------
@@ -132,6 +134,28 @@ export const CONTEXT_MAPPINGS: Record<string, ContextMappingFn> = {
       kpis: dashboard?.kpis ?? [],
     };
   },
+
+  proposal_writer: (input, results) => {
+    const intake = results.get("intake") as IntakeOutput | undefined;
+    const workflow = results.get("workflow") as WorkflowMapperOutput | undefined;
+    const automation = results.get("automation") as AutomationDesignerOutput | undefined;
+    const dashboard = results.get("dashboard") as DashboardDesignerOutput | undefined;
+    const ops = results.get("ops_pulse") as OpsPulseOutput | undefined;
+    const roadmap = results.get("implementation_sequencer") as ImplementationSequencerOutput | undefined;
+    return {
+      industry: input.industry,
+      clarified_problem: intake?.clarified_problem ?? input.bottleneck,
+      suggested_scope: intake?.suggested_scope ?? "",
+      workflow_stage_count: workflow?.stages?.length ?? 0,
+      automation_count: automation?.automations?.length ?? 0,
+      alert_count: automation?.alerts?.length ?? 0,
+      kpi_count: dashboard?.kpis?.length ?? 0,
+      executive_summary: ops?.executive_summary ?? { problem: "", solution: "", impact: "", next_step: "" },
+      actions: ops?.actions ?? [],
+      total_estimated_weeks: roadmap?.total_estimated_weeks ?? 0,
+      phases: roadmap?.phases ?? [],
+    };
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -199,6 +223,7 @@ export const FALLBACK_OUTPUTS: Record<string, unknown> = {
     questions: [],
   },
   implementation_sequencer: undefined, // Optional stage — maps to plan.roadmap
+  proposal_writer: undefined, // Optional stage — maps to plan.proposal
 };
 
 /**

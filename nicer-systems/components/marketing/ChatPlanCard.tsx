@@ -8,6 +8,7 @@ import type {
   DashboardDesignerOutput,
   OpsPulseOutput,
   ImplementationSequencerOutput,
+  ProposalOutput,
 } from "@/types/preview-plan";
 
 interface ChatPlanCardProps {
@@ -20,6 +21,8 @@ interface ChatPlanCardProps {
   isStreaming?: boolean;
   /** Section index for visual ordering. */
   index?: number;
+  /** Callback for retry/refine on failed sections (2C). */
+  onRetry?: (sectionType: PlanSectionType) => void;
 }
 
 const SECTION_ICONS: Record<PlanSectionType, string> = {
@@ -29,6 +32,7 @@ const SECTION_ICONS: Record<PlanSectionType, string> = {
   dashboard: "📊",
   ops_pulse: "📡",
   implementation_sequencer: "🗓️",
+  proposal_writer: "📝",
 };
 
 function safeParse<T = unknown>(json: string): T | null {
@@ -40,15 +44,33 @@ function safeParse<T = unknown>(json: string): T | null {
   }
 }
 
+/**
+ * Detect if a parsed section is a fallback (all arrays empty, key strings blank).
+ * These are produced by FALLBACK_OUTPUTS in context.ts when a stage fails.
+ */
+export function isFallbackSection(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const values = Object.values(data as Record<string, unknown>);
+  if (values.length === 0) return true;
+  return values.every((v) => {
+    if (Array.isArray(v)) return v.length === 0;
+    if (typeof v === "string") return v.trim().length === 0;
+    if (v && typeof v === "object") return isFallbackSection(v);
+    return false;
+  });
+}
+
 export function ChatPlanCard({
   title,
   content,
   sectionType,
   isStreaming = false,
   index,
+  onRetry,
 }: ChatPlanCardProps) {
   const icon = (sectionType && SECTION_ICONS[sectionType]) ?? "📄";
   const data = sectionType ? safeParse(content) : null;
+  const isFallback = data ? isFallbackSection(data) : false;
 
   return (
     <div className="rounded-lg border border-primary/20 bg-surface overflow-hidden">
@@ -67,13 +89,23 @@ export function ChatPlanCard({
         )}
       </div>
       <div className="px-4 py-3 text-sm leading-relaxed">
-        {data && sectionType ? (
+        {data && sectionType && !isFallback ? (
           <SectionBody type={sectionType} data={data} />
         ) : isStreaming ? (
           <span className="text-xs text-muted">Building this section…</span>
+        ) : isFallback && sectionType && onRetry ? (
+          <div className="space-y-2">
+            <p className="text-xs text-muted">
+              This section could not be generated and contains placeholder data.
+            </p>
+            <button
+              onClick={() => onRetry(sectionType)}
+              className="text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+            >
+              Retry this section
+            </button>
+          </div>
         ) : (
-          // Fallback: unknown section or unparseable content. Render as
-          // wrapped plain text (never raw JSON-on-one-line).
           <p className="text-xs text-muted whitespace-pre-wrap break-words">
             {content || "(empty)"}
           </p>
@@ -108,6 +140,8 @@ function SectionBody({
       return <OpsPulseBody data={data as OpsPulseOutput} />;
     case "implementation_sequencer":
       return <RoadmapBody data={data as ImplementationSequencerOutput} />;
+    case "proposal_writer":
+      return <ProposalBody data={data as ProposalOutput} />;
     default:
       return null;
   }
@@ -281,6 +315,36 @@ function RoadmapBody({ data }: { data: ImplementationSequencerOutput }) {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function ProposalBody({ data }: { data: ProposalOutput }) {
+  const vps = data.value_propositions ?? [];
+  return (
+    <div className="space-y-2">
+      {data.executive_pitch && (
+        <p className="text-xs text-foreground line-clamp-3">{data.executive_pitch}</p>
+      )}
+      {vps.length > 0 && (
+        <div>
+          <SubLabel>Value propositions</SubLabel>
+          <ul className="text-xs text-muted space-y-0.5">
+            {vps.slice(0, 3).map((vp, i) => (
+              <li key={i}>
+                <span className="font-medium text-foreground">{vp.claim}</span>
+                {vp.metric && <span className="text-muted"> — {vp.metric}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {data.estimated_roi && (
+        <p className="text-xs text-muted">
+          <span className="font-medium">Est. ROI:</span> {data.estimated_roi.slice(0, 120)}
+          {data.estimated_roi.length > 120 ? "..." : ""}
+        </p>
       )}
     </div>
   );

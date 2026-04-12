@@ -98,6 +98,20 @@ export interface PlanWarning {
   message: string;
 }
 
+export interface ValueProposition {
+  claim: string;
+  evidence: string;
+  metric: string;
+}
+
+export interface ProposalOutput {
+  executive_pitch: string;
+  value_propositions: ValueProposition[];
+  risk_of_inaction: string[];
+  recommended_engagement: string;
+  estimated_roi: string;
+}
+
 export interface PreviewPlan {
   intake: IntakeOutput;
   workflow: WorkflowMapperOutput;
@@ -106,6 +120,8 @@ export interface PreviewPlan {
   ops_pulse: OpsPulseOutput;
   /** Implementation roadmap (optional — 6th stage, runs in parallel with ops_pulse). */
   roadmap?: ImplementationSequencerOutput;
+  /** Executive proposal (optional — 7th stage, depends on all prior stages). */
+  proposal?: ProposalOutput;
   /** Cross-section consistency warnings (populated after validation pass). */
   warnings?: PlanWarning[];
 }

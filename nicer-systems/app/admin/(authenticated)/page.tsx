@@ -9,6 +9,7 @@ import {
   AdminPill,
 } from "@/components/admin/AdminPrimitives";
 import DashboardAnalytics from "@/components/admin/DashboardAnalytics";
+import PipelineMetrics from "@/components/admin/PipelineMetrics";
 
 async function getDashboardMetrics() {
   try {
@@ -266,6 +267,8 @@ export default function AdminDashboard() {
       </Suspense>
 
       <DashboardAnalytics />
+
+      <PipelineMetrics />
 
       <Suspense fallback={<SectionSkeleton />}>
         <FollowUpsSection />

@@ -153,6 +153,25 @@ export const implementationSequencerOutputSchema = z.object({
   total_estimated_weeks: z.number().min(2).max(12),
 });
 
+// --- Proposal Writer ---
+
+export const proposalOutputSchema = z.object({
+  executive_pitch: z.string().min(50).max(5000),
+  value_propositions: z
+    .array(
+      z.object({
+        claim: z.string().min(10).max(1000),
+        evidence: z.string().min(10).max(2000),
+        metric: z.string().min(5).max(500),
+      })
+    )
+    .min(2)
+    .max(6),
+  risk_of_inaction: z.array(z.string().min(10).max(1000)).min(1).max(5),
+  recommended_engagement: z.string().min(20).max(3000),
+  estimated_roi: z.string().min(10).max(2000),
+});
+
 // --- Stage output guardrails: template key → Zod schema ---
 
 export const stageOutputGuardrails: Partial<Record<string, z.ZodTypeAny>> = {
@@ -162,6 +181,7 @@ export const stageOutputGuardrails: Partial<Record<string, z.ZodTypeAny>> = {
   dashboard_designer: dashboardDesignerOutputSchema,
   ops_pulse_writer: opsPulseOutputSchema,
   implementation_sequencer: implementationSequencerOutputSchema,
+  proposal_writer: proposalOutputSchema,
 };
 
 /** @deprecated Use stageOutputGuardrails */

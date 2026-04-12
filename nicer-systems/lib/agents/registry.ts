@@ -21,6 +21,7 @@ import {
   dashboardDesignerOutputSchema,
   opsPulseOutputSchema,
   implementationSequencerOutputSchema,
+  proposalOutputSchema,
 } from "./schemas";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +35,8 @@ export type AgentStageKey =
   | "automation"
   | "dashboard"
   | "ops_pulse"
-  | "implementation_sequencer";
+  | "implementation_sequencer"
+  | "proposal_writer";
 
 /** Configuration for a single pipeline stage. */
 export interface PipelineStageConfig {
@@ -166,6 +168,17 @@ export const PIPELINE_DAG: PipelineStageConfig[] = [
     completeLabel: "Implementation roadmap complete",
     outputSchema: implementationSequencerOutputSchema,
     dependencies: ["automation", "dashboard"],
+    critical: false,
+    timeoutMs: 30_000,
+    maxCorrections: 1,
+  },
+  {
+    key: "proposal_writer",
+    templateKey: "proposal_writer",
+    label: "Drafting executive proposal...",
+    completeLabel: "Executive proposal complete",
+    outputSchema: proposalOutputSchema,
+    dependencies: ["intake", "workflow", "automation", "dashboard", "ops_pulse", "implementation_sequencer"],
     critical: false,
     timeoutMs: 30_000,
     maxCorrections: 1,

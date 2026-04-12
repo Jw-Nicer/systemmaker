@@ -3,6 +3,16 @@ import type { StoredPlan } from "@/types/chat";
 import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { applyRefinedSection } from "@/lib/plans/refinement";
+import { scorePlanQuality } from "@/lib/agents/plan-quality";
+
+/**
+ * Plans are considered cache-eligible for this many milliseconds after
+ * `created_at`. 24h matches the doc spec in PREVIEW_PLAN_DEVELOPMENT_PLAN.md
+ * — long enough that an agency demo running the same input twice in a
+ * day hits the cache, short enough that any prompt/template changes
+ * applied via the admin editor naturally roll out within a day.
+ */
+export const PLAN_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function buildPlanRefinementUpdate(
   currentPlan: PreviewPlan,
@@ -30,15 +40,20 @@ export async function savePlan(params: {
   preview_plan: PreviewPlan;
   input_summary: { industry: string; bottleneck_summary: string };
   lead_id?: string | null;
+  /** SHA-256 of the normalized AgentRunInput. Empty string skips dedup. */
+  input_hash?: string;
 }): Promise<string> {
   try {
     const db = getAdminDb();
     // JSON round-trip strips undefined values (Firestore rejects them)
     const cleanPlan = JSON.parse(JSON.stringify(params.preview_plan));
+    const { score: heuristicScore } = scorePlanQuality(params.preview_plan);
     const docRef = await db.collection("plans").add({
       preview_plan: cleanPlan,
       input_summary: params.input_summary,
       lead_id: params.lead_id ?? null,
+      input_hash: params.input_hash || null,
+      heuristic_score: heuristicScore,
       created_at: FieldValue.serverTimestamp(),
       view_count: 0,
       is_public: true,
@@ -49,6 +64,47 @@ export async function savePlan(params: {
   } catch (error) {
     console.error("Failed to save plan:", error);
     throw new Error("Failed to save plan");
+  }
+}
+
+/**
+ * Find a recent plan with the given input hash, if any.
+ *
+ * Looks for plans with `input_hash === hash` created within the last
+ * PLAN_CACHE_TTL_MS milliseconds. Returns the most recent match (or
+ * null if none / the lookup fails). Refined plans (`version > 1`) are
+ * skipped — the cache should only return canonical, never-touched
+ * generations.
+ */
+export async function findRecentPlanByHash(
+  hash: string
+): Promise<{ id: string; plan: PreviewPlan } | null> {
+  if (!hash) return null;
+  try {
+    const db = getAdminDb();
+    const cutoff = new Date(Date.now() - PLAN_CACHE_TTL_MS);
+    const snap = await db
+      .collection("plans")
+      .where("input_hash", "==", hash)
+      .where("created_at", ">=", cutoff)
+      .orderBy("created_at", "desc")
+      .limit(5)
+      .get();
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      // Skip plans that have been refined — return only fresh generations.
+      if (typeof data.version === "number" && data.version > 1) continue;
+      const plan = data.preview_plan as PreviewPlan | undefined;
+      if (!plan) continue;
+      return { id: doc.id, plan };
+    }
+    return null;
+  } catch (error) {
+    // Missing index or other Firestore issue — fall back to no-cache.
+    // This is non-fatal: callers will run the pipeline normally.
+    console.warn("[plans] findRecentPlanByHash failed; skipping cache:", error);
+    return null;
   }
 }
 

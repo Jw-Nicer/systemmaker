@@ -7,6 +7,7 @@ import type {
   AutomationDesignerOutput,
   OpsPulseOutput,
   ImplementationSequencerOutput,
+  ProposalOutput,
 } from "@/types/preview-plan";
 
 export type RefineSectionKey =
@@ -58,6 +59,8 @@ export function applyRefinedSection(
       return { ...plan, ops_pulse: refined as OpsPulseOutput };
     case "implementation_sequencer":
       return { ...plan, roadmap: refined as ImplementationSequencerOutput };
+    case "proposal_writer":
+      return { ...plan, proposal: refined as ProposalOutput };
     default: {
       const _exhaustive: never = section;
       throw new Error(`Unknown plan section: ${_exhaustive}`);

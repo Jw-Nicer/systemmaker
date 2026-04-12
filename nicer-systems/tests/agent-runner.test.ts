@@ -23,6 +23,7 @@ const templateData = new Map<string, string>([
   ["dashboard_designer", "dashboard prompt {{stages}}"],
   ["ops_pulse_writer", "ops pulse prompt {{kpis}}"],
   ["implementation_sequencer", "implementation prompt {{stages}}"],
+  ["proposal_writer", "proposal prompt {{clarified_problem}}"],
 ]);
 
 vi.mock("@/lib/firebase/admin", () => ({
@@ -306,9 +307,9 @@ describe("runAgentChain (backward-compat wrapper)", () => {
     assert.deepEqual(plan.ops_pulse, fixture.ops_pulse);
   });
 
-  test("executes all 6 pipeline stages", async () => {
+  test("executes all 7 pipeline stages", async () => {
     await runAgentChain(baseInput);
-    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 6);
+    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 7);
   });
 
   test("calls onStep callback for each stage", async () => {
@@ -320,6 +321,7 @@ describe("runAgentChain (backward-compat wrapper)", () => {
     assert.ok(steps.includes("dashboard"));
     assert.ok(steps.includes("ops_pulse"));
     assert.ok(steps.includes("implementation_sequencer"));
+    assert.ok(steps.includes("proposal_writer"));
   });
 
   test("defaults urgency and volume to 'not specified' when absent", async () => {
@@ -621,8 +623,8 @@ describe("invalidateTemplateCache", () => {
     setupHappyPath();
     invalidateTemplateCache();
     await runAgentChain(baseInput);
-    // 12 total calls (6 per run)
-    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 12);
+    // 14 total calls (7 per run)
+    assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 14);
   });
 
   test("falls back to local templates when Firestore templates are empty", async () => {
@@ -634,7 +636,7 @@ describe("invalidateTemplateCache", () => {
       invalidateTemplateCache();
       const plan = await runAgentChain(baseInput);
       assert.ok(plan.intake);
-      assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 6);
+      assert.equal(mockExecuteStageWithCorrection.mock.calls.length, 7);
     } finally {
       for (const [key, value] of entries) {
         templateData.set(key, value);

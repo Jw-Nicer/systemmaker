@@ -8,6 +8,7 @@ import type { ExperimentAssignment } from "@/types/experiment";
 import type { GuidedAuditResponses } from "@/types/audit";
 import type { ActionResult } from "./types";
 import { LEAD_STATUSES } from "@/types/lead";
+import { dispatchCRMWebhook } from "@/lib/crm/sync";
 import type { Lead, LeadExportFilters, LeadStatus } from "@/types/lead";
 
 function toISOOrPassthrough(value: unknown): string | undefined {
@@ -95,6 +96,13 @@ export async function updateLeadStatus(
       author: user.email,
       created_at: new Date(),
     });
+
+    // Fire-and-forget CRM webhook (5D)
+    dispatchCRMWebhook("lead_status_changed", {
+      lead_id: id,
+      old_status: oldStatus,
+      new_status: status,
+    }).catch(() => {});
 
     revalidatePath("/admin/leads");
     revalidatePath(`/admin/leads/${id}`);

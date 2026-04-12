@@ -19,6 +19,7 @@ const SECTION_TO_TEMPLATE_KEY: Record<PlanSectionType, string> = {
   dashboard: "dashboard_designer",
   ops_pulse: "ops_pulse_writer",
   implementation_sequencer: "implementation_sequencer",
+  proposal_writer: "proposal_writer",
 };
 
 export async function POST(request: Request) {

@@ -118,6 +118,34 @@ export function planToMarkdown(plan: PreviewPlan): string {
     lines.push(`**Critical Path:** ${plan.roadmap.critical_path}\n`);
   }
 
+  // Executive Proposal
+  if (plan.proposal) {
+    lines.push("## Executive Proposal\n");
+    if (plan.proposal.executive_pitch) {
+      lines.push(`${plan.proposal.executive_pitch}\n`);
+    }
+    if (plan.proposal.value_propositions?.length > 0) {
+      lines.push("### Value Propositions\n");
+      for (const vp of plan.proposal.value_propositions) {
+        lines.push(`- **${vp.claim}** — ${vp.evidence} *(${vp.metric})*`);
+      }
+      lines.push("");
+    }
+    if (plan.proposal.risk_of_inaction?.length > 0) {
+      lines.push("### Risk of Inaction\n");
+      for (const risk of plan.proposal.risk_of_inaction) {
+        lines.push(`- ${risk}`);
+      }
+      lines.push("");
+    }
+    if (plan.proposal.recommended_engagement) {
+      lines.push(`### Recommended Engagement\n\n${plan.proposal.recommended_engagement}\n`);
+    }
+    if (plan.proposal.estimated_roi) {
+      lines.push(`### Estimated ROI\n\n${plan.proposal.estimated_roi}\n`);
+    }
+  }
+
   // Disclaimer
   lines.push("---\n");
   lines.push("*This is a draft preview — not a final recommendation. Assumptions may not match your exact setup.*\n");

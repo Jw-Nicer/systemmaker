@@ -35,7 +35,8 @@ export type PlanSectionType =
   | "automation"
   | "dashboard"
   | "ops_pulse"
-  | "implementation_sequencer";
+  | "implementation_sequencer"
+  | "proposal_writer";
 
 // --- Conversation state ---
 
@@ -63,12 +64,13 @@ export interface ConversationState {
 // --- SSE event types ---
 
 export type SSEEventType =
-  | "message"        // Conversational text from agent
-  | "phase_change"   // Transition between conversation phases
-  | "plan_section"   // A completed plan section during building
-  | "plan_complete"  // All sections done, plan_id available
-  | "error"          // Server-side error
-  | "done";          // Stream finished
+  | "message"                // Conversational text from agent
+  | "phase_change"           // Transition between conversation phases
+  | "plan_section"           // A completed plan section during building
+  | "plan_complete"          // All sections done, plan_id available
+  | "refinement_suggestion"  // Follow-up refinement intent detected (5C)
+  | "error"                  // Server-side error
+  | "done";                  // Stream finished
 
 export interface SSEEvent {
   type: SSEEventType;
@@ -136,6 +138,10 @@ export interface StoredPlan {
   is_public: boolean;
   version: number;
   versions: PlanVersion[];
+  /** 0–100 heuristic quality score (6C). */
+  heuristic_score?: number;
+  /** SHA-256 input hash for dedup (3C). */
+  input_hash?: string | null;
 }
 
 export interface PlanVersion {

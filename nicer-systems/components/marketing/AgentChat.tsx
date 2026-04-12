@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
+import { PlanBuildProgress } from "./PlanBuildProgress";
 import { track, EVENTS } from "@/lib/analytics";
 import { useSSEChat } from "@/hooks/useSSEChat";
 import type { PreviewPlan } from "@/types/preview-plan";
@@ -105,6 +106,14 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
 
   return (
     <div className="flex h-[380px] min-h-0 flex-col sm:h-[460px]">
+      {chat.phase === "building" && (
+        <div className="shrink-0 px-3 pt-3 sm:px-5">
+          <PlanBuildProgress
+            completedStages={chat.completedStages}
+            failedStages={chat.failedStages}
+          />
+        </div>
+      )}
       <ChatMessages
         messages={displayMessages}
         isTyping={chat.isStreaming}
@@ -124,6 +133,13 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
             : undefined
         }
       />
+
+      {chat.isReconnecting && (
+        <div className="flex items-center gap-2 border-t border-yellow-500/20 bg-yellow-500/10 px-4 py-2 text-xs text-yellow-600">
+          <span className="block h-2 w-2 animate-pulse rounded-full bg-yellow-500" />
+          Connection lost — resuming...
+        </div>
+      )}
 
       {chat.error && (
         <div className="flex items-center justify-between gap-2 border-t border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-400">

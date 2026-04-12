@@ -45,6 +45,7 @@ import {
   bufferTrace,
   type AgentTrace,
 } from "./tracing";
+import { storeTrace } from "@/lib/firestore/traces";
 import type { AgentTemplate } from "@/types/agent-template";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
@@ -56,6 +57,7 @@ import type {
   DashboardDesignerOutput,
   OpsPulseOutput,
   ImplementationSequencerOutput,
+  ProposalOutput,
 } from "@/types/preview-plan";
 
 // ---------------------------------------------------------------------------
@@ -69,6 +71,7 @@ const REQUIRED_TEMPLATE_KEYS = [
   "dashboard_designer",
   "ops_pulse_writer",
   "implementation_sequencer",
+  "proposal_writer",
 ] as const;
 
 // TTL cache for agent templates (5 minutes)
@@ -139,6 +142,49 @@ async function getLocalTemplates(): Promise<Map<string, string>> {
   );
 
   return map;
+}
+
+// ---------------------------------------------------------------------------
+// Prompt A/B experiment overrides (5E)
+// ---------------------------------------------------------------------------
+
+import { AGENT_PROMPT_EXPERIMENT_PREFIX } from "@/lib/constants/experiments";
+
+/**
+ * Apply prompt A/B experiment overrides to the template map.
+ *
+ * For each assignment whose `experiment_target` starts with `agent_prompt:`,
+ * extract the template key (e.g. `intake_agent` from `agent_prompt:intake_agent`)
+ * and override the corresponding entry in `templates` with `variant_value`.
+ *
+ * Returns the list of template keys that were overridden (for tracing).
+ */
+export function applyPromptExperiments(
+  templates: Map<string, string>,
+  assignments: AgentExperimentAssignment[] | undefined
+): string[] {
+  if (!assignments || assignments.length === 0) return [];
+
+  const overriddenKeys: string[] = [];
+
+  for (const assignment of assignments) {
+    if (!assignment.experiment_target.startsWith(AGENT_PROMPT_EXPERIMENT_PREFIX)) {
+      continue; // Not a prompt experiment — skip
+    }
+    const templateKey = assignment.experiment_target.slice(
+      AGENT_PROMPT_EXPERIMENT_PREFIX.length
+    );
+    if (!templateKey || !templates.has(templateKey)) {
+      continue; // No matching template — skip
+    }
+    if (!assignment.variant_value) {
+      continue; // No variant content provided — skip
+    }
+    templates.set(templateKey, assignment.variant_value);
+    overriddenKeys.push(templateKey);
+  }
+
+  return overriddenKeys;
 }
 
 // ---------------------------------------------------------------------------
@@ -288,6 +334,14 @@ function assemblePlan(results: Map<string, unknown>): PreviewPlan {
     plan.roadmap = roadmap;
   }
 
+  // Only set proposal if proposal_writer produced a result.
+  const proposal = results.get("proposal_writer") as
+    | ProposalOutput
+    | undefined;
+  if (proposal) {
+    plan.proposal = proposal;
+  }
+
   return plan;
 }
 
@@ -295,12 +349,22 @@ function assemblePlan(results: Map<string, unknown>): PreviewPlan {
 // Public API: AgentRunInput (backward-compatible alias)
 // ---------------------------------------------------------------------------
 
+/** A single experiment assignment relevant to the agent pipeline. */
+export interface AgentExperimentAssignment {
+  experiment_id: string;
+  variant_id: string;
+  experiment_target: string;
+  variant_value?: string;
+}
+
 export interface AgentRunInput {
   industry: string;
   bottleneck: string;
   current_tools: string;
   urgency?: string;
   volume?: string;
+  /** Optional experiment assignments for prompt A/B testing (5E). */
+  experimentAssignments?: AgentExperimentAssignment[];
 }
 
 // Re-export from registry for backward compatibility
@@ -326,12 +390,23 @@ export async function orchestrateAgentPipeline(
   input: AgentRunInput,
   onStageStart?: (step: AgentStageKey) => void
 ): Promise<{ plan: PreviewPlan; trace: AgentTrace }> {
-  const trace = createTrace("plan_generation", {
+  const traceMetadata: Record<string, unknown> = {
     industry: input.industry,
     bottleneck: input.bottleneck.slice(0, 200),
-  });
+  };
 
   const templates = await getAllTemplates();
+
+  // Apply prompt A/B experiment overrides (5E)
+  const overriddenKeys = applyPromptExperiments(
+    templates,
+    input.experimentAssignments
+  );
+  if (overriddenKeys.length > 0) {
+    traceMetadata.prompt_variant_keys = overriddenKeys;
+  }
+
+  const trace = createTrace("plan_generation", traceMetadata);
   const results = new Map<string, unknown>();
   const degradedStages: AgentStageKey[] = [];
   const routingSignals = new Set<string>();
@@ -414,6 +489,7 @@ export async function orchestrateAgentPipeline(
   finalizeTrace(trace);
   emitTraceLog(trace);
   bufferTrace(trace);
+  storeTrace(trace).catch(() => {});
 
   return { plan, trace };
 }
@@ -431,13 +507,24 @@ export async function orchestrateAgentPipelineStreaming(
   onSection: (step: AgentStageKey, label: string, data: unknown) => void,
   onSectionFailed?: (step: AgentStageKey, error: string) => void
 ): Promise<{ plan: PreviewPlan; trace: AgentTrace }> {
-  const trace = createTrace("plan_generation", {
+  const streamingTraceMetadata: Record<string, unknown> = {
     industry: input.industry,
     bottleneck: input.bottleneck.slice(0, 200),
     streaming: true,
-  });
+  };
 
   const templates = await getAllTemplates();
+
+  // Apply prompt A/B experiment overrides (5E)
+  const streamOverriddenKeys = applyPromptExperiments(
+    templates,
+    input.experimentAssignments
+  );
+  if (streamOverriddenKeys.length > 0) {
+    streamingTraceMetadata.prompt_variant_keys = streamOverriddenKeys;
+  }
+
+  const trace = createTrace("plan_generation", streamingTraceMetadata);
   const results = new Map<string, unknown>();
   const degradedStages: AgentStageKey[] = [];
   const routingSignals = new Set<string>();
@@ -520,6 +607,7 @@ export async function orchestrateAgentPipelineStreaming(
   finalizeTrace(trace);
   emitTraceLog(trace);
   bufferTrace(trace);
+  storeTrace(trace).catch(() => {});
 
   return { plan, trace };
 }
