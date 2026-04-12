@@ -23,7 +23,7 @@ const defaultFeatures: LandingFeatureItem[] = [
     title: "Alerts and next actions before problems escalate",
     description:
       "The plan includes alert recommendations and ownership so the output ends with decisions and next steps, not just a diagram.",
-    visual: "Alert triggers, escalation owners, and next actions",
+    visual: "Alert recommendations, assigned ownership, and next steps",
     imageUrl: "/images/features/what-you-get-03-alerts.png",
   },
   {
