@@ -8,6 +8,7 @@ import {
   enforceRateLimit,
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
+import { buildPublicPlanUrl } from "@/lib/urls";
 import type { ExperimentAssignment } from "@/types/experiment";
 
 export async function POST(request: Request) {
@@ -99,13 +100,14 @@ export async function POST(request: Request) {
       },
       lead_id: leadRef.id,
     });
+    const shareUrl = buildPublicPlanUrl(request, planId);
 
     return NextResponse.json(
       {
         preview_plan: plan,
         lead_id: leadRef.id,
         plan_id: planId,
-        share_url: `/plan/${planId}`,
+        share_url: shareUrl,
         steps_completed: completedSteps,
       },
       { status: 200 }

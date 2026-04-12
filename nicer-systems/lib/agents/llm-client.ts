@@ -18,6 +18,25 @@ import type { AgentSpan } from "./tracing";
 import { endSpan } from "./tracing";
 
 // ---------------------------------------------------------------------------
+// Structured chat types (used by invokeLLMChatStreaming)
+// ---------------------------------------------------------------------------
+
+/** A single turn in a Gemini-style structured chat. */
+export interface ChatTurn {
+  role: "user" | "model";
+  text: string;
+}
+
+/** Generation tuning passed through to Gemini's generationConfig. */
+export interface ChatGenerationConfig {
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxOutputTokens?: number;
+  stopSequences?: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
@@ -91,7 +110,7 @@ interface TokenBucketState {
 const TOKEN_BUCKET_CAPACITY = 60; // requests per minute
 const TOKEN_BUCKET_REFILL_RATE = 1; // tokens per second
 
-let _tokenBucket: TokenBucketState = {
+const _tokenBucket: TokenBucketState = {
   tokens: TOKEN_BUCKET_CAPACITY,
   lastRefill: Date.now(),
 };
@@ -368,6 +387,117 @@ export async function* invokeLLMStreaming(
 
   const geminiModel = client.getGenerativeModel({ model });
   const result = await geminiModel.generateContentStream(prompt);
+
+  let totalBytes = 0;
+
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    if (text) {
+      totalBytes += new TextEncoder().encode(text).byteLength;
+      if (totalBytes > maxOutputBytes) break;
+      yield text;
+    }
+  }
+
+  const latencyMs = Date.now() - callStart;
+
+  _stats.totalCalls++;
+  _stats.totalLatencyMs += latencyMs;
+  _stats.callsByModel[model] = (_stats.callsByModel[model] ?? 0) + 1;
+
+  if (span) {
+    span.model = model;
+    span.metadata = { ...span.metadata, totalBytes, latencyMs, label };
+  }
+
+  return { model, latencyMs };
+}
+
+// ---------------------------------------------------------------------------
+// Core: invokeLLMChatStreaming (structured chat with systemInstruction)
+// ---------------------------------------------------------------------------
+
+export interface LLMChatStreamOptions extends LLMCallOptions {
+  /** Persistent task framing — model treats this as authoritative grounding. */
+  systemInstruction: string;
+  /** Conversation turns in chronological order. Last turn should be from "user". */
+  contents: ChatTurn[];
+  /** Sampling + length controls. */
+  generationConfig?: ChatGenerationConfig;
+}
+
+/**
+ * Streaming chat with proper systemInstruction + structured contents.
+ *
+ * Internally uses Gemini's `model.startChat({ history })` +
+ * `chat.sendMessageStream(text)` instead of bare generateContentStream.
+ * Benefits over the previous flat-contents approach:
+ *
+ *  - **SDK-level history validation** — startChat throws immediately if the
+ *    history is malformed (non-alternating roles, leading model turn, etc.)
+ *    instead of silently producing weird output downstream.
+ *  - **Native chat template** — Gemini handles role formatting consistently
+ *    across model versions.
+ *  - **Foundation for session pinning (G2)** — the ChatSession object can
+ *    later be persisted/restored across requests if we add Firestore-backed
+ *    session state.
+ *
+ * The public signature is unchanged from the previous version: callers
+ * still pass `contents` as a single chronological array. Internally we
+ * split off the trailing user turn and use it as the new message; the
+ * preceding turns become the chat history.
+ *
+ * Used by conversation.ts for the multi-phase chat agent. Refinement.ts
+ * still uses the legacy flat-prompt invokeLLMStreaming.
+ */
+export async function* invokeLLMChatStreaming(
+  options: LLMChatStreamOptions
+): AsyncGenerator<string, LLMStreamResult, unknown> {
+  const {
+    span,
+    models: modelOverride,
+    maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
+    label = "llm_chat_stream",
+    systemInstruction,
+    contents,
+    generationConfig,
+  } = options;
+
+  if (!contents || contents.length === 0) {
+    throw new Error("invokeLLMChatStreaming requires at least one chat turn");
+  }
+
+  // The chatSession API needs the latest user message separately from the
+  // accumulated history. The last turn must be from the user.
+  const lastTurn = contents[contents.length - 1];
+  if (lastTurn.role !== "user") {
+    throw new Error(
+      `invokeLLMChatStreaming: last turn must be a user message, got "${lastTurn.role}"`
+    );
+  }
+  const history = contents.slice(0, -1).map((turn) => ({
+    role: turn.role,
+    parts: [{ text: turn.text }],
+  }));
+
+  await acquireToken();
+
+  const client = getClient();
+  const models = getModelCandidates(modelOverride);
+  const model = models[0]; // Streaming uses primary model only
+  const callStart = Date.now();
+
+  const geminiModel = client.getGenerativeModel({
+    model,
+    systemInstruction,
+    generationConfig,
+  });
+
+  // startChat validates the history shape (alternating roles, first turn =
+  // user) and throws synchronously on bad input — catches buildChatTurns
+  // bugs at the boundary instead of letting them poison the response.
+  const chat = geminiModel.startChat({ history });
+  const result = await chat.sendMessageStream(lastTurn.text);
 
   let totalBytes = 0;
 

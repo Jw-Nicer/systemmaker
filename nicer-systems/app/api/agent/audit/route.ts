@@ -12,6 +12,7 @@ import {
   buildAuditLeadSummary,
   buildAuditBottleneckSummary,
 } from "@/lib/guided-audit";
+import { buildPublicPlanUrl } from "@/lib/urls";
 import type { ExperimentAssignment } from "@/types/experiment";
 
 export async function POST(request: Request) {
@@ -101,13 +102,14 @@ export async function POST(request: Request) {
       plan_id: planRef.id,
       updated_at: new Date(),
     });
+    const shareUrl = buildPublicPlanUrl(request, planRef.id);
 
     return NextResponse.json(
       {
         preview_plan: plan,
         lead_id: leadRef.id,
         plan_id: planRef.id,
-        share_url: `/plan/${planRef.id}`,
+        share_url: shareUrl,
         audit_summary: buildAuditLeadSummary(input),
       },
       { status: 200 }

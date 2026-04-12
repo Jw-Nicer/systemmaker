@@ -8,6 +8,7 @@ import { orchestrateAgentPipelineStreaming, type AgentStep } from "@/lib/agents/
 import {
   detectPhase,
   extractIntakeData,
+  extractedHasChanges,
   generateConversationalResponse,
   buildPlanSummary,
   buildDetailedPlanContext,
@@ -15,6 +16,7 @@ import {
   detectContradiction,
   type ConversationContext,
 } from "@/lib/agents/conversation";
+import { getIndustryProbingsFromFirestore } from "@/lib/firestore/industry-probing";
 import {
   recallVisitorContext,
   storeMemory,
@@ -26,6 +28,7 @@ import { renderPreviewPlanHTML } from "@/lib/agents/email-template";
 import { sendAdminNotification } from "@/lib/email/admin-notification";
 import { enrollInNurture } from "@/lib/email/nurture-sequence";
 import { Resend } from "resend";
+import { buildPublicPlanPath, buildPublicPlanUrl } from "@/lib/urls";
 import type {
   ConversationPhase,
   ChatMessage,
@@ -208,6 +211,14 @@ export async function POST(request: Request) {
     const memoryPromise = visitorEmail
       ? recallVisitorContext(visitorEmail).catch(() => null)
       : Promise.resolve(null);
+
+    // Step 0b: Warm the industry-probing cache (non-blocking).
+    // The chat agent's prompt builders read this synchronously via
+    // getCachedIndustryProbings() — kicking it off here means the cache
+    // is populated by the time generateConversationalResponse runs on
+    // the very first request after a cold start. The fetch is internally
+    // TTL-cached and coalesces concurrent calls.
+    const industryProbingPromise = getIndustryProbingsFromFirestore().catch(() => null);
 
     // Step 1: Extract intake data and detect phase
     let updatedExtracted: ExtractedIntake = { ...extracted };
@@ -471,29 +482,39 @@ export async function POST(request: Request) {
       write("plan_complete", {
         plan_id: planId ?? "",
         lead_id: leadId ?? "",
-        share_url: planId ? `/plan/${planId}` : "",
+        share_url: planId ? buildPublicPlanUrl(request, planId) : "",
         email_auto_sent: emailAutoSent,
       });
 
       // Emit phase change to complete
       write("phase_change", { from: "building", to: "complete" });
 
-      // Post-plan message
+      // Post-plan message — both branches get a share_link so the chat can
+      // surface a "View full plan" button regardless of whether the email
+      // was auto-sent.
+      const sharePath = planId ? buildPublicPlanPath(planId) : undefined;
       if (emailAutoSent) {
         write("message", {
           content: `Your Preview Plan is ready! I've sent a copy to ${extractedEmail}. Feel free to ask any follow-up questions about the plan.`,
+          share_link: sharePath,
         });
       } else {
         write("message", {
           content:
             "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
           email_capture: true,
+          share_link: sharePath,
         });
       }
 
       close();
       return;
     }
+
+    // Make sure the industry-probing cache is warm before the prompt
+    // builders read it synchronously inside generateConversationalResponse.
+    // After the first request this is effectively zero-cost (cache hit).
+    await industryProbingPromise;
 
     // For conversational phases (gathering, confirming, follow_up):
     // Build full conversation context for accurate, consistent responses
@@ -537,9 +558,14 @@ export async function POST(request: Request) {
       write("message", { content: chunk, is_chunk: true });
     }
 
-    // If phase changed to confirming, also send the updated extracted data
-    // so the client can store it
-    if (nextPhase !== clientPhase || nextPhase === "gathering") {
+    // Send the updated extracted data to the client only when there's an
+    // actual change. Previously this fired every gathering turn even when
+    // extraction produced no new fields, wasting bandwidth and forcing
+    // an unnecessary client re-render. Phase changes are also a trigger
+    // because the client needs to know about state transitions.
+    const phaseChanged = nextPhase !== clientPhase;
+    const dataChanged = extractedHasChanges(extracted, updatedExtracted);
+    if (phaseChanged || dataChanged) {
       write("message", {
         content: "",
         extracted: updatedExtracted,

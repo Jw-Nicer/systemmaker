@@ -8,6 +8,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { ChatPlanCard } from "./ChatPlanCard";
 import { BookingModal } from "./BookingModal";
 import { EVENTS, track } from "@/lib/analytics";
+import type { PlanSectionType } from "@/types/chat";
 
 export interface ChatMessage {
   id: string;
@@ -18,9 +19,12 @@ export interface ChatMessage {
     title: string;
     content: string;
     index: number;
+    sectionType?: PlanSectionType;
     isStreaming?: boolean;
   };
   emailCapture?: boolean;
+  /** Set on the post-plan "ready" message — surfaces a "View full plan" link in the bubble. */
+  shareLink?: string;
 }
 
 interface ChatMessagesProps {
@@ -175,10 +179,15 @@ function MessageBubble({
             <ChatPlanCard
               title={message.planSection.title}
               content={message.planSection.content}
+              sectionType={message.planSection.sectionType}
               index={message.planSection.index}
               isStreaming={message.planSection.isStreaming}
             />
           </div>
+        )}
+
+        {message.shareLink && (
+          <ViewFullPlanLink shareUrl={message.shareLink} />
         )}
 
         {message.emailCapture && emailForm && (
@@ -198,6 +207,27 @@ function MessageBubble({
     >
       {bubble}
     </motion.div>
+  );
+}
+
+function ViewFullPlanLink({ shareUrl }: { shareUrl: string }) {
+  // Extract plan id from /plan/{id} for the analytics payload (best-effort).
+  const planId = shareUrl.match(/\/plan\/([^/?#]+)/)?.[1];
+
+  return (
+    <Link
+      href={shareUrl}
+      onClick={() =>
+        track(EVENTS.AGENT_CHAT_VIEW_FULL_PLAN, {
+          plan_id: planId,
+          source: "chat_message",
+        })
+      }
+      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#8a966d]/30 bg-[#eef3e6] px-3.5 py-1.5 text-xs font-semibold text-[#27311f] transition-colors hover:bg-[#e3eed1]"
+    >
+      View the full plan
+      <span aria-hidden>→</span>
+    </Link>
   );
 }
 

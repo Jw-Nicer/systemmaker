@@ -22,11 +22,12 @@ import type { PreviewPlan } from "@/types/preview-plan";
 type ChatAction =
   | { type: "SEND_MESSAGE"; message: string }
   | { type: "STREAM_CHUNK"; content: string }
-  | { type: "STREAM_MESSAGE"; content: string; email_capture?: boolean }
+  | { type: "STREAM_MESSAGE"; content: string; email_capture?: boolean; share_link?: string }
   | { type: "UPDATE_EXTRACTED"; extracted: ExtractedIntake }
   | { type: "PHASE_CHANGE"; from: ConversationPhase; to: ConversationPhase }
   | { type: "PLAN_SECTION"; section: string; label: string; content: string | null }
   | { type: "PLAN_COMPLETE"; plan_id: string; lead_id?: string; share_url: string; email_auto_sent?: boolean }
+  | { type: "MARK_EMAIL_CAPTURED"; name: string; email: string }
   | { type: "SET_PLAN"; plan: PreviewPlan }
   | { type: "STREAM_DONE" }
   | { type: "ERROR"; message: string; isTimeout?: boolean }
@@ -69,8 +70,15 @@ function createMessage(
   };
 }
 
-const SSE_TIMEOUT_MS = 30_000; // 30 seconds with no data = stall (gathering/confirming)
-const SSE_BUILDING_TIMEOUT_MS = 180_000; // 3 minutes for building phase (pipeline takes 60-120s)
+// Stall detection — split into "first chunk" vs "inter-chunk" so cold-start
+// latency doesn't get mistaken for a stalled stream. Cold gathering turns can
+// legitimately take 25-35s for the first byte (Gemini queue + extraction), but
+// once chunks start flowing they should arrive within a few seconds of each
+// other. The building phase has its own timer because the 6-stage pipeline
+// runs 60-120s end-to-end and needs much more headroom.
+const SSE_FIRST_CHUNK_TIMEOUT_MS = 60_000; // 60s waiting for the first byte
+const SSE_INTER_CHUNK_TIMEOUT_MS = 15_000; // 15s between chunks once data flows
+const SSE_BUILDING_TIMEOUT_MS = 180_000;   // 3 min for the building phase
 
 const initialState: ChatState = {
   phase: "gathering",
@@ -117,6 +125,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       // Full message received — add as assistant message
       const assistantMsg = createMessage("assistant", action.content, {
         email_capture: action.email_capture,
+        share_link: action.share_link,
       });
       return {
         ...state,
@@ -184,6 +193,20 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         plan: isPreviewPlanComplete(state.streamedPlan)
           ? state.streamedPlan
           : state.plan,
+      };
+
+    case "MARK_EMAIL_CAPTURED":
+      // User submitted the inline email-capture form. Treat the plan as
+      // delivered and fold the name/email into extracted state so subsequent
+      // follow-up requests carry them server-side and the agent stops asking.
+      return {
+        ...state,
+        email_auto_sent: true,
+        extracted: {
+          ...state.extracted,
+          name: action.name || state.extracted.name,
+          email: action.email || state.extracted.email,
+        },
       };
 
     case "SET_PLAN":
@@ -322,11 +345,18 @@ export function useSSEChat() {
         let currentEvent = "message";
         const MAX_BUFFER_SIZE = 64 * 1024; // 64KB
 
-        // Timeout: stall detection adapts to phase
-        // - gathering/confirming: 30s (fast conversational responses)
-        // - building: 3 minutes (pipeline runs 6 stages with Gemini calls)
+        // Timeout: stall detection adapts to phase AND whether the first
+        // chunk has arrived yet.
+        // - building: 3 minutes flat (pipeline runs 6 stages with Gemini calls)
+        // - gathering/confirming/follow_up:
+        //     • 60s waiting for the first byte (cold-start friendly)
+        //     • 15s between chunks once data starts flowing
         let isBuilding = stateRef.current.phase === "building";
-        const getTimeoutMs = () => isBuilding ? SSE_BUILDING_TIMEOUT_MS : SSE_TIMEOUT_MS;
+        let firstChunkSeen = false;
+        const getTimeoutMs = () => {
+          if (isBuilding) return SSE_BUILDING_TIMEOUT_MS;
+          return firstChunkSeen ? SSE_INTER_CHUNK_TIMEOUT_MS : SSE_FIRST_CHUNK_TIMEOUT_MS;
+        };
         const resetTimeout = () => {
           if (timeoutId) clearTimeout(timeoutId);
           timeoutId = setTimeout(() => {
@@ -345,6 +375,8 @@ export function useSSEChat() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          // First successful read flips us into the tighter inter-chunk window.
+          if (!firstChunkSeen) firstChunkSeen = true;
           resetTimeout();
 
           buffer += decoder.decode(value, { stream: true });
@@ -401,6 +433,7 @@ export function useSSEChat() {
                       type: "STREAM_MESSAGE",
                       content: msgData.content,
                       email_capture: msgData.email_capture,
+                      share_link: msgData.share_link,
                     });
                   }
                   break;
@@ -488,6 +521,10 @@ export function useSSEChat() {
     dispatch({ type: "SET_PLAN", plan });
   }, []);
 
+  const markEmailCaptured = useCallback((name: string, email: string) => {
+    dispatch({ type: "MARK_EMAIL_CAPTURED", name, email });
+  }, []);
+
   const clearError = useCallback(() => {
     dispatch({ type: "CLEAR_ERROR" });
   }, []);
@@ -521,6 +558,7 @@ export function useSSEChat() {
     // Actions
     sendMessage,
     setPlan,
+    markEmailCaptured,
     clearError,
     reset,
     abort,

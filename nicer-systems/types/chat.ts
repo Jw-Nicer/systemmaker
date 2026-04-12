@@ -25,6 +25,8 @@ export interface ChatMessage {
   plan_section_label?: string;
   /** Set when the message is an email capture prompt/response */
   email_capture?: boolean;
+  /** Relative shareable plan URL (/plan/{id}) — set on the post-plan ready message. */
+  share_link?: string;
 }
 
 export type PlanSectionType =
@@ -80,6 +82,8 @@ export interface SSEMessageData {
   extracted?: ExtractedIntake;
   is_extraction_update?: boolean;
   email_capture?: boolean;
+  /** Relative shareable plan URL (/plan/{id}) — set on the post-plan ready message. */
+  share_link?: string;
 }
 
 export interface SSEPhaseChangeData {

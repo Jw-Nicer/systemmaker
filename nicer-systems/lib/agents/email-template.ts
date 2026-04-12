@@ -17,6 +17,20 @@ export function renderPreviewPlanHTML(
   leadId?: string
 ): string {
   const unsubscribeUrl = leadId ? buildUnsubscribeUrl(leadId) : null;
+  const assumptionsHTML = plan.intake.assumptions
+    .map((item) => `<li style="margin-bottom:6px;">${esc(item)}</li>`)
+    .join("");
+  const constraintsHTML = plan.intake.constraints
+    .map((item) => `<li style="margin-bottom:6px;">${esc(item)}</li>`)
+    .join("");
+  const warningsHTML = plan.warnings
+    ?.map(
+      (warning) => `
+      <li style="margin-bottom:6px;">
+        <strong>${esc(warning.section)}:</strong> ${esc(warning.message)}
+      </li>`
+    )
+    .join("");
   const stagesHTML = plan.workflow.stages
     .map(
       (s, i) => `
@@ -109,6 +123,14 @@ export function renderPreviewPlanHTML(
   <h2 style="color:#00d4ff;font-size:18px;">Suggested Scope</h2>
   <p><strong>${esc(plan.intake.suggested_scope)}</strong></p>
   <p style="color:#6b7280;">${esc(plan.intake.clarified_problem)}</p>
+  ${assumptionsHTML ? `
+  <p style="margin:16px 0 8px;color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Assumptions</p>
+  <ul style="padding-left:20px;color:#374151;font-size:14px;">${assumptionsHTML}</ul>
+  ` : ""}
+  ${constraintsHTML ? `
+  <p style="margin:16px 0 8px;color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Constraints</p>
+  <ul style="padding-left:20px;color:#374151;font-size:14px;">${constraintsHTML}</ul>
+  ` : ""}
 
   <!-- Workflow Map -->
   <h2 style="color:#00d4ff;font-size:18px;">Workflow Map</h2>
@@ -154,6 +176,11 @@ export function renderPreviewPlanHTML(
     <p style="margin:0;font-size:13px;color:#6b7280;"><strong style="color:#00d4ff;">Critical Path:</strong> ${esc(plan.roadmap.critical_path)}</p>
   </div>
   ` : ''}
+
+  ${warningsHTML ? `
+  <h2 style="color:#d97706;font-size:18px;margin-top:24px;">Consistency Notes</h2>
+  <ul style="padding-left:20px;color:#6b7280;font-size:14px;">${warningsHTML}</ul>
+  ` : ""}
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
 

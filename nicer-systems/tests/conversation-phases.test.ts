@@ -36,6 +36,45 @@ describe("extractHeuristicIntakeData — industry", () => {
     assert.equal(extractHeuristicIntakeData("hello").industry, undefined);
     assert.equal(extractHeuristicIntakeData("I need help").industry, undefined);
   });
+
+  // ── Conversational openers with sizing prefix (Tier 2E) ────────────────
+
+  test("matches 'we're a 30-person property management shop'", () => {
+    const result = extractHeuristicIntakeData("we're a 30-person property management shop");
+    assert.equal(result.industry, "property management");
+  });
+
+  test("matches 'I'm a small healthcare clinic'", () => {
+    const result = extractHeuristicIntakeData("I'm a small healthcare clinic");
+    assert.equal(result.industry, "healthcare");
+  });
+
+  test("matches 'we are a 5-person legal firm'", () => {
+    const result = extractHeuristicIntakeData("we are a 5-person legal firm");
+    assert.equal(result.industry, "legal");
+  });
+
+  test("matches 'we're a mid-sized construction company'", () => {
+    const result = extractHeuristicIntakeData("we're a mid-sized construction company");
+    assert.equal(result.industry, "construction");
+  });
+
+  test("matches 'I am a tiny landscaping business'", () => {
+    const result = extractHeuristicIntakeData("I am a tiny landscaping business");
+    assert.equal(result.industry, "landscaping");
+  });
+
+  test("matches 'we're a growing dental practice'", () => {
+    const result = extractHeuristicIntakeData("we're a growing dental practice");
+    assert.equal(result.industry, "dental");
+  });
+
+  test("does not falsely capture from 'we're using HubSpot at the moment'", () => {
+    // Negative case — the negative-words guard should reject "using HubSpot"
+    // before it reaches a captured industry value.
+    const result = extractHeuristicIntakeData("we're using HubSpot at the moment");
+    assert.equal(result.industry, undefined);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -56,6 +95,39 @@ describe("extractHeuristicIntakeData — bottleneck", () => {
 
   test("returns undefined for generic text", () => {
     assert.equal(extractHeuristicIntakeData("hi there").bottleneck, undefined);
+  });
+
+  // ── Tightened conversational branch (Tier 2E) ──────────────────────────
+  // The pre-2E version would over-fire on long messages that contained ANY
+  // problem keyword. The new logic requires both a problem-pattern AND a
+  // problem-keyword.
+
+  test("does NOT fire on long messages with a keyword but no problem pattern", () => {
+    const result = extractHeuristicIntakeData(
+      "I'd love to learn how the manual review process works for new client onboarding"
+    );
+    assert.equal(result.bottleneck, undefined);
+  });
+
+  test("does NOT fire on a casual mention of spreadsheets", () => {
+    const result = extractHeuristicIntakeData(
+      "Our team uses spreadsheets for everything and that has worked fine for years honestly"
+    );
+    assert.equal(result.bottleneck, undefined);
+  });
+
+  test("DOES fire when both pattern and keyword are present", () => {
+    const result = extractHeuristicIntakeData(
+      "the process is broken and we keep losing track of follow-ups"
+    );
+    assert.ok(result.bottleneck);
+  });
+
+  test("DOES fire on 'we lose time' + 'manual' combination", () => {
+    const result = extractHeuristicIntakeData(
+      "we lose time every week chasing manual updates from the field crews"
+    );
+    assert.ok(result.bottleneck);
   });
 });
 

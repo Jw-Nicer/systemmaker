@@ -160,6 +160,35 @@ describe("chatReducer", () => {
       });
       assert.equal(state.messages[0].email_capture, true);
     });
+
+    test("sets share_link on message when provided", () => {
+      const state = chatReducer(init(), {
+        type: "STREAM_MESSAGE",
+        content: "Your Preview Plan is ready!",
+        email_capture: true,
+        share_link: "/plan/abc123",
+      });
+      assert.equal(state.messages[0].share_link, "/plan/abc123");
+      assert.equal(state.messages[0].email_capture, true);
+    });
+
+    test("share_link works on auto-sent messages without email_capture", () => {
+      const state = chatReducer(init(), {
+        type: "STREAM_MESSAGE",
+        content: "Your Preview Plan is ready! I've sent a copy to ...",
+        share_link: "/plan/xyz789",
+      });
+      assert.equal(state.messages[0].share_link, "/plan/xyz789");
+      assert.equal(state.messages[0].email_capture, undefined);
+    });
+
+    test("share_link is undefined when not provided", () => {
+      const state = chatReducer(init(), {
+        type: "STREAM_MESSAGE",
+        content: "regular message",
+      });
+      assert.equal(state.messages[0].share_link, undefined);
+    });
   });
 
   describe("UPDATE_EXTRACTED", () => {
@@ -311,6 +340,50 @@ describe("chatReducer", () => {
       const state = chatReducer(init(), { type: "SET_PLAN", plan });
       assert.deepEqual(state.plan, plan);
       assert.deepEqual(state.streamedPlan, plan);
+    });
+  });
+
+  describe("MARK_EMAIL_CAPTURED", () => {
+    test("flips email_auto_sent and merges name + email into extracted", () => {
+      const state = chatReducer(init(), {
+        type: "MARK_EMAIL_CAPTURED",
+        name: "Jane Doe",
+        email: "jane@acme.com",
+      });
+      assert.equal(state.email_auto_sent, true);
+      assert.equal(state.extracted.name, "Jane Doe");
+      assert.equal(state.extracted.email, "jane@acme.com");
+    });
+
+    test("preserves prior extracted fields when capturing", () => {
+      const seeded = {
+        ...init(),
+        extracted: { industry: "legal", bottleneck: "intake forms" },
+      };
+      const state = chatReducer(seeded, {
+        type: "MARK_EMAIL_CAPTURED",
+        name: "John",
+        email: "john@firm.com",
+      });
+      assert.equal(state.extracted.industry, "legal");
+      assert.equal(state.extracted.bottleneck, "intake forms");
+      assert.equal(state.extracted.name, "John");
+      assert.equal(state.extracted.email, "john@firm.com");
+    });
+
+    test("does not overwrite existing name/email with empty strings", () => {
+      const seeded = {
+        ...init(),
+        extracted: { name: "Existing Name", email: "existing@example.com" },
+      };
+      const state = chatReducer(seeded, {
+        type: "MARK_EMAIL_CAPTURED",
+        name: "",
+        email: "",
+      });
+      assert.equal(state.email_auto_sent, true);
+      assert.equal(state.extracted.name, "Existing Name");
+      assert.equal(state.extracted.email, "existing@example.com");
     });
   });
 

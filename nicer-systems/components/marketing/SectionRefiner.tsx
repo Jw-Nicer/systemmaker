@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRefineSection } from "@/hooks/useRefineSection";
 import type { RefineSectionKey } from "@/lib/plans/refinement";
 import { mapRefineSectionKeyToPlanSection } from "@/lib/plans/refinement";
-import { getSectionSuggestions } from "@/lib/agents/refinement";
+import { getSectionSuggestions } from "@/lib/agents/refinement-suggestions";
 import type { PreviewPlan } from "@/types/preview-plan";
 
 interface SectionRefinerProps {

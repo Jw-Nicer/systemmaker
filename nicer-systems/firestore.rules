@@ -63,6 +63,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Industry probing — admin only (read by server via Admin SDK,
+    // never directly from the client)
+    match /industry_probing/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
     // Experiments — public read if running (for client bucketing), admin full access
     match /experiments/{docId} {
       allow read: if resource.data.status == "running";

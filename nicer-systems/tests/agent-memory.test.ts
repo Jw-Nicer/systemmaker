@@ -21,8 +21,13 @@ vi.mock("@/lib/firebase/admin", () => ({
     collection: () => ({
       doc: (...args: unknown[]) => mockDoc(...args),
     }),
-    runTransaction: async (fn: Function) => {
-      const docRef = {};
+    runTransaction: async (
+      fn: (tx: {
+        get: () => unknown;
+        set: (ref: unknown, data: unknown) => void;
+        update: (ref: unknown, data: unknown) => void;
+      }) => unknown
+    ) => {
       return fn({
         get: () => mockDocGet(),
         set: (_ref: unknown, data: unknown) => {
