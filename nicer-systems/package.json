@@ -16,7 +16,9 @@
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
-    "seed:templates": "npx tsx scripts/seed-agent-templates.ts"
+    "seed:templates": "npx tsx scripts/seed-agent-templates.ts",
+    "seed:industry-probing": "npx tsx scripts/seed-industry-probing.ts",
+    "eval:chat": "npx tsx scripts/run-chat-evals.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

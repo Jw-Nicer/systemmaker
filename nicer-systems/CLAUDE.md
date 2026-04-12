@@ -55,6 +55,8 @@ app/
       variants/page.tsx        # Landing variant CRUD (industry pages)
       experiments/page.tsx     # A/B testing management
       agent-templates/page.tsx # Agent template editor + test runner
+      industry-probing/page.tsx # Per-industry chat-agent context CRUD (Phase 7)
+      homepage-layout/page.tsx # Drag-to-reorder homepage sections + visibility toggles (Phase 8 — D1)
       settings/page.tsx        # Theme customizer
   api/
     auth/session/route.ts      # POST: create session cookie from Firebase ID token
@@ -85,6 +87,8 @@ lib/
   firestore/faqs.ts          # getPublishedFAQs() — server-side
   firestore/offers.ts        # getPublishedOffers() — server-side
   firestore/site-settings.ts # getSiteSettings() — server-side
+  firestore/industry-probing.ts  # getIndustryProbingsFromFirestore() with TTL cache + alias map (Phase 7)
+  firestore/homepage-layout.ts   # getHomepageLayout() with TTL cache, stored at site_settings/homepage_layout (Phase 8 — D1)
   actions/case-studies.ts    # Server actions: CRUD for case studies
   actions/testimonials.ts    # Server actions: CRUD for testimonials
   actions/faqs.ts            # Server actions: CRUD for FAQs
@@ -93,6 +97,8 @@ lib/
   actions/agent-templates.ts # Server actions: CRUD + test run
   actions/variants.ts        # Server actions: CRUD for landing variants
   actions/experiments.ts     # Server actions: A/B experiment management
+  actions/industry-probing.ts # Server actions: CRUD for chat-agent industry probing context (Phase 7)
+  actions/homepage-layout.ts  # Server actions: update + reset homepage section order/visibility (Phase 8 — D1)
   firestore/variants.ts      # getPublishedVariants(), getVariantBySlug()
   firestore/experiments.ts   # getRunningExperiments(), getExperimentByTarget()
   firestore/plans.ts         # storePlan(), getPlanById() — agent preview plans
@@ -100,11 +106,14 @@ lib/
   agents/runner.ts           # DAG-driven pipeline orchestrator (walks PIPELINE_DAG, parallel tiers)
   agents/registry.ts         # Pipeline DAG config (stage keys, dependencies, routing signals, criticality)
   agents/context.ts          # Typed context protocol (data flow between stages, fallback outputs)
-  agents/llm-client.ts       # Shared LLM client (singleton Gemini, retry, model fallback, token budget)
+  agents/llm-client.ts       # Shared LLM client (singleton Gemini, retry, model fallback, token budget, invokeLLMChatStreaming via model.startChat)
   agents/self-correction.ts  # ReAct self-correction loop (schema validation → error feedback → retry)
   agents/tracing.ts          # Observability (traces, spans, structured logging per pipeline run)
   agents/tools.ts            # Tool use / RAG (searchCaseStudies, getIndustryBenchmarks, searchExistingPlans)
-  agents/evals.ts            # LLM-as-judge evaluation (quality scoring, golden test suite)
+  agents/evals.ts            # LLM-as-judge evaluation for plan stages (quality scoring, golden test suite)
+  agents/chat-evals.ts       # LLM-as-judge eval suite for chat responses (Phase 7) — runChatEvalSuite, judge prompt, aggregation
+  agents/chat-eval-cases.ts  # 22 curated chat eval cases across gathering/confirming/follow_up (Phase 7)
+  agents/conversation-rules.ts # Cross-phase rule registry — first-class rule data with stable ids (Phase 7)
   agents/memory.ts           # Episodic memory (Firestore-backed visitor recall across sessions)
   agents/conversation.ts     # Multi-phase SSE chat (gathering → confirming → building → complete → follow_up)
   agents/prompts.ts          # Context assembly (template + context + input sanitization + versioning)
@@ -140,12 +149,16 @@ types/
   preview-plan.ts        # PreviewPlan interface (agent output structures)
   variant.ts             # LandingVariant interface
   experiment.ts          # Experiment + ExperimentVariant interfaces
-  chat.ts                # ChatMessage, ChatPhase, SSE event types
+  chat.ts                # ChatMessage, ChatPhase, SSE event types (incl. share_link field for post-plan messages)
+  industry-probing.ts    # IndustryProbing interface (Phase 7)
+  homepage-layout.ts     # HomepageLayout + HomepageSectionKey union + SECTION_REGISTRY (Phase 8 — D1)
+  lead.ts                # Lead, LeadStatus, LEAD_STATUSES, LEAD_STATUS_LABELS, LEAD_STATUS_COLORS
 
 agents/                  # Agent markdown specs (intake, workflow mapper, etc.)
 docs/                    # PRD, Architecture, Data Model, API Spec, etc.
   ADR/                   # Architecture Decision Records — see ADR/README.md for index
   CI_CD.md               # Deployment checklist, rollback procedure, future CI/CD plan
+  Chat_Agent_Architecture.md # Chat agent design, weaknesses log, prioritized roadmap, Phase 7 changelog
   Scaling_Playbook.md    # Roadmap: solo founder → VA/contractor → client portal → SaaS
   SOP_Founder_Operations.md  # Daily/weekly/monthly ops checklist, automation vs manual matrix
   Weekly_Review_Template.md  # Fillable Friday review template (pipeline, wins, stuck, priorities)
@@ -158,6 +171,8 @@ scripts/
   seed-variants.ts           # Seeds industry variant landing pages (6 variants)
   seed-case-studies.ts       # Seeds sample case studies
   seed-case-study-thumbnails.ts # Seeds case study thumbnail images
+  seed-industry-probing.ts   # Seeds the 8 default industry-probing entries with aliases (Phase 7)
+  run-chat-evals.ts          # CLI runner for the chat-agent LLM eval suite (Phase 7)
 
 tests/
   firebase-admin-init.test.ts # Tests dual-mode Admin SDK init (service account + ADC fallback)
@@ -236,6 +251,8 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `experiments` | status=running | none | auth | name, target, variants[], status, winner |
 | `plans` | is_public=true | none | auth | preview_plan, input_summary, lead_id, view_count, is_public, version, versions[] |
 | `agent_memory` | none | none | auth | visitorId (email hash), industry, lastBottleneck, planIds[], interactions[], preferences, sessionCount |
+| `industry_probing` | none | none | auth | slug, display_name, common_bottlenecks[], common_tools[], probing_angles[], aliases[], is_published, sort_order — chat agent context (Phase 7) |
+| `site_settings/homepage_layout` | none | none | auth | sections[] (key, enabled, sort_order), updated_at — marketing landing page layout config (Phase 8 — D1, sub-doc of site_settings) |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -322,6 +339,51 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 - [x] Production hardening (gemini-2.5-flash-lite fallback, undefined-safe Firestore writes, template seeding)
 - [x] Comprehensive test coverage (549 tests across 63 files)
 
+## What's Built (Chat Agent Quality Pass — 2026-04-10/11, complete)
+**Tracked as Phase 7 in `docs/Phased_Implementation_Plan.md` and P6 in `docs/Backlog.md`. Full architectural detail in `docs/Chat_Agent_Architecture.md`.**
+
+Tier 1 — stability + UX recovery:
+- [x] Single-retry on streaming failure with contextual fallback (`buildContextualConversationFallback` re-asks the missing field instead of starting over)
+- [x] Split SSE stall timeout into first-chunk (60s) vs inter-chunk (15s) — eliminates false-positive cold-start "Try again" errors
+- [x] Skip `is_extraction_update` SSE echo when nothing changed (`extractedHasChanges` helper)
+- [x] Tightened `inferBottleneck` heuristic — requires both pattern AND keyword (was: pattern OR length+keyword)
+- [x] Tightened `inferIndustry` heuristic — Branch 2 catches "we're a 30-person property management shop"
+- [x] "View full plan" link inside the post-plan chat bubble via per-message `share_link` field
+- [x] Plan section cards parse JSON and render formatted summaries (was: raw JSON dump)
+- [x] Email-capture form no longer re-asks after submission (success state stays mounted; captured contact info syncs into `extracted` for follow-ups)
+- [x] Per-phase `generationConfig` (temperature 0.55, maxOutputTokens 220-480, stopSequences) + `systemInstruction` + structured `Content[]` history
+- [x] `chatSession` API refactor — `model.startChat({ history }) + chat.sendMessageStream()` with SDK-level history validation
+
+Tier 2 — admin-driven configuration:
+- [x] `industry_probing` Firestore collection with admin CRUD page at `/admin/industry-probing`, server-side reader with TTL cache, hardcoded fallback safety net, idempotent seed script
+- [x] Cross-phase rules registry (`lib/agents/conversation-rules.ts`) — first-class rule data with stable ids the eval suite can correlate failures against
+
+Tier 3 — observability:
+- [x] LLM-as-judge eval suite for chat answers — 22 curated cases, 19 reusable criteria, CLI runner (`npm run eval:chat`), opt-in vitest harness (`RUN_LLM_EVALS=1`)
+- [x] Lead-scoring dead-code cleanup — removed `case "critical"` branch, added regression-net test pinning canonical urgency values
+- [x] New analytics event: `AGENT_CHAT_VIEW_FULL_PLAN`
+- [x] **659 tests across 68 files** (up from 549/63 at start of pass)
+
+## What's Built (Phase 8 — Admin UX + Draft Review, complete)
+**Tracked as Phase 8 in `docs/Phased_Implementation_Plan.md`. Two independent slices delivered.**
+
+D1 — Homepage Layout Admin (shipped 2026-04-11):
+- [x] `types/homepage-layout.ts` — 11-section union + `SECTION_REGISTRY` with labels/descriptions/recommended flags
+- [x] `lib/marketing/homepage-layout-resolver.ts` — pure merge function (backfill missing, drop unknown, dedupe, normalize `sort_order`)
+- [x] `lib/firestore/homepage-layout.ts` — TTL-cached reader via `unstable_cache`, stored at `site_settings/homepage_layout`
+- [x] `lib/actions/homepage-layout.ts` — server actions (update + reset-to-defaults)
+- [x] `app/admin/(authenticated)/homepage-layout/` — drag-to-reorder admin page with visibility toggles, unsaved-changes indicator, reset confirmation
+- [x] `app/(marketing)/page.tsx` refactored to `renderSection(key, experiments)` dispatch
+- [x] 27 regression tests in `tests/homepage-layout.test.ts`
+
+D2 — Admin Preview Mode (shipped pre-2026-04-11):
+- [x] `/preview/site` and `/preview/variant/[id]` routes gated on `getSessionUser()`
+- [x] Dedicated `getAllXForPreview` readers that bypass the publish filter
+- [x] "Preview site" link in admin layout chrome + `PreviewBanner` draft counts
+- [x] 5 regression tests in `tests/preview-readers.test.ts`
+
+**Current test suite: 736 passed / 1 skipped across 73 files** (up from 659/68 at end of Phase 7).
+
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
 
@@ -340,7 +402,9 @@ npm run deploy           # Full Firebase deploy (hosting + functions)
 npm run deploy:hosting   # Deploy hosting + SSR Cloud Function only
 npm run deploy:rules     # Deploy Firestore security rules
 npm run deploy:indexes   # Deploy Firestore indexes
-npm run seed:templates   # Seed agent templates into Firestore
+npm run seed:templates           # Seed agent templates into Firestore
+npm run seed:industry-probing    # Seed the 8 default industry-probing entries with aliases (Phase 7)
+npm run eval:chat                # Run the chat-agent LLM eval suite (Phase 7) — uses real Gemini, costs API credits
 npx tsx scripts/seed-firestore.ts  # Seed default site_settings
 npx tsx scripts/seed-content.ts    # Seed FAQs, testimonials, offers
 npx tsx scripts/seed-variants.ts   # Seed industry variant pages

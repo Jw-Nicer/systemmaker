@@ -1,7 +1,39 @@
 # GAPS SHARED CONTEXT — 6-Terminal Parallel Work Plan
-**Created:** 2026-03-10 | **Purpose:** Shared context for 6 Claude Code terminals working in parallel
+**Created:** 2026-03-10 | **Updated:** 2026-04-11 | **Purpose:** Shared context for 6 Claude Code terminals working in parallel
 
 > **IMPORTANT**: Each terminal owns ONE section. Do NOT modify files outside your assigned section unless coordinating via this doc. Read this entire document before starting work.
+
+---
+
+## ⚠️ Status reconciliation (2026-04-11)
+
+This doc was originally written 2026-03-10 to coordinate 6 parallel terminals. Most of the gaps it lists have since been resolved by other work, but the per-gap `**Status**:` lines were never updated. A reconciliation pass on 2026-04-11 marked stale entries inline. **Authoritative state for resolved items lives in `docs/Backlog.md` and `docs/Phased_Implementation_Plan.md`.**
+
+Reconciliation summary:
+
+| Gap | Original status | Real status | Where it shipped |
+|---|---|---|---|
+| 1A — Persona section | Unaddressed | ✅ RESOLVED | `components/marketing/IsThisForYou.tsx` |
+| 1B — Competitive differentiation | Unaddressed | ✅ RESOLVED | `components/marketing/WhyNotDIY.tsx` |
+| 2A — Guided Audit wizard | Deferred | ✅ RESOLVED | `app/(marketing)/audit/page.tsx`, `GuidedAuditWizard.tsx`, `app/api/agent/audit/route.ts` |
+| 2B — Surface Guided Audit prominently | Unaddressed | ✅ RESOLVED — `SeeItWork.tsx` already has the "Prefer a structured format? — Try the Guided Audit →" CTA wired to `/audit`. Added analytics tracking (`CTA_CLICK_GUIDED_AUDIT`) on 2026-04-11. |
+| 3A — workflow_type on case studies | Unaddressed | ✅ RESOLVED — `workflow_type` field on `types/case-study.ts`, admin form input, `ProofOfWorkClient` + `CaseStudiesListClient` filter chips (latter added 2026-04-11) |
+| 3B — result_category tags | Unaddressed | ✅ RESOLVED — `ResultCategory` enum with 6 values, `result_categories: ResultCategory[]`, admin multi-select checkbox UI, gallery filter chips + per-card tags |
+| 3C — Approval workflow | Partially addressed | ✅ RESOLVED — `status: "draft" \| "review" \| "published" \| "archived"` enum, server-side filter in `getPublishedCaseStudies`, Firestore rule `status == "published"`, admin inline status selectors, dedicated `updateCaseStudyStatus` server action, migration-safe `is_published` fallback, 16 regression tests added 2026-04-11 |
+| 3D — published_at timestamp | Unaddressed | ✅ RESOLVED — `published_at: string \| null` field, server actions stamp it on first publish and preserve across status transitions, regression tests pin the lifecycle |
+| 4A — Lead-scoring urgency mismatch | Bug | ✅ RESOLVED 2026-04-11 (Phase 7 / BUG-034) — dead `case "critical"` removed, regression-net test added |
+| 4B — Lead confirmation email | Unaddressed | ✅ RESOLVED | `lib/email/confirmation-email.ts`, wired in `/api/leads/route.ts:82` |
+| 4C — Email unsubscribe | Unaddressed | ✅ RESOLVED | `lib/email/unsubscribe-token.ts` (HMAC), `nurture-sequence.ts` checks `nurture_unsubscribed`, `nurture-templates.ts` injects link, `app/api/leads/unsubscribe/route.ts` |
+| 4D — Replace mailto with booking | Partially addressed | ✅ RESOLVED | `BookingCTAButton`, `BookingModal`, Google Calendar integration (BUG-007 in KNOWN_ISSUES) |
+| 5A — Founder operations SOP | Unaddressed | ✅ RESOLVED | `docs/SOP_Founder_Operations.md` |
+| 5B — Weekly review template | Unaddressed | ✅ RESOLVED | `docs/Weekly_Review_Template.md` |
+| 5C — Issue triage process | Unaddressed | ✅ RESOLVED | `docs/Triage_Process.md` |
+| 5D — Expand lead statuses | Partially addressed | ✅ RESOLVED 2026-04-11 — `LEAD_STATUSES` already had 7 values (`nurture` + `qualified` included); added the 8th `later` disposition for explicit deferred follow-ups. Centralized `LEAD_STATUS_LABELS` and `LEAD_STATUS_COLORS` in `types/lead.ts` so both `LeadsManager` and `LeadDetail` render consistent pills for every status (previously each file defined its own partial map covering only 2 of 7 statuses). 11 regression tests pin the enum, labels, and color classes. |
+| 6A — Architecture Decision Records | Unaddressed | ✅ RESOLVED | `docs/ADR/` (4 ADRs + README) |
+| 6B — CI/CD documentation | Unaddressed | ✅ RESOLVED | `docs/CI_CD.md` |
+| 6C — Scaling playbook | Unaddressed | ✅ RESOLVED | `docs/Scaling_Playbook.md` |
+
+**Genuinely open gaps after reconciliation:** None. Every gap this document catalogued is either ✅ RESOLVED or superseded by the broader roadmap. Further feature work should be sourced from `docs/Backlog.md` (deferred items) and `docs/Phased_Implementation_Plan.md`, not from this file. This file is kept for historical traceability only.
 
 ---
 

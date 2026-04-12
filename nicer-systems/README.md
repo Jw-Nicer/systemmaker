@@ -46,7 +46,8 @@ A conversion-first marketing site and web app for **Nicer Systems**, an automati
 
    Optional marketing variables:
    - `NEXT_PUBLIC_SCOPING_CALL_EMBED_URL` — inline scheduler iframe source for the contact page
-   - `NEXT_PUBLIC_SCOPING_CALL_BOOKING_URL` — direct booking link used as a fallback/open-in-new-tab action
+   - `NEXT_PUBLIC_BOOKING_URL` — direct booking link used for call CTAs
+   - `NEXT_PUBLIC_SCOPING_CALL_BOOKING_URL` — legacy alias still supported for backward compatibility
 
 3. Seed initial data:
    ```bash
