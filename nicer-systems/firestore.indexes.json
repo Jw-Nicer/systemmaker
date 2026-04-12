@@ -87,13 +87,6 @@
         { "fieldPath": "pipelineType", "order": "ASCENDING" },
         { "fieldPath": "created_at", "order": "DESCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "pipeline_traces",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "started_at", "order": "DESCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
