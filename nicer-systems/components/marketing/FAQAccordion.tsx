@@ -15,6 +15,8 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
     <div className="space-y-3">
       {faqs.map((faq) => {
         const isOpen = openId === faq.id;
+        const triggerId = `faq-trigger-${faq.id}`;
+        const panelId = `faq-panel-${faq.id}`;
         return (
           <div
             key={faq.id}
@@ -33,6 +35,9 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
 
             <button
               onClick={() => setOpenId(isOpen ? null : faq.id)}
+              id={triggerId}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
               className="relative flex w-full items-start justify-between gap-3 px-4 py-4 text-left transition-colors sm:px-6"
             >
               <span className="pr-2 font-medium text-[var(--text-heading)] sm:pr-4">
@@ -63,6 +68,9 @@ export function FAQAccordion({ faqs }: FAQAccordionProps) {
             <AnimatePresence>
               {isOpen && (
                 <motion.div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={triggerId}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}

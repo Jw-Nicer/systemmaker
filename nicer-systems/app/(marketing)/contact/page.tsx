@@ -178,6 +178,8 @@ function ContactForm() {
   const inputClasses =
     "w-full rounded-[18px] border border-[#d5cdbd] bg-[#fbf7ef] px-4 py-3 text-sm text-[#25311f] placeholder:text-[#76806e] focus-organic transition-[border-color,box-shadow] duration-250";
 
+  const fieldErrorId = (field: keyof LeadInput) => `${field}-error`;
+
   return (
     <section className="border-b border-[#d8d1c4] bg-[#f4efe5] py-20 md:py-24">
       <div className="mx-auto max-w-5xl px-6">
@@ -288,10 +290,13 @@ function ContactForm() {
                   type="text"
                   value={formData.name}
                   onChange={handleChange}
+                  required
+                  aria-invalid={errors.name ? "true" : "false"}
+                  aria-describedby={errors.name ? fieldErrorId("name") : undefined}
                   className={inputClasses}
                   placeholder="Your name"
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && <p id={fieldErrorId("name")} className="mt-1 text-xs text-red-500">{errors.name}</p>}
               </div>
 
               <div>
@@ -302,10 +307,13 @@ function ContactForm() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
+                  required
+                  aria-invalid={errors.email ? "true" : "false"}
+                  aria-describedby={errors.email ? fieldErrorId("email") : undefined}
                   className={inputClasses}
                   placeholder="you@company.com"
                 />
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+                {errors.email && <p id={fieldErrorId("email")} className="mt-1 text-xs text-red-500">{errors.email}</p>}
               </div>
             </div>
 
@@ -318,10 +326,13 @@ function ContactForm() {
                   type="text"
                   value={formData.company}
                   onChange={handleChange}
+                  required
+                  aria-invalid={errors.company ? "true" : "false"}
+                  aria-describedby={errors.company ? fieldErrorId("company") : undefined}
                   className={inputClasses}
                   placeholder="Your company"
                 />
-                {errors.company && <p className="mt-1 text-xs text-red-500">{errors.company}</p>}
+                {errors.company && <p id={fieldErrorId("company")} className="mt-1 text-xs text-red-500">{errors.company}</p>}
               </div>
 
               <div>
@@ -331,6 +342,8 @@ function ContactForm() {
                   name="urgency"
                   value={formData.urgency}
                   onChange={handleChange}
+                  aria-invalid={errors.urgency ? "true" : "false"}
+                  aria-describedby={errors.urgency ? fieldErrorId("urgency") : undefined}
                   className={inputClasses}
                 >
                   <option value="">Select urgency</option>
@@ -339,6 +352,7 @@ function ContactForm() {
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
                 </select>
+                {errors.urgency && <p id={fieldErrorId("urgency")} className="mt-1 text-xs text-red-500">{errors.urgency}</p>}
               </div>
             </div>
 
@@ -353,9 +367,12 @@ function ContactForm() {
                   rows={4}
                   value={formData.bottleneck}
                   onChange={handleChange}
+                  aria-invalid={errors.bottleneck ? "true" : "false"}
+                  aria-describedby={errors.bottleneck ? fieldErrorId("bottleneck") : undefined}
                   className={`${inputClasses} resize-none`}
                   placeholder="Describe the workflow issue."
                 />
+                {errors.bottleneck && <p id={fieldErrorId("bottleneck")} className="mt-1 text-xs text-red-500">{errors.bottleneck}</p>}
               </div>
 
               <div>
@@ -368,9 +385,12 @@ function ContactForm() {
                   type="text"
                   value={formData.tools}
                   onChange={handleChange}
+                  aria-invalid={errors.tools ? "true" : "false"}
+                  aria-describedby={errors.tools ? fieldErrorId("tools") : undefined}
                   className={inputClasses}
                   placeholder="Slack, Airtable, HubSpot"
                 />
+                {errors.tools && <p id={fieldErrorId("tools")} className="mt-1 text-xs text-red-500">{errors.tools}</p>}
               </div>
             </div>
 

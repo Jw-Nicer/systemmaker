@@ -1,7 +1,10 @@
-import { getPublishedCaseStudies, getIndustries } from "@/lib/firestore/case-studies";
+import {
+  getPublishedCaseStudies,
+  getIndustries,
+  getPublicCaseStudies,
+} from "@/lib/firestore/case-studies";
 import { ProofOfWorkClient } from "./ProofOfWorkClient";
 import { matchesIndustryKey } from "@/lib/marketing/industry-key";
-import { FALLBACK_CASE_STUDIES } from "@/lib/marketing/fallback-case-studies";
 import type { CaseStudy } from "@/types/case-study";
 
 interface ProofOfWorkProps {
@@ -20,7 +23,7 @@ export async function ProofOfWork({
   caseStudiesData,
 }: ProofOfWorkProps = {}) {
   const liveCaseStudies = caseStudiesData ?? await getPublishedCaseStudies();
-  let caseStudies = liveCaseStudies.length > 0 ? liveCaseStudies : FALLBACK_CASE_STUDIES;
+  let caseStudies = getPublicCaseStudies(liveCaseStudies);
 
   // Filter to featured industries if provided (variant pages)
   if (featuredIndustries && featuredIndustries.length > 0) {

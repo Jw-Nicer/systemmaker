@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/AnalyticsConsentControls";
 import { MobileNav } from "@/components/marketing/MobileNav";
 import { BookingCTAButton } from "@/components/marketing/BookingCTAButton";
-import { getPublishedCaseStudies } from "@/lib/firestore/case-studies";
+import { getResolvedPublicCaseStudies } from "@/lib/firestore/case-studies";
 
 export interface NavLink {
   href: string;
@@ -14,7 +14,7 @@ export interface NavLink {
   badge?: string;
 }
 
-function buildNavLinks(hasCaseStudies: boolean): NavLink[] {
+export function buildNavLinks(hasCaseStudies: boolean): NavLink[] {
   return [
     { href: "/#see-it-work", label: "Preview Plan" },
     { href: "/#how-it-works", label: "How it works" },
@@ -50,7 +50,7 @@ export default async function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const caseStudies = await getPublishedCaseStudies();
+  const caseStudies = await getResolvedPublicCaseStudies();
   const navLinks = buildNavLinks(caseStudies.length > 0);
 
   return (

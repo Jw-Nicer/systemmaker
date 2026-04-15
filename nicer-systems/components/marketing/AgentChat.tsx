@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { PlanBuildProgress } from "./PlanBuildProgress";
@@ -178,6 +179,17 @@ export function AgentChat({ onPlanComplete }: AgentChatProps) {
           </button>
         </div>
       )}
+
+      <div className="border-t border-[#d7d2c4] bg-[linear-gradient(180deg,#f2ecdf,#e6ddcd)] px-4 py-2 text-[11px] leading-5 text-[#596351]">
+        Workflow details you enter here are processed to generate your preview plan.
+        {" "}
+        <Link
+          href="/privacy"
+          className="text-[#38552d] underline decoration-[#93a071] underline-offset-4"
+        >
+          Privacy Policy
+        </Link>
+      </div>
 
       <ChatInput
         onSend={chat.sendMessage}

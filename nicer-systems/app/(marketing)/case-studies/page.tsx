@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { getPublishedCaseStudies, getIndustries } from "@/lib/firestore/case-studies";
-import { FALLBACK_CASE_STUDIES } from "@/lib/marketing/fallback-case-studies";
+import {
+  getPublishedCaseStudies,
+  getIndustries,
+  getPublicCaseStudies,
+} from "@/lib/firestore/case-studies";
 import { collectWorkflowTypes } from "@/lib/marketing/case-study-filters";
 import { CaseStudiesListClient } from "./CaseStudiesListClient";
 
@@ -25,8 +28,7 @@ export const metadata: Metadata = {
 
 export default async function CaseStudiesPage() {
   const liveCaseStudies = await getPublishedCaseStudies();
-  const caseStudies =
-    liveCaseStudies.length > 0 ? liveCaseStudies : FALLBACK_CASE_STUDIES;
+  const caseStudies = getPublicCaseStudies(liveCaseStudies);
   const industries = getIndustries(caseStudies);
   const workflowTypes = collectWorkflowTypes(caseStudies);
 

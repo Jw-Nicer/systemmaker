@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { getCaseStudyBySlug, getRelatedCaseStudies, getPublishedCaseStudies } from "@/lib/firestore/case-studies";
+import {
+  getRelatedCaseStudies,
+  getResolvedCaseStudyBySlug,
+  getResolvedPublicCaseStudies,
+} from "@/lib/firestore/case-studies";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,7 +14,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const cs = await getCaseStudyBySlug(slug);
+  const cs = await getResolvedCaseStudyBySlug(slug);
   if (!cs) return { title: "Case Study Not Found | Nicer Systems" };
 
   const title = `${cs.title} | Nicer Systems`;
@@ -38,8 +42,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CaseStudyDetailPage({ params }: Props) {
   const { slug } = await params;
   const [cs, allStudies] = await Promise.all([
-    getCaseStudyBySlug(slug),
-    getPublishedCaseStudies(),
+    getResolvedCaseStudyBySlug(slug),
+    getResolvedPublicCaseStudies(),
   ]);
 
   if (!cs) notFound();
@@ -50,8 +54,8 @@ export default async function CaseStudyDetailPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://nicer-systems.web.app" },
-      { "@type": "ListItem", position: 2, name: "Case Studies", item: "https://nicer-systems.web.app/case-studies" },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.nicersystems.com" },
+      { "@type": "ListItem", position: 2, name: "Case Studies", item: "https://www.nicersystems.com/case-studies" },
       { "@type": "ListItem", position: 3, name: cs.title },
     ],
   };

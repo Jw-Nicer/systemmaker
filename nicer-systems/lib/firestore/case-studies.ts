@@ -1,6 +1,7 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 import { unstable_cache } from "next/cache";
 import type { CaseStudy } from "@/types/case-study";
+import { FALLBACK_CASE_STUDIES } from "@/lib/marketing/fallback-case-studies";
 import { serializeDoc } from "./serialize";
 
 export const getPublishedCaseStudies = unstable_cache(
@@ -84,4 +85,23 @@ export async function getAllCaseStudiesForPreview(): Promise<CaseStudy[]> {
 export function getIndustries(caseStudies: CaseStudy[]): string[] {
   const industries = new Set(caseStudies.map((cs) => cs.industry));
   return Array.from(industries).sort();
+}
+
+export function getPublicCaseStudies(caseStudies: CaseStudy[]): CaseStudy[] {
+  return caseStudies.length > 0 ? caseStudies : FALLBACK_CASE_STUDIES;
+}
+
+export async function getResolvedPublicCaseStudies(): Promise<CaseStudy[]> {
+  return getPublicCaseStudies(await getPublishedCaseStudies());
+}
+
+export async function getResolvedCaseStudyBySlug(
+  slug: string
+): Promise<CaseStudy | null> {
+  const liveCaseStudy = await getCaseStudyBySlug(slug);
+  if (liveCaseStudy) {
+    return liveCaseStudy;
+  }
+
+  return FALLBACK_CASE_STUDIES.find((caseStudy) => caseStudy.slug === slug) ?? null;
 }
