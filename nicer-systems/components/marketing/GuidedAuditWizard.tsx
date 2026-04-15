@@ -312,6 +312,7 @@ export function GuidedAuditWizard() {
   }
 
   const stepCopy = STEP_COPY[step];
+  const fieldErrorId = (field: keyof GuidedAuditInput) => `guided-audit-${field}-error`;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
@@ -380,10 +381,13 @@ export function GuidedAuditWizard() {
         <div className="mt-8 space-y-5">
           {step === 0 ? (
             <>
-              <Field label="Industry" error={errors.industry}>
+              <Field label="Industry" error={errors.industry} htmlFor="industry" errorId={fieldErrorId("industry")}>
                 <select
+                  id="industry"
                   value={form.industry}
                   onChange={(event) => setField("industry", event.target.value as GuidedAuditInput["industry"])}
+                  aria-invalid={errors.industry ? "true" : "false"}
+                  aria-describedby={errors.industry ? fieldErrorId("industry") : undefined}
                   className={inputClass(Boolean(errors.industry))}
                 >
                   <option value="">Select industry</option>
@@ -396,10 +400,13 @@ export function GuidedAuditWizard() {
               </Field>
 
               <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Workflow type" error={errors.workflow_type}>
+                <Field label="Workflow type" error={errors.workflow_type} htmlFor="workflow_type" errorId={fieldErrorId("workflow_type")}>
                   <select
+                    id="workflow_type"
                     value={form.workflow_type}
                     onChange={(event) => setField("workflow_type", event.target.value as GuidedAuditInput["workflow_type"])}
+                    aria-invalid={errors.workflow_type ? "true" : "false"}
+                    aria-describedby={errors.workflow_type ? fieldErrorId("workflow_type") : undefined}
                     className={inputClass(Boolean(errors.workflow_type))}
                   >
                     {AUDIT_WORKFLOW_TYPES.map((option) => (
@@ -410,10 +417,13 @@ export function GuidedAuditWizard() {
                   </select>
                 </Field>
 
-                <Field label="Team size" error={errors.team_size}>
+                <Field label="Team size" error={errors.team_size} htmlFor="team_size" errorId={fieldErrorId("team_size")}>
                   <select
+                    id="team_size"
                     value={form.team_size}
                     onChange={(event) => setField("team_size", event.target.value as GuidedAuditInput["team_size"])}
+                    aria-invalid={errors.team_size ? "true" : "false"}
+                    aria-describedby={errors.team_size ? fieldErrorId("team_size") : undefined}
                     className={inputClass(Boolean(errors.team_size))}
                   >
                     {AUDIT_TEAM_SIZES.map((option) => (
@@ -425,8 +435,12 @@ export function GuidedAuditWizard() {
                 </Field>
               </div>
 
-              <Field label="How systemized is the current stack?" error={errors.stack_maturity}>
-                <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="How systemized is the current stack?" error={errors.stack_maturity} errorId={fieldErrorId("stack_maturity")}>
+                <div
+                  className="grid gap-3 sm:grid-cols-2"
+                  aria-invalid={errors.stack_maturity ? "true" : "false"}
+                  aria-describedby={errors.stack_maturity ? fieldErrorId("stack_maturity") : undefined}
+                >
                   {AUDIT_STACK_MATURITY.map((option) => (
                     <button
                       key={option}
@@ -448,39 +462,51 @@ export function GuidedAuditWizard() {
 
           {step === 1 ? (
             <>
-              <Field label="What is the bottleneck?" error={errors.bottleneck}>
+              <Field label="What is the bottleneck?" error={errors.bottleneck} htmlFor="bottleneck" errorId={fieldErrorId("bottleneck")}>
                 <textarea
+                  id="bottleneck"
                   value={form.bottleneck}
                   onChange={(event) => setField("bottleneck", event.target.value)}
                   rows={4}
                   placeholder="Describe the workflow issue in plain language."
+                  aria-invalid={errors.bottleneck ? "true" : "false"}
+                  aria-describedby={errors.bottleneck ? fieldErrorId("bottleneck") : undefined}
                   className={`${inputClass(Boolean(errors.bottleneck))} resize-none`}
                 />
               </Field>
-              <Field label="Which steps are still manual?" error={errors.manual_steps}>
+              <Field label="Which steps are still manual?" error={errors.manual_steps} htmlFor="manual_steps" errorId={fieldErrorId("manual_steps")}>
                 <textarea
+                  id="manual_steps"
                   value={form.manual_steps}
                   onChange={(event) => setField("manual_steps", event.target.value)}
                   rows={3}
                   placeholder="Examples: copying data, chasing approvals, dispatch follow-up."
+                  aria-invalid={errors.manual_steps ? "true" : "false"}
+                  aria-describedby={errors.manual_steps ? fieldErrorId("manual_steps") : undefined}
                   className={`${inputClass(Boolean(errors.manual_steps))} resize-none`}
                 />
               </Field>
-              <Field label="Where do handoffs break?" error={errors.handoff_breaks}>
+              <Field label="Where do handoffs break?" error={errors.handoff_breaks} htmlFor="handoff_breaks" errorId={fieldErrorId("handoff_breaks")}>
                 <textarea
+                  id="handoff_breaks"
                   value={form.handoff_breaks}
                   onChange={(event) => setField("handoff_breaks", event.target.value)}
                   rows={3}
                   placeholder="Where does work stall, get lost, or bounce between people?"
+                  aria-invalid={errors.handoff_breaks ? "true" : "false"}
+                  aria-describedby={errors.handoff_breaks ? fieldErrorId("handoff_breaks") : undefined}
                   className={`${inputClass(Boolean(errors.handoff_breaks))} resize-none`}
                 />
               </Field>
-              <Field label="What is hard to see or report on?" error={errors.visibility_gap}>
+              <Field label="What is hard to see or report on?" error={errors.visibility_gap} htmlFor="visibility_gap" errorId={fieldErrorId("visibility_gap")}>
                 <textarea
+                  id="visibility_gap"
                   value={form.visibility_gap}
                   onChange={(event) => setField("visibility_gap", event.target.value)}
                   rows={3}
                   placeholder="What metrics, queues, or exceptions are invisible today?"
+                  aria-invalid={errors.visibility_gap ? "true" : "false"}
+                  aria-describedby={errors.visibility_gap ? fieldErrorId("visibility_gap") : undefined}
                   className={`${inputClass(Boolean(errors.visibility_gap))} resize-none`}
                 />
               </Field>
@@ -489,8 +515,12 @@ export function GuidedAuditWizard() {
 
           {step === 2 ? (
             <>
-              <Field label="Current tools" error={errors.current_tools}>
-                <div className="flex flex-wrap gap-2">
+              <Field label="Current tools" error={errors.current_tools} errorId={fieldErrorId("current_tools")}>
+                <div
+                  className="flex flex-wrap gap-2"
+                  aria-invalid={errors.current_tools ? "true" : "false"}
+                  aria-describedby={errors.current_tools ? fieldErrorId("current_tools") : undefined}
+                >
                   {TOOL_OPTIONS.map((tool) => {
                     const selected = form.current_tools.includes(tool);
                     return (
@@ -512,16 +542,20 @@ export function GuidedAuditWizard() {
               </Field>
 
               <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Rough volume" error={errors.volume}>
+                <Field label="Rough volume" error={errors.volume} htmlFor="volume" errorId={fieldErrorId("volume")}>
                   <input
+                    id="volume"
                     value={form.volume ?? ""}
                     onChange={(event) => setField("volume", event.target.value)}
                     placeholder="e.g. 120 requests/week"
+                    aria-invalid={errors.volume ? "true" : "false"}
+                    aria-describedby={errors.volume ? fieldErrorId("volume") : undefined}
                     className={inputClass(Boolean(errors.volume))}
                   />
                 </Field>
-                <Field label="Urgency" error={errors.urgency}>
+                <Field label="Urgency" error={errors.urgency} htmlFor="urgency" errorId={fieldErrorId("urgency")}>
                   <select
+                    id="urgency"
                     value={form.urgency ?? ""}
                     onChange={(event) =>
                       setField(
@@ -529,6 +563,8 @@ export function GuidedAuditWizard() {
                         (event.target.value || undefined) as GuidedAuditInput["urgency"]
                       )
                     }
+                    aria-invalid={errors.urgency ? "true" : "false"}
+                    aria-describedby={errors.urgency ? fieldErrorId("urgency") : undefined}
                     className={inputClass(Boolean(errors.urgency))}
                   >
                     <option value="">Select urgency</option>
@@ -541,8 +577,9 @@ export function GuidedAuditWizard() {
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Time lost per week" error={errors.time_lost_per_week}>
+                <Field label="Time lost per week" error={errors.time_lost_per_week} htmlFor="time_lost_per_week" errorId={fieldErrorId("time_lost_per_week")}>
                   <select
+                    id="time_lost_per_week"
                     value={form.time_lost_per_week ?? ""}
                     onChange={(event) =>
                       setField(
@@ -550,6 +587,8 @@ export function GuidedAuditWizard() {
                         (event.target.value || undefined) as GuidedAuditInput["time_lost_per_week"]
                       )
                     }
+                    aria-invalid={errors.time_lost_per_week ? "true" : "false"}
+                    aria-describedby={errors.time_lost_per_week ? fieldErrorId("time_lost_per_week") : undefined}
                     className={inputClass(Boolean(errors.time_lost_per_week))}
                   >
                     <option value="">Select estimate</option>
@@ -560,11 +599,14 @@ export function GuidedAuditWizard() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Accuracy or compliance concerns" error={errors.compliance_notes}>
+                <Field label="Accuracy or compliance concerns" error={errors.compliance_notes} htmlFor="compliance_notes" errorId={fieldErrorId("compliance_notes")}>
                   <input
+                    id="compliance_notes"
                     value={form.compliance_notes ?? ""}
                     onChange={(event) => setField("compliance_notes", event.target.value)}
                     placeholder="Optional"
+                    aria-invalid={errors.compliance_notes ? "true" : "false"}
+                    aria-describedby={errors.compliance_notes ? fieldErrorId("compliance_notes") : undefined}
                     className={inputClass(Boolean(errors.compliance_notes))}
                   />
                 </Field>
@@ -574,12 +616,15 @@ export function GuidedAuditWizard() {
 
           {step === 3 ? (
             <>
-              <Field label="What does a better system need to do?" error={errors.desired_outcome}>
+              <Field label="What does a better system need to do?" error={errors.desired_outcome} htmlFor="desired_outcome" errorId={fieldErrorId("desired_outcome")}>
                 <textarea
+                  id="desired_outcome"
                   value={form.desired_outcome}
                   onChange={(event) => setField("desired_outcome", event.target.value)}
                   rows={5}
                   placeholder="Describe the result you want: faster handoffs, clearer dashboards, fewer exceptions, cleaner ownership."
+                  aria-invalid={errors.desired_outcome ? "true" : "false"}
+                  aria-describedby={errors.desired_outcome ? fieldErrorId("desired_outcome") : undefined}
                   className={`${inputClass(Boolean(errors.desired_outcome))} resize-none`}
                 />
               </Field>
@@ -701,20 +746,24 @@ function sanitizeForm(form: GuidedAuditInput): GuidedAuditInput {
 function Field({
   label,
   error,
+  htmlFor,
+  errorId,
   children,
 }: {
   label: string;
   error?: string;
+  htmlFor?: string;
+  errorId?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-[#24311f]">
+    <div className="block">
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-[#24311f]">
         {label}
-      </span>
+      </label>
       {children}
-      {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
-    </label>
+      {error ? <p id={errorId} className="mt-1 text-xs text-red-500">{error}</p> : null}
+    </div>
   );
 }
 

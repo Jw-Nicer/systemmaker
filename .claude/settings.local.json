@@ -97,7 +97,9 @@
       "mcp__plugin_playwright_playwright__browser_evaluate",
       "mcp__plugin_playwright_playwright__browser_run_code",
       "Bash(nslookup nicersystems.com)",
-      "Bash(nslookup:*)"
+      "Bash(nslookup:*)",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_click"
     ]
   }
 }

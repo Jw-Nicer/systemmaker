@@ -47,18 +47,24 @@ test("faq page renders placeholder content", async ({ page }) => {
   await expect(page.getByRole("link", { name: /Contact us/i })).toBeVisible();
 });
 
-test("case studies page renders an empty state instead of 404", async ({ page }) => {
+test("case studies page renders published studies or the fallback empty state instead of 404", async ({ page }) => {
   const response = await page.goto("/case-studies");
   await dismissConsentBanner(page);
 
   expect(response?.status()).toBe(200);
   await expect(page).toHaveTitle(/Case Studies/i);
-  await expect(
-    page.getByText(/Case studies coming soon/i)
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "See a live preview plan" })
-  ).toBeVisible();
+
+  const emptyState = page.getByText(/Case studies coming soon/i);
+  const liveStudyLinks = page.locator('a[href^="/case-studies/"]');
+
+  if (await emptyState.count()) {
+    await expect(emptyState).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "See a live preview plan" })
+    ).toBeVisible();
+  } else {
+    await expect(liveStudyLinks.first()).toBeVisible();
+  }
 });
 
 test("terms page renders legal content and links to privacy and contact", async ({ page }) => {

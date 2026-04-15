@@ -79,19 +79,43 @@ async function mockAuditAPI(page: import("@playwright/test").Page, useSSE = true
 }
 
 async function fillStep1(page: import("@playwright/test").Page) {
-  // Step 1: Context — select industry, workflow type, team size, maturity
-  // These are select/button-group controls
-  const healthcareBtn = page.getByRole("button", { name: /healthcare/i });
-  if (await healthcareBtn.isVisible().catch(() => false)) {
-    await healthcareBtn.click();
-  } else {
-    // Fallback: try a select or input
-    const industryInput = page.locator('[name="industry"], [data-field="industry"]').first();
-    if (await industryInput.isVisible().catch(() => false)) {
-      await industryInput.click();
-      await page.getByText(/healthcare/i).first().click();
-    }
-  }
+  await page.getByLabel("Industry").selectOption("Healthcare");
+  await page.getByLabel("Workflow type").selectOption("Scheduling & Dispatch");
+  await page.getByLabel("Team size").selectOption("6-15");
+  await page.getByRole("button", { name: "Some tools no integration" }).click();
+}
+
+async function fillStep2(page: import("@playwright/test").Page) {
+  await page.getByLabel("What is the bottleneck?").fill("Dispatch approvals still bounce between inboxes.");
+  await page.getByLabel("Which steps are still manual?").fill("Coordinators copy updates into sheets and chase approvals manually.");
+  await page.getByLabel("Where do handoffs break?").fill("Requests sit between dispatch and field teams without a clear owner.");
+  await page.getByLabel("What is hard to see or report on?").fill("Nobody can see aging requests or overdue follow-up.");
+}
+
+async function fillStep3(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Slack" }).click();
+  await page.getByRole("button", { name: "Airtable" }).click();
+  await page.getByLabel("Rough volume").fill("120 requests per week");
+  await page.getByLabel("Urgency").selectOption("high");
+  await page.getByLabel("Time lost per week").selectOption("10+ hours");
+}
+
+async function completeAudit(page: import("@playwright/test").Page) {
+  await fillStep1(page);
+  await page.getByRole("button", { name: /^Continue$/i }).click();
+  await expect(page.getByRole("heading", { name: "Breakpoints" })).toBeVisible();
+
+  await fillStep2(page);
+  await page.getByRole("button", { name: /^Continue$/i }).click();
+  await expect(page.getByRole("heading", { name: "Operating load" })).toBeVisible();
+
+  await fillStep3(page);
+  await page.getByRole("button", { name: /^Continue$/i }).click();
+  await expect(page.getByRole("heading", { name: "Target state" })).toBeVisible();
+
+  await page.getByLabel("What does a better system need to do?").fill(
+    "Route requests automatically, flag stuck work, and surface a weekly dashboard."
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -109,8 +133,8 @@ test.describe("Guided Audit Wizard", () => {
     await dismissConsentBanner(page);
 
     // Step 1 is visible
-    await expect(page.getByText("Step 1")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Context")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Context" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("1 of 4")).toBeVisible();
 
     // Back button is disabled on first step
     const backBtn = page.getByRole("button", { name: /back/i });
@@ -126,7 +150,9 @@ test.describe("Guided Audit Wizard", () => {
     await continueBtn.click();
 
     // Should show validation errors (stay on step 1)
-    await expect(page.getByText("Step 1")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Context" })).toBeVisible();
+    await expect(page.getByText("Industry is required")).toBeVisible();
+    await expect(page.getByLabel(/Industry/)).toHaveAttribute("aria-invalid", "true");
   });
 
   test("navigates back to previous step", async ({ page }) => {
@@ -135,31 +161,26 @@ test.describe("Guided Audit Wizard", () => {
 
     // Fill step 1 minimally and advance
     await fillStep1(page);
+    await page.getByRole("button", { name: /^Continue$/i }).click();
 
-    // If Continue is available, try clicking it
-    const continueBtn = page.getByRole("button", { name: /continue/i });
-    if (await continueBtn.isEnabled().catch(() => false)) {
-      await continueBtn.click();
+    // Should be on step 2
+    await expect(page.getByRole("heading", { name: "Breakpoints" })).toBeVisible({ timeout: 5_000 });
 
-      // Should be on step 2
-      await expect(page.getByText("Step 2")).toBeVisible({ timeout: 5_000 });
-
-      // Go back
-      await page.getByRole("button", { name: /back/i }).click();
-      await expect(page.getByText("Step 1")).toBeVisible();
-    }
+    // Go back
+    await page.getByRole("button", { name: /^Back$/i }).click();
+    await expect(page.getByRole("heading", { name: "Context" })).toBeVisible();
   });
 
   test("shows plan results after successful submission", async ({ page }) => {
     await page.goto("/audit");
     await dismissConsentBanner(page);
 
-    // Wait for the page to be interactive
-    await expect(page.getByText("Step 1")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Context" })).toBeVisible({ timeout: 10_000 });
+    await completeAudit(page);
+    await page.getByRole("button", { name: /Generate audit plan/i }).click();
 
-    // The generate button should be visible on the last step
-    // For now, verify the audit page renders correctly
-    await expect(page.locator("form, [data-testid='audit-wizard']").first()).toBeVisible();
+    await expect(page.getByText("Guided audit complete")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: /Open shareable plan/i })).toBeVisible();
   });
 
   test("displays share link after plan generation", async ({ page }) => {
@@ -175,7 +196,13 @@ test.describe("Guided Audit Wizard", () => {
     await page.goto("/audit");
     await dismissConsentBanner(page);
 
-    // Verify the audit wizard loads
-    await expect(page.getByText("Step 1")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Context" })).toBeVisible({ timeout: 10_000 });
+    await completeAudit(page);
+    await page.getByRole("button", { name: /Generate audit plan/i }).click();
+
+    await expect(page.getByRole("link", { name: /Open shareable plan/i })).toHaveAttribute(
+      "href",
+      "/plan/share-test-plan"
+    );
   });
 });

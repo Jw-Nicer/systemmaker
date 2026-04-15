@@ -38,31 +38,47 @@ export function PlanDisplay({
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  const intake = plan.intake ?? {};
+  const workflowStages = plan.workflow?.stages ?? [];
+  const workflowFailureModes = plan.workflow?.failure_modes ?? [];
+  const dashboardKpis = plan.dashboard?.kpis ?? [];
+  const dashboardViews = plan.dashboard?.dashboards ?? [];
+  const automations = plan.automation?.automations ?? [];
+  const alerts = plan.automation?.alerts ?? [];
+  const opsPulseSections = plan.ops_pulse?.sections ?? [];
+  const opsPulseActions = plan.ops_pulse?.actions ?? [];
+  const opsPulseQuestions = plan.ops_pulse?.questions ?? [];
+  const roadmapPhases = plan.roadmap?.phases ?? [];
+  const warnings = plan.warnings ?? [];
+  const assumptions = intake.assumptions ?? [];
+  const constraints = intake.constraints ?? [];
+  const executiveSummary = plan.ops_pulse?.executive_summary;
+
   return (
     <div className="space-y-4 print:space-y-6">
       {/* Executive Summary */}
-      {plan.ops_pulse.executive_summary && plan.ops_pulse.executive_summary.problem && (
+      {executiveSummary?.problem && (
         <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-5 print:border-gray-300">
           <p className="text-xs text-primary uppercase tracking-wide font-medium mb-3">
             Executive Summary
           </p>
           <div className="space-y-2 text-sm">
-            <p><span className="font-medium text-foreground">Problem:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.problem}</span></p>
-            <p><span className="font-medium text-foreground">Solution:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.solution}</span></p>
-            <p><span className="font-medium text-foreground">Expected Impact:</span> <span className="text-muted">{plan.ops_pulse.executive_summary.impact}</span></p>
-            <p><span className="font-medium text-primary">Next Step:</span> <span className="text-foreground">{plan.ops_pulse.executive_summary.next_step}</span></p>
+            <p><span className="font-medium text-foreground">Problem:</span> <span className="text-muted">{executiveSummary.problem}</span></p>
+            <p><span className="font-medium text-foreground">Solution:</span> <span className="text-muted">{executiveSummary.solution}</span></p>
+            <p><span className="font-medium text-foreground">Expected Impact:</span> <span className="text-muted">{executiveSummary.impact}</span></p>
+            <p><span className="font-medium text-primary">Next Step:</span> <span className="text-foreground">{executiveSummary.next_step}</span></p>
           </div>
         </div>
       )}
 
       {/* Warnings */}
-      {plan.warnings && plan.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 print:hidden">
           <p className="text-xs text-yellow-400 uppercase tracking-wide font-medium mb-2">
             Consistency Notes
           </p>
           <ul className="text-xs text-muted space-y-1">
-            {plan.warnings.map((w, i) => (
+            {warnings.map((w, i) => (
               <li key={i}>
                 <span className="text-yellow-400">{w.section}:</span> {w.message}
               </li>
@@ -124,28 +140,28 @@ export function PlanDisplay({
         onRefine={onRefineSection}
       >
         <p className="font-medium text-primary mb-2">
-          {plan.intake.suggested_scope}
+          {intake.suggested_scope}
         </p>
-        <p className="text-sm text-muted">{plan.intake.clarified_problem}</p>
-        {plan.intake.assumptions.length > 0 && (
+        <p className="text-sm text-muted">{intake.clarified_problem}</p>
+        {assumptions.length > 0 && (
           <div className="mt-3">
             <p className="text-xs text-muted uppercase tracking-wide mb-1">
               Assumptions
             </p>
             <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {plan.intake.assumptions.map((a, i) => (
+              {assumptions.map((a, i) => (
                 <li key={i}>{a}</li>
               ))}
             </ul>
           </div>
         )}
-        {plan.intake.constraints.length > 0 && (
+        {constraints.length > 0 && (
           <div className="mt-3">
             <p className="text-xs text-muted uppercase tracking-wide mb-1">
               Constraints
             </p>
             <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {plan.intake.constraints.map((c, i) => (
+              {constraints.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}
             </ul>
@@ -155,7 +171,7 @@ export function PlanDisplay({
 
       {/* Workflow */}
       <PlanSection
-        title={`Workflow Map (${plan.workflow.stages.length} stages)`}
+        title={`Workflow Map (${workflowStages.length} stages)`}
         sectionKey="workflow"
         expanded={expanded.workflow}
         onToggle={() => toggle("workflow")}
@@ -174,7 +190,7 @@ export function PlanDisplay({
               </tr>
             </thead>
             <tbody>
-              {plan.workflow.stages.map((s, i) => (
+              {workflowStages.map((s, i) => (
                 <tr key={i} className="border-b border-border/50">
                   <td className="py-2 pr-4 text-muted">{i + 1}</td>
                   <td className="py-2 pr-4 font-medium">{s.name}</td>
@@ -188,13 +204,13 @@ export function PlanDisplay({
             </tbody>
           </table>
         </div>
-        {plan.workflow.failure_modes.length > 0 && (
+        {workflowFailureModes.length > 0 && (
           <div className="mt-3">
             <p className="text-xs text-muted uppercase tracking-wide mb-1">
               Failure Modes
             </p>
             <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {plan.workflow.failure_modes.map((f, i) => (
+              {workflowFailureModes.map((f, i) => (
                 <li key={i}>{f}</li>
               ))}
             </ul>
@@ -204,7 +220,7 @@ export function PlanDisplay({
 
       {/* Dashboard KPIs */}
       <PlanSection
-        title={`Dashboard KPIs (${plan.dashboard.kpis.length})`}
+        title={`Dashboard KPIs (${dashboardKpis.length})`}
         sectionKey="kpis"
         expanded={expanded.kpis}
         onToggle={() => toggle("kpis")}
@@ -212,7 +228,7 @@ export function PlanDisplay({
         onRefine={onRefineSection}
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          {plan.dashboard.kpis.map((k, i) => (
+          {dashboardKpis.map((k, i) => (
             <div
               key={i}
               className="rounded-lg border border-border bg-background p-4"
@@ -225,12 +241,12 @@ export function PlanDisplay({
             </div>
           ))}
         </div>
-        {plan.dashboard.dashboards.length > 0 && (
+        {dashboardViews.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted uppercase tracking-wide mb-2">
               Dashboards
             </p>
-            {plan.dashboard.dashboards.map((d, i) => (
+            {dashboardViews.map((d, i) => (
               <div key={i} className="mb-2">
                 <p className="text-sm font-medium">{d.name}</p>
                 <p className="text-xs text-muted">{d.purpose}</p>
@@ -249,13 +265,13 @@ export function PlanDisplay({
         showRefine={showRefine}
         onRefine={onRefineSection}
       >
-        {plan.automation.automations.length > 0 && (
+        {automations.length > 0 && (
           <div className="mb-4">
             <p className="text-xs text-muted uppercase tracking-wide mb-2">
               Automations
             </p>
             <div className="space-y-2">
-              {plan.automation.automations.map((a, i) => (
+              {automations.map((a, i) => (
                 <AutomationCard key={i} automation={a} />
               ))}
             </div>
@@ -265,7 +281,7 @@ export function PlanDisplay({
           Alerts
         </p>
         <ul className="space-y-2">
-          {plan.automation.alerts.map((a, i) => (
+          {alerts.map((a, i) => (
             <li
               key={i}
               className="text-sm rounded-lg border border-border bg-background p-3"
@@ -290,24 +306,24 @@ export function PlanDisplay({
         showRefine={showRefine}
         onRefine={onRefineSection}
       >
-        {plan.ops_pulse.sections.map((section, i) => (
+        {opsPulseSections.map((section, i) => (
           <div key={i} className="mb-3">
             <p className="text-sm font-medium mb-1">{section.title}</p>
             <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {section.bullets.map((b, j) => (
+              {(section.bullets ?? []).map((b, j) => (
                 <li key={j}>{b}</li>
               ))}
             </ul>
           </div>
         ))}
 
-        {plan.ops_pulse.actions.length > 0 && (
+        {opsPulseActions.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted uppercase tracking-wide mb-2">
               Recommended Actions
             </p>
             <div className="space-y-2">
-              {plan.ops_pulse.actions.map((a, i) => (
+              {opsPulseActions.map((a, i) => (
                 <div key={i} className="flex items-start gap-3 text-sm">
                   <span
                     className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -330,13 +346,13 @@ export function PlanDisplay({
           </div>
         )}
 
-        {plan.ops_pulse.questions.length > 0 && (
+        {opsPulseQuestions.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-muted uppercase tracking-wide mb-2">
               Questions to Explore
             </p>
             <ul className="text-sm text-muted list-disc pl-4 space-y-0.5">
-              {plan.ops_pulse.questions.map((q, i) => (
+              {opsPulseQuestions.map((q, i) => (
                 <li key={i}>{q}</li>
               ))}
             </ul>
@@ -345,7 +361,7 @@ export function PlanDisplay({
       </PlanSection>
 
       {/* Implementation Roadmap */}
-      {plan.roadmap && plan.roadmap.phases.length > 0 && (
+      {plan.roadmap && roadmapPhases.length > 0 && (
         <PlanSection
           title={`Implementation Roadmap (${plan.roadmap.total_estimated_weeks} weeks)`}
           sectionKey="roadmap"
@@ -355,7 +371,7 @@ export function PlanDisplay({
           onRefine={onRefineSection}
         >
           <div className="space-y-4">
-            {plan.roadmap.phases.map((phase, i) => (
+            {roadmapPhases.map((phase, i) => (
               <div
                 key={i}
                 className="rounded-lg border border-border bg-background p-4"
@@ -367,7 +383,7 @@ export function PlanDisplay({
                   <span className="font-medium text-sm">{phase.title}</span>
                 </div>
                 <div className="space-y-2 mb-3">
-                  {phase.tasks.map((t, j) => (
+                  {(phase.tasks ?? []).map((t, j) => (
                     <div key={j} className="flex items-start gap-2 text-sm">
                       <span
                         className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -387,21 +403,21 @@ export function PlanDisplay({
                     </div>
                   ))}
                 </div>
-                {phase.quick_wins.length > 0 && (
+                {(phase.quick_wins ?? []).length > 0 && (
                   <div className="mt-2">
                     <p className="text-xs text-green-400 font-medium mb-1">Quick Wins</p>
                     <ul className="text-xs text-muted list-disc pl-4 space-y-0.5">
-                      {phase.quick_wins.map((w, j) => (
+                      {(phase.quick_wins ?? []).map((w, j) => (
                         <li key={j}>{w}</li>
                       ))}
                     </ul>
                   </div>
                 )}
-                {phase.risks.length > 0 && (
+                {(phase.risks ?? []).length > 0 && (
                   <div className="mt-2">
                     <p className="text-xs text-yellow-400 font-medium mb-1">Risks</p>
                     <ul className="text-xs text-muted list-disc pl-4 space-y-0.5">
-                      {phase.risks.map((r, j) => (
+                      {(phase.risks ?? []).map((r, j) => (
                         <li key={j}>{r}</li>
                       ))}
                     </ul>
@@ -483,7 +499,7 @@ function AutomationCard({ automation: a }: { automation: Automation }) {
         )}
       </div>
       <ol className="text-xs text-muted list-decimal pl-4 mt-1 space-y-0.5">
-        {a.steps.map((step, j) => (
+        {(a.steps ?? []).map((step, j) => (
           <li key={j}>{step}</li>
         ))}
       </ol>

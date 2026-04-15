@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { dismissConsentBanner } from "./helpers/consent";
-import { clickAndWaitForUrl } from "./helpers/navigation";
 import { mockEventsAPI } from "./helpers/api-mocks";
 
 test.describe("Landing page", () => {
@@ -20,23 +19,21 @@ test.describe("Landing page", () => {
 
     // Navigation links to all sections
     const nav = page.getByRole("navigation");
-    await expect(nav.getByRole("link", { name: "Demo" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Preview Plan" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "How it works" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Pricing" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Case Studies" })).toBeVisible();
 
     // Footer
     await expect(page.getByRole("contentinfo")).toBeVisible();
   });
 
-  test("hero Book a Scoping Call CTA navigates to /contact", async ({ page }) => {
+  test("hero Book a Scoping Call CTA opens the booking modal", async ({ page }) => {
     await page.goto("/");
     await dismissConsentBanner(page);
 
-    await clickAndWaitForUrl(
-      page,
-      page.getByRole("link", { name: "Book a Scoping Call" }).first(),
-      /\/contact$/
-    );
+    await page.getByRole("button", { name: "Book a Scoping Call" }).first().click();
+    await expect(page.getByRole("heading", { name: /Book your scoping call/i })).toBeVisible();
   });
 
   test("hero Get a Preview Plan CTA scrolls to #see-it-work", async ({ page }) => {
@@ -66,11 +63,13 @@ test.describe("Landing page", () => {
     // Find the first FAQ toggle button
     const firstButton = faqSection.getByRole("button").first();
     await expect(firstButton).toBeVisible();
+    await expect(firstButton).toHaveAttribute("aria-expanded", "false");
 
     // Click to expand — the answer div should appear
     await firstButton.click();
     const answerContainer = faqSection.locator("div.rounded-b-\\[20px\\]").first();
     await expect(answerContainer).toBeVisible({ timeout: 5_000 });
+    await expect(firstButton).toHaveAttribute("aria-expanded", "true");
 
     // Click again to collapse
     await firstButton.click();
@@ -89,6 +88,24 @@ test.describe("Landing page", () => {
     await expect(page.getByPlaceholder("Type your answer...")).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.getByText(/processed to generate your preview plan/i)).toBeVisible();
+  });
+
+  test("visible case study cards lead to working detail pages", async ({ page }) => {
+    await page.goto("/case-studies");
+    await dismissConsentBanner(page);
+
+    const slugs = [
+      "dispatch-workflow-rebuilt",
+      "recruiting-handoffs-cleaned-up",
+      "referral-intake-mapped",
+    ];
+
+    for (const slug of slugs) {
+      const response = await page.goto(`/case-studies/${slug}`);
+      expect(response?.status(), `Unexpected status for ${slug}`).toBe(200);
+      await expect(page.getByRole("heading").first()).toBeVisible();
+    }
   });
 
   test("footer contains navigation links", async ({ page }) => {

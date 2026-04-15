@@ -75,6 +75,15 @@ function getClientIP(request: Request): string {
   );
 }
 
+function getAdminDbSafe() {
+  try {
+    return getAdminDb();
+  } catch (error) {
+    console.error("[agent-chat] Admin DB unavailable:", error);
+    return null;
+  }
+}
+
 export function reserveSSEConnection(ip: string): boolean {
   const current = activeConnections.get(ip);
   const currentConns = current?.count ?? 0;
@@ -210,57 +219,57 @@ export async function POST(request: Request) {
 
     // Step 3: Handle based on phase
     if (nextPhase === "building") {
-      const input = {
-        industry: updatedExtracted.industry ?? "Unknown",
-        bottleneck: updatedExtracted.bottleneck ?? "Not specified",
-        current_tools: updatedExtracted.current_tools ?? "Not specified",
-        urgency: updatedExtracted.urgency,
-        volume: updatedExtracted.volume,
-        // Pass experiment assignments for prompt A/B testing (5E)
-        experimentAssignments: experimentAssignments?.map((a) => ({
-          experiment_id: a.experiment_id,
-          variant_id: a.variant_key,
-          experiment_target: a.target,
-          variant_value: (a as unknown as Record<string, unknown>).variant_value as string | undefined,
-        })),
-      };
+      try {
+        const input = {
+          industry: updatedExtracted.industry ?? "Unknown",
+          bottleneck: updatedExtracted.bottleneck ?? "Not specified",
+          current_tools: updatedExtracted.current_tools ?? "Not specified",
+          urgency: updatedExtracted.urgency,
+          volume: updatedExtracted.volume,
+          // Pass experiment assignments for prompt A/B testing (5E)
+          experimentAssignments: experimentAssignments?.map((a) => ({
+            experiment_id: a.experiment_id,
+            variant_id: a.variant_key,
+            experiment_target: a.target,
+            variant_value: (a as unknown as Record<string, unknown>).variant_value as string | undefined,
+          })),
+        };
 
-      // 3C — plan dedup: compute input hash and check the cache.
-      const inputHash = hashAgentInput(input);
-      const cached = inputHash
-        ? await findRecentPlanByHash(inputHash).catch(() => null)
-        : null;
+        // 3C — plan dedup: compute input hash and check the cache.
+        const inputHash = hashAgentInput(input);
+        const cached = inputHash
+          ? await findRecentPlanByHash(inputHash).catch(() => null)
+          : null;
 
-      let plan: PreviewPlan;
-      let cachedPlanId: string | undefined;
+        let plan: PreviewPlan;
+        let cachedPlanId: string | undefined;
 
-      if (cached) {
-        // ── Cache hit — replay the cached plan via SSE ──
-        plan = cached.plan;
-        cachedPlanId = cached.id;
+        if (cached) {
+          // ── Cache hit — replay the cached plan via SSE ──
+          plan = cached.plan;
+          cachedPlanId = cached.id;
 
-        write("message", {
-          content:
-            "I've already built a Preview Plan for a very similar scenario — let me show you.",
-        });
-
-        // Replay each section in the same shape the client expects
-        for (const stage of PIPELINE_DAG) {
-          const planKey = stage.key === "implementation_sequencer" ? "roadmap"
-            : stage.key === "proposal_writer" ? "proposal"
-            : stage.key;
-          const sectionData = (plan as unknown as Record<string, unknown>)[planKey];
-          write("plan_section", {
-            section: stage.key,
-            label: stage.completeLabel,
-            content: sectionData ? JSON.stringify(sectionData) : null,
+          write("message", {
+            content:
+              "I've already built a Preview Plan for a very similar scenario — let me show you.",
           });
-        }
 
-        // Fire analytics event (server-side)
-        try {
-          const db = getAdminDb();
-          db.collection("events").add({
+          // Replay each section in the same shape the client expects
+          for (const stage of PIPELINE_DAG) {
+            const planKey = stage.key === "implementation_sequencer" ? "roadmap"
+              : stage.key === "proposal_writer" ? "proposal"
+              : stage.key;
+            const sectionData = (plan as unknown as Record<string, unknown>)[planKey];
+            write("plan_section", {
+              section: stage.key,
+              label: stage.completeLabel,
+              content: sectionData ? JSON.stringify(sectionData) : null,
+            });
+          }
+
+          // Fire analytics event (server-side)
+          const cacheDb = getAdminDbSafe();
+          cacheDb?.collection("events").add({
             event_name: "agent_plan_cache_hit",
             payload: {
               input_hash: inputHash,
@@ -269,259 +278,273 @@ export async function POST(request: Request) {
             },
             created_at: new Date(),
           }).catch(() => {});
-        } catch { /* non-critical */ }
-      } else {
-        // ── Cache miss — run the full pipeline ──
-        write("message", {
-          content:
-            "Great, let me build your Preview Plan now. This takes about 30 seconds — I'll show each section as it's ready.",
-        });
-
-        const result = await orchestrateAgentPipelineStreaming(
-          input,
-          (step: AgentStep, label: string, data: unknown) => {
-            write("plan_section", {
-              section: step,
-              label,
-              content: data ? JSON.stringify(data) : null,
-            });
-          },
-          (step: AgentStep, errorMsg: string) => {
-            write("error", {
-              message: `Section "${step}" failed to generate. The rest of your plan is still available.`,
-              section: step,
-              recoverable: true,
-            });
-          }
-        );
-        plan = result.plan;
-      }
-
-      // Create lead record (non-blocking — don't delay plan delivery)
-      const db = getAdminDb();
-      const leadWritePromise = db.collection("leads").add({
-        name: "",
-        email: "",
-        company: "",
-        industry: (input.industry ?? "Unknown").slice(0, 200),
-        bottleneck: (input.bottleneck ?? "").slice(0, 2000),
-        tools: (input.current_tools ?? "").slice(0, 500),
-        urgency: (input.urgency ?? "").slice(0, 20),
-        status: "new",
-        source: "agent_chat",
-        landing_path: landingPath ?? null,
-        experiment_assignments: experimentAssignments ?? [],
-        score: computeLeadScore({
-          email: "",
-          company: "",
-          bottleneck: input.bottleneck,
-          urgency: input.urgency,
-          completed_agent_demo: true,
-          preview_plan_sent: false,
-        }),
-        created_at: new Date(),
-      }).catch(() => {
-        console.error("Failed to create lead");
-        return null;
-      });
-
-      // Resolve lead write
-      const leadRef = await leadWritePromise;
-      const leadId = leadRef?.id;
-
-      if (leadId) {
-        db.collection("events").add({
-          event_name: "lead_submit",
-          payload: {
-            source: "agent_chat",
-            landing_path: landingPath ?? null,
-            experiment_assignments: experimentAssignments ?? [],
-          },
-          lead_id: leadId,
-          created_at: new Date(),
-        }).catch(() => {});
-      }
-
-      // Save plan to Firestore (for shareable URLs).
-      // On cache hit we reuse the cached plan's ID instead of creating a
-      // duplicate document — the lead still gets linked to it.
-      let planId: string | undefined = cachedPlanId;
-      if (!planId) {
-        try {
-          const planRef = await db.collection("plans").add({
-            preview_plan: JSON.parse(JSON.stringify(plan)),
-            input_summary: {
-              industry: input.industry,
-              bottleneck_summary:
-                input.bottleneck.length > 100
-                  ? input.bottleneck.slice(0, 100) + "..."
-                  : input.bottleneck,
-            },
-            lead_id: leadId ?? null,
-            input_hash: inputHash || null,
-            heuristic_score: scorePlanQuality(plan).score,
-            created_at: new Date(),
-            view_count: 0,
-            is_public: true,
-            version: 1,
-            versions: [],
+        } else {
+          // ── Cache miss — run the full pipeline ──
+          write("message", {
+            content:
+              "Great, let me build your Preview Plan now. This takes about 30 seconds — I'll show each section as it's ready.",
           });
-          planId = planRef.id;
-        } catch (err) {
-          console.error("Failed to save plan:", err);
-        }
-      }
 
-      // Link plan to lead (fire-and-forget)
-      if (leadId && planId) {
-        db.collection("leads").doc(leadId).update({ plan_id: planId }).catch(() => {});
-      }
-
-      // Auto-send plan email if we have the visitor's email
-      let emailAutoSent = false;
-      const extractedEmail = updatedExtracted.email;
-      const extractedName = updatedExtracted.name || "";
-
-      if (extractedEmail && leadId && plan) {
-        try {
-          const apiKey = process.env.RESEND_API_KEY;
-          if (apiKey) {
-            const email = normalizeEmail(extractedEmail);
-            const resend = new Resend(apiKey);
-            const html = renderPreviewPlanHTML(
-              plan as unknown as PreviewPlan,
-              extractedName,
-              leadId
-            );
-
-            await resend.emails.send({
-              from: "Nicer Systems <onboarding@resend.dev>",
-              to: email,
-              subject: "Your Preview Plan from Nicer Systems",
-              html,
-            });
-
-            // Dedup: check if another lead already owns this email
-            let effectiveLeadId = leadId;
-            const existing = await findLeadByEmail(email);
-            if (existing && existing.id !== leadId) {
-              // Merge into existing lead
-              const mergeData: Record<string, unknown> = {
-                name: extractedName || existing.data.name,
-                updated_at: new Date(),
-              };
-              if (planId) mergeData.plan_id = planId;
-              if (input.industry && !existing.data.industry) {
-                mergeData.industry = input.industry;
-              }
-              if (input.bottleneck && !existing.data.bottleneck) {
-                mergeData.bottleneck = input.bottleneck;
-              }
-              await db.collection("leads").doc(existing.id).update(mergeData);
-              await db.collection("leads").doc(leadId).update({
-                status: "merged",
-                merged_into: existing.id,
-                updated_at: new Date(),
+          const result = await orchestrateAgentPipelineStreaming(
+            input,
+            (step: AgentStep, label: string, data: unknown) => {
+              write("plan_section", {
+                section: step,
+                label,
+                content: data ? JSON.stringify(data) : null,
               });
-              effectiveLeadId = existing.id;
+            },
+            (step: AgentStep, errorMsg: string) => {
+              write("error", {
+                message: `Section "${step}" failed to generate. The rest of your plan is still available.`,
+                section: step,
+                recoverable: true,
+              });
             }
-
-            // Update lead with email + score
-            const score = computeLeadScore({
-              email,
-              company: "",
-              bottleneck: input.bottleneck,
-              urgency: input.urgency,
-              completed_agent_demo: true,
-              preview_plan_sent: true,
-            });
-
-            await db.collection("leads").doc(effectiveLeadId).update({
-              name: extractedName,
-              email,
-              score: Math.max(score, 0),
-              preview_plan_sent_at: new Date(),
-              updated_at: new Date(),
-            });
-
-            // Log activity
-            db.collection("leads").doc(effectiveLeadId).collection("activity").add({
-              type: "email_sent",
-              content: "Preview Plan auto-sent during chat",
-              created_at: new Date(),
-            }).catch(() => {});
-
-            // Fire-and-forget: admin notification + nurture
-            sendAdminNotification({
-              name: extractedName,
-              email,
-              industry: input.industry,
-              bottleneck: input.bottleneck,
-              score,
-              source: "agent_chat",
-            }).catch(() => {});
-
-            enrollInNurture({
-              lead_id: effectiveLeadId,
-              name: extractedName,
-              email,
-              industry: input.industry,
-              bottleneck: input.bottleneck,
-            }).catch(() => {});
-
-            emailAutoSent = true;
-          }
-        } catch (err) {
-          console.error("Auto-send email failed:", err);
-          // Non-fatal — fall back to manual email capture
+          );
+          plan = result.plan;
         }
-      }
 
-      // Store memory for returning visitor context (fire-and-forget)
-      if (extractedEmail) {
-        storeMemory(extractedEmail, {
-          name: extractedName || undefined,
-          industry: input.industry,
-          bottleneck: input.bottleneck,
-          planId: planId,
-          tools: input.current_tools ? input.current_tools.split(",").map((t: string) => t.trim()) : undefined,
-          interaction: {
-            type: "plan_generated",
-            summary: `Generated plan for ${input.industry}: ${input.bottleneck.slice(0, 80)}`,
-          },
-        }).catch(() => {});
-      }
+        const db = getAdminDbSafe();
 
-      write("plan_complete", {
-        plan_id: planId ?? "",
-        lead_id: leadId ?? "",
-        share_url: planId ? buildPublicPlanUrl(request, planId) : "",
-        email_auto_sent: emailAutoSent,
-      });
+        // Create lead record (non-blocking — don't delay plan delivery)
+        const leadWritePromise = db
+          ? db.collection("leads").add({
+              name: "",
+              email: "",
+              company: "",
+              industry: (input.industry ?? "Unknown").slice(0, 200),
+              bottleneck: (input.bottleneck ?? "").slice(0, 2000),
+              tools: (input.current_tools ?? "").slice(0, 500),
+              urgency: (input.urgency ?? "").slice(0, 20),
+              status: "new",
+              source: "agent_chat",
+              landing_path: landingPath ?? null,
+              experiment_assignments: experimentAssignments ?? [],
+              score: computeLeadScore({
+                email: "",
+                company: "",
+                bottleneck: input.bottleneck,
+                urgency: input.urgency,
+                completed_agent_demo: true,
+                preview_plan_sent: false,
+              }),
+              created_at: new Date(),
+            }).catch(() => {
+              console.error("Failed to create lead");
+              return null;
+            })
+          : Promise.resolve(null);
 
-      // Emit phase change to complete
-      write("phase_change", { from: "building", to: "complete" });
+        // Resolve lead write
+        const leadRef = await leadWritePromise;
+        const leadId = leadRef?.id;
 
-      // Post-plan message — both branches get a share_link so the chat can
-      // surface a "View full plan" button regardless of whether the email
-      // was auto-sent.
-      const sharePath = planId ? buildPublicPlanPath(planId) : undefined;
-      if (emailAutoSent) {
-        write("message", {
-          content: `Your Preview Plan is ready! I've sent a copy to ${extractedEmail}. Feel free to ask any follow-up questions about the plan.`,
-          share_link: sharePath,
+        if (leadId && db) {
+          db.collection("events").add({
+            event_name: "lead_submit",
+            payload: {
+              source: "agent_chat",
+              landing_path: landingPath ?? null,
+              experiment_assignments: experimentAssignments ?? [],
+            },
+            lead_id: leadId,
+            created_at: new Date(),
+          }).catch(() => {});
+        }
+
+        // Save plan to Firestore (for shareable URLs).
+        // On cache hit we reuse the cached plan's ID instead of creating a
+        // duplicate document — the lead still gets linked to it.
+        let planId: string | undefined = cachedPlanId;
+        if (!planId && db) {
+          try {
+            const planRef = await db.collection("plans").add({
+              preview_plan: JSON.parse(JSON.stringify(plan)),
+              input_summary: {
+                industry: input.industry,
+                bottleneck_summary:
+                  input.bottleneck.length > 100
+                    ? input.bottleneck.slice(0, 100) + "..."
+                    : input.bottleneck,
+              },
+              lead_id: leadId ?? null,
+              input_hash: inputHash || null,
+              heuristic_score: scorePlanQuality(plan).score,
+              created_at: new Date(),
+              view_count: 0,
+              is_public: true,
+              version: 1,
+              versions: [],
+            });
+            planId = planRef.id;
+          } catch (err) {
+            console.error("Failed to save plan:", err);
+          }
+        }
+
+        // Link plan to lead (fire-and-forget)
+        if (leadId && planId && db) {
+          db.collection("leads").doc(leadId).update({ plan_id: planId }).catch(() => {});
+        }
+
+        // Auto-send plan email if we have the visitor's email
+        let emailAutoSent = false;
+        const extractedEmail = updatedExtracted.email;
+        const extractedName = updatedExtracted.name || "";
+
+        if (extractedEmail && plan) {
+          try {
+            const apiKey = process.env.RESEND_API_KEY;
+            if (apiKey) {
+              const email = normalizeEmail(extractedEmail);
+              const resend = new Resend(apiKey);
+              const html = renderPreviewPlanHTML(
+                plan as unknown as PreviewPlan,
+                extractedName,
+                leadId
+              );
+
+              await resend.emails.send({
+                from: "Nicer Systems <onboarding@resend.dev>",
+                to: email,
+                subject: "Your Preview Plan from Nicer Systems",
+                html,
+              });
+
+              if (db && leadId) {
+                let effectiveLeadId: string = leadId;
+                // Dedup: check if another lead already owns this email
+                const existing = await findLeadByEmail(email);
+                if (existing && existing.id !== leadId) {
+                  // Merge into existing lead
+                  const mergeData: Record<string, unknown> = {
+                    name: extractedName || existing.data.name,
+                    updated_at: new Date(),
+                  };
+                  if (planId) mergeData.plan_id = planId;
+                  if (input.industry && !existing.data.industry) {
+                    mergeData.industry = input.industry;
+                  }
+                  if (input.bottleneck && !existing.data.bottleneck) {
+                    mergeData.bottleneck = input.bottleneck;
+                  }
+                  await db.collection("leads").doc(existing.id).update(mergeData);
+                  await db.collection("leads").doc(leadId).update({
+                    status: "merged",
+                    merged_into: existing.id,
+                    updated_at: new Date(),
+                  });
+                  effectiveLeadId = existing.id;
+                }
+
+                // Update lead with email + score
+                const score = computeLeadScore({
+                  email,
+                  company: "",
+                  bottleneck: input.bottleneck,
+                  urgency: input.urgency,
+                  completed_agent_demo: true,
+                  preview_plan_sent: true,
+                });
+
+                await db.collection("leads").doc(effectiveLeadId).update({
+                  name: extractedName,
+                  email,
+                  score: Math.max(score, 0),
+                  preview_plan_sent_at: new Date(),
+                  updated_at: new Date(),
+                });
+
+                // Log activity
+                db.collection("leads").doc(effectiveLeadId).collection("activity").add({
+                  type: "email_sent",
+                  content: "Preview Plan auto-sent during chat",
+                  created_at: new Date(),
+                }).catch(() => {});
+
+                // Fire-and-forget: admin notification + nurture
+                sendAdminNotification({
+                  name: extractedName,
+                  email,
+                  industry: input.industry,
+                  bottleneck: input.bottleneck,
+                  score,
+                  source: "agent_chat",
+                }).catch(() => {});
+
+                enrollInNurture({
+                  lead_id: effectiveLeadId,
+                  name: extractedName,
+                  email,
+                  industry: input.industry,
+                  bottleneck: input.bottleneck,
+                }).catch(() => {});
+              }
+
+              emailAutoSent = true;
+            }
+          } catch (err) {
+            console.error("Auto-send email failed:", err);
+            // Non-fatal — fall back to manual email capture
+          }
+        }
+
+        // Store memory for returning visitor context (fire-and-forget)
+        if (extractedEmail) {
+          storeMemory(extractedEmail, {
+            name: extractedName || undefined,
+            industry: input.industry,
+            bottleneck: input.bottleneck,
+            planId: planId,
+            tools: input.current_tools ? input.current_tools.split(",").map((t: string) => t.trim()) : undefined,
+            interaction: {
+              type: "plan_generated",
+              summary: `Generated plan for ${input.industry}: ${input.bottleneck.slice(0, 80)}`,
+            },
+          }).catch(() => {});
+        }
+
+        write("plan_complete", {
+          plan_id: planId ?? "",
+          lead_id: leadId ?? "",
+          share_url: planId ? buildPublicPlanUrl(request, planId) : "",
+          email_auto_sent: emailAutoSent,
         });
-      } else {
-        write("message", {
-          content:
-            "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
-          email_capture: true,
-          share_link: sharePath,
-        });
-      }
 
-      close();
-      return;
+        // Emit phase change to complete
+        write("phase_change", { from: "building", to: "complete" });
+
+        // Post-plan message — both branches get a share_link so the chat can
+        // surface a "View full plan" button regardless of whether the email
+        // was auto-sent.
+        const sharePath = planId ? buildPublicPlanPath(planId) : undefined;
+        if (emailAutoSent) {
+          write("message", {
+            content: `Your Preview Plan is ready! I've sent a copy to ${extractedEmail}. Feel free to ask any follow-up questions about the plan.`,
+            share_link: sharePath,
+          });
+        } else {
+          write("message", {
+            content:
+              "Your Preview Plan is ready! Want me to email it to you? Just share your name and email, and I'll send the full plan to your inbox.",
+            email_capture: true,
+            share_link: sharePath,
+          });
+        }
+
+        close();
+        return;
+      } catch (error) {
+        console.error("[agent-chat] Preview plan build failed:", error);
+        write("error", {
+          message:
+            "Preview plan generation is temporarily unavailable. Please try again in a moment.",
+          recoverable: true,
+        });
+        close();
+        return;
+      }
     }
 
     // Make sure the industry-probing cache is warm before the prompt

@@ -70,9 +70,11 @@ test.describe("Agent chat", () => {
     await page.getByRole("button", { name: "Send message" }).click();
 
     // Plan sections stream in
-    await expect(page.getByText("Bottleneck analysis complete")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Workflow mapped")).toBeVisible();
-    await expect(page.getByText("KPIs defined")).toBeVisible();
+    await expect(page.getByText("Bottleneck analysis complete", { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText("Workflow mapped", { exact: true })).toBeVisible();
+    await expect(page.getByText("KPIs defined", { exact: true })).toBeVisible();
 
     // Email capture appears
     await expect(

@@ -29,7 +29,7 @@ test.describe("Contact page", () => {
       page.getByRole("heading", { name: "Book a Scoping Call" }).first()
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /Get a Preview Plan/i })
+      page.getByRole("heading", { name: /Run a Guided Audit first/i })
     ).toBeVisible();
   });
 
@@ -42,6 +42,9 @@ test.describe("Contact page", () => {
     await expect(page.getByText("Name is required")).toBeVisible();
     await expect(page.getByText("Valid email is required")).toBeVisible();
     await expect(page.getByText("Company is required")).toBeVisible();
+    await expect(page.getByLabel("Name *")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("Email *")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("Company *")).toHaveAttribute("aria-invalid", "true");
   });
 
   test("submitting invalid email shows validation error", async ({ page }) => {
@@ -75,7 +78,7 @@ test.describe("Contact page", () => {
     // Success state
     await expect(page.getByText("Request received")).toBeVisible({ timeout: 10_000 });
     await expect(
-      page.getByText(/follow up/i)
+      page.getByText(/respond within 24 hours/i)
     ).toBeVisible();
   });
 
@@ -118,14 +121,13 @@ test.describe("Contact page", () => {
     expect(body.utm_campaign).toBe("spring");
   });
 
-  test("Book a Scoping Call card links to mailto", async ({ page }) => {
+  test("Book a Scoping Call card points to scheduling options or inline fallback", async ({ page }) => {
     await page.goto("/contact");
     await dismissConsentBanner(page);
 
-    // The contact page has multiple "Book a Scoping Call" links — check any has mailto
-    const mailtoLinks = page.locator("a[href*='mailto:johnwilnicer']");
-    await expect(mailtoLinks.first()).toBeVisible();
-    await expect(mailtoLinks.first()).toHaveAttribute("href", /mailto:johnwilnicer@gmail\.com/);
+    await expect(
+      page.getByText(/schedule a 45-minute call|reply with scheduling options/i).first()
+    ).toBeVisible();
   });
 
   test("button shows loading state during submission", async ({ page }) => {
