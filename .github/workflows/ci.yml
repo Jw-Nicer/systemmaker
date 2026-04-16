@@ -37,14 +37,16 @@ jobs:
         run: npm ci
 
       # --- Static checks ---------------------------------------------------
+      # Uses the project's typecheck script which handles Next.js route
+      # typegen + retry for the .next/types cache-life race condition.
       - name: TypeScript — strict typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: ESLint
         run: npm run lint
 
       # --- Unit tests ------------------------------------------------------
-      # Runs the full 736-test vitest suite. The opt-in LLM eval harness
+      # Runs the full vitest suite (806+ tests). The opt-in LLM eval harness
       # (tests/chat-evals.test.ts) is gated by RUN_LLM_EVALS=1 and stays
       # skipped here so CI doesn't burn Gemini credits on every push.
       - name: Vitest — unit tests
