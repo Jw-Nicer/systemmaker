@@ -172,10 +172,19 @@ scripts/
   seed-case-studies.ts       # Seeds sample case studies
   seed-case-study-thumbnails.ts # Seeds case study thumbnail images
   seed-industry-probing.ts   # Seeds the 8 default industry-probing entries with aliases (Phase 7)
+  seed-e2e-plan.ts           # Seeds a deterministic plan doc for computer-use runbooks 3/4/5
   run-chat-evals.ts          # CLI runner for the chat-agent LLM eval suite (Phase 7)
 
 tests/
   firebase-admin-init.test.ts # Tests dual-mode Admin SDK init (service account + ADC fallback)
+  computer-use-harness.test.ts # Scoring math for computer-use eval harness (9 tests)
+  pipeline-metrics-aggregation.test.ts # Stage-level aggregation logic (7 tests)
+
+e2e/
+  computer-use/              # Release-gating computer-use runbook suite
+    harness.ts               # TrackedSession wrapper + scoring + JSON scorecard emitter
+    types.ts                 # RunMetrics, ScoringDimensions, Scorecard, RunbookDef
+    runbook-{1..7}-*.spec.ts # 7 runbook specs (see README.md in that dir)
 ```
 
 ## Landing Page Components (`components/marketing/`)
@@ -253,6 +262,7 @@ All sections are separate components assembled in `app/(marketing)/page.tsx`:
 | `agent_memory` | none | none | auth | visitorId (email hash), industry, lastBottleneck, planIds[], interactions[], preferences, sessionCount |
 | `industry_probing` | none | none | auth | slug, display_name, common_bottlenecks[], common_tools[], probing_angles[], aliases[], is_published, sort_order — chat agent context (Phase 7) |
 | `site_settings/homepage_layout` | none | none | auth | sections[] (key, enabled, sort_order), updated_at — marketing landing page layout config (Phase 8 — D1, sub-doc of site_settings) |
+| `pipeline_traces` | none | none | auto (fire-and-forget from runner) | traceId, pipelineType, status, totalLatencyMs, spanCount, degradedStages[], spans[], started_at — agent pipeline observability |
 
 ## What's Built (Phase 1 — complete)
 - [x] Firebase setup (Auth, Firestore, rules, indexes, seed data)
@@ -384,6 +394,17 @@ D2 — Admin Preview Mode (shipped pre-2026-04-11):
 
 **Current test suite: 736 passed / 1 skipped across 73 files** (up from 659/68 at end of Phase 7).
 
+## What's Built (Computer-Use Eval Harness + Pipeline Dashboard, 2026-04-15)
+- [x] `e2e/computer-use/harness.ts` — `TrackedSession` wraps Playwright Page; counts actions, scores against runbook dimensions, writes JSON scorecards
+- [x] 7 runbook specs covering all 6 release-gating scenarios + mobile viewport (runbooks 1–7)
+- [x] Runbooks 3/4/5 gated on `E2E_PLAN_ID` with idempotent seeder (`scripts/seed-e2e-plan.ts`)
+- [x] Goal-failure veto in scoring (goal_completion === 0 floors readiness to `not_reliable`)
+- [x] Stage failure rates in admin dashboard — pure `aggregateTraceDocs()` with per-stage runs/failures/degradations/latency, surfaced in `PipelineMetrics` table
+- [x] `pipeline_traces` Firestore collection persisted fire-and-forget from the runner
+- [x] `npm run test:computer-use` script + `npm run seed:e2e-plan`
+
+**Current test suite: 806 passed / 1 skipped across 81 files + 7 computer-use e2e specs.**
+
 ## Brand Voice
 Clear, confident, practical, business-friendly. No hype. Minimal jargon. Translate features into outcomes.
 
@@ -398,12 +419,14 @@ npx tsc --watch --noEmit # TypeScript watch mode
 npm run typecheck        # Route typegen + tsc (includes one retry for the .next/types cache-life race)
 npm run test             # Vitest suite
 npm run test:e2e         # Playwright suite on isolated local port
+npm run test:computer-use        # Computer-use release-gating runbook suite (7 scenarios)
 npm run deploy           # Full Firebase deploy (hosting + functions)
 npm run deploy:hosting   # Deploy hosting + SSR Cloud Function only
 npm run deploy:rules     # Deploy Firestore security rules
 npm run deploy:indexes   # Deploy Firestore indexes
 npm run seed:templates           # Seed agent templates into Firestore
 npm run seed:industry-probing    # Seed the 8 default industry-probing entries with aliases (Phase 7)
+npm run seed:e2e-plan            # Seed a deterministic plan doc for computer-use runbooks 3/4/5
 npm run eval:chat                # Run the chat-agent LLM eval suite (Phase 7) — uses real Gemini, costs API credits
 npx tsx scripts/seed-firestore.ts  # Seed default site_settings
 npx tsx scripts/seed-content.ts    # Seed FAQs, testimonials, offers

@@ -167,9 +167,9 @@ These are things that are broken or will fail in production today.
 ## Phase 6: Observability & Operations
 
 ### 6A. Add agent pipeline metrics
-- **File**: `lib/agents/tracing.ts`
-- **Status**: Substantially addressed in Phase 7
-- **Notes**: `lib/agents/tracing.ts` (~250 lines) emits structured spans/trace IDs per stage with model, latency, correction count, and status. Open sub-item: surface aggregates (avg plan generation time, stage failure rates, plans/day) in the admin dashboard.
+- **File**: `lib/agents/tracing.ts`, `lib/firestore/traces.ts`, `components/admin/PipelineMetrics.tsx`
+- **Status**: Completed
+- **Notes**: `lib/agents/tracing.ts` emits structured spans/trace IDs per stage. `lib/firestore/traces.ts` persists traces to `pipeline_traces` Firestore collection and aggregates them via `aggregateTraceDocs()` (pure function, unit-tested). Admin dashboard at `/admin` renders top-line metrics (avg latency, p95, failure rate, plans/day, plans today) plus a stage-level table showing per-stage runs, failures, degradations, failure rate, and avg latency — sorted most-failing first. 7 unit tests in `tests/pipeline-metrics-aggregation.test.ts`.
 
 ### 6B. Add refinement analytics
 - **Files**: `hooks/useRefineSection.ts`, `lib/analytics.ts`
@@ -261,7 +261,7 @@ All 27 items are now completed or substantially addressed.
 | Completed | 27 | All items across Phases 1–6 |
 | Substantially addressed | 1 | 4E (superseded by LLM eval suite — no `tests/golden/` dir, but `evals.ts` + `chat-evals.ts` + CLI runner serve the same purpose) |
 
-**Test suite: 78 files / 788 unit tests passed / 1 skipped + 5 E2E specs** (up from 73/736 at start of session).
+**Test suite: 81 files / 806 unit tests passed / 1 skipped + 7 computer-use e2e specs + 8 standard e2e specs** (up from 78/788 at end of prior session).
 
 ### What was completed in this session (2026-04-11)
 - 2A: PlanBuildProgress tracker + completedStages in useSSEChat
