@@ -12,12 +12,14 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:computer-use": "playwright test e2e/computer-use",
     "deploy": "firebase deploy",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
     "seed:templates": "npx tsx scripts/seed-agent-templates.ts",
     "seed:industry-probing": "npx tsx scripts/seed-industry-probing.ts",
+    "seed:e2e-plan": "npx tsx scripts/seed-e2e-plan.ts",
     "eval:chat": "npx tsx scripts/run-chat-evals.ts"
   },
   "dependencies": {

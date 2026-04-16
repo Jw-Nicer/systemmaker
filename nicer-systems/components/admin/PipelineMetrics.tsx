@@ -86,6 +86,56 @@ export default function PipelineMetrics() {
           meta={`${data.windowDays}-day average`}
         />
       </div>
+
+      {data.stageStats.length > 0 && (
+        <div className="mt-6 rounded-[28px] border border-[#d9d1c3] bg-white/70 p-5">
+          <h3 className="mb-3 text-sm font-semibold text-[#1d2318]">
+            Stage failure rates
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-[#6d6557]">
+                <tr>
+                  <th className="pb-2 pr-4 font-medium">Stage</th>
+                  <th className="pb-2 pr-4 font-medium">Runs</th>
+                  <th className="pb-2 pr-4 font-medium">Failed</th>
+                  <th className="pb-2 pr-4 font-medium">Degraded</th>
+                  <th className="pb-2 pr-4 font-medium">Fail %</th>
+                  <th className="pb-2 font-medium">Avg latency</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e9e2d4]">
+                {data.stageStats.map((stage) => (
+                  <tr key={stage.stage}>
+                    <td className="py-2 pr-4 font-medium text-[#1d2318]">
+                      {stage.stage}
+                    </td>
+                    <td className="py-2 pr-4 text-[#3e3a31]">{stage.runs}</td>
+                    <td className="py-2 pr-4 text-[#3e3a31]">{stage.failures}</td>
+                    <td className="py-2 pr-4 text-[#3e3a31]">
+                      {stage.degradations}
+                    </td>
+                    <td
+                      className={`py-2 pr-4 font-medium ${
+                        stage.failureRate >= 10
+                          ? "text-red-700"
+                          : stage.failureRate > 0
+                            ? "text-amber-700"
+                            : "text-[#3e3a31]"
+                      }`}
+                    >
+                      {formatPercent(stage.failureRate)}
+                    </td>
+                    <td className="py-2 text-[#3e3a31]">
+                      {formatLatency(stage.avgLatencyMs)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
