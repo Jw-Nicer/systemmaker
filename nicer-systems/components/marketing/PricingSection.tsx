@@ -103,7 +103,7 @@ export async function PricingSection({
                 )}
                 {isHighlighted && (
                   <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                    <span className="inline-block rounded-b-full bg-[#f8f4ea] px-4 py-1 text-xs font-medium uppercase tracking-[0.14em] text-[#173220]">
+                    <span className="inline-block whitespace-nowrap rounded-b-full bg-[#f8f4ea] px-4 py-1 text-xs font-medium uppercase tracking-[0.14em] text-[#173220]">
                       Most Popular
                     </span>
                   </div>
