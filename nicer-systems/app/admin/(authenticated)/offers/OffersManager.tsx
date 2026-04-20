@@ -1,6 +1,6 @@
 "use client";
 
-import type { Offer } from "@/types/offer";
+import type { Offer, OfferCtaAction } from "@/types/offer";
 import {
   createOffer,
   deleteOffer,
@@ -21,6 +21,7 @@ type FormData = {
   description: string;
   features: string;
   cta: string;
+  cta_action: OfferCtaAction | "";
   highlighted: boolean;
   is_published: boolean;
   sort_order: number;
@@ -32,6 +33,7 @@ const emptyForm: FormData = {
   description: "",
   features: "",
   cta: "Book a Scoping Call",
+  cta_action: "",
   highlighted: false,
   is_published: false,
   sort_order: 0,
@@ -52,6 +54,7 @@ function itemToForm(item: Offer): FormData {
     description: item.description,
     features: item.features.join("\n"),
     cta: item.cta,
+    cta_action: item.cta_action ?? "",
     highlighted: item.highlighted,
     is_published: item.is_published,
     sort_order: item.sort_order,
@@ -59,12 +62,14 @@ function itemToForm(item: Offer): FormData {
 }
 
 function preparePayload(form: FormData) {
+  const { cta_action, ...rest } = form;
   return {
-    ...form,
+    ...rest,
     features: form.features
       .split("\n")
       .map((f) => f.trim())
       .filter(Boolean),
+    ...(cta_action ? { cta_action } : {}),
   };
 }
 
@@ -183,6 +188,21 @@ export default function OffersManager({
                   className={INPUT_CLASS_NAME}
                   required
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-[#6c7467]">CTA Action</label>
+                <select
+                  value={crud.form.cta_action}
+                  onChange={(e) =>
+                    crud.updateField("cta_action", e.target.value as OfferCtaAction | "")
+                  }
+                  className={INPUT_CLASS_NAME}
+                >
+                  <option value="">Auto (route by CTA text)</option>
+                  <option value="booking">Open booking modal</option>
+                  <option value="audit">Link to /audit</option>
+                  <option value="contact">Link to /contact</option>
+                </select>
               </div>
             </div>
 

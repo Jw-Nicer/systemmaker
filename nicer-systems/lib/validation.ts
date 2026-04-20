@@ -135,6 +135,7 @@ export const offerSchema = z.object({
   description: z.string().min(1, "Description is required").max(500),
   features: z.array(z.string().min(1).max(200)).min(1, "At least one feature is required"),
   cta: z.string().min(1, "CTA text is required").max(100),
+  cta_action: z.enum(["audit", "contact", "booking"]).optional(),
   highlighted: z.boolean(),
   is_published: z.boolean(),
   sort_order: z.number().int().min(0),

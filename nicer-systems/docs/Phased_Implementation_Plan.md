@@ -118,9 +118,9 @@
 **Outcome:** Production-ready site with seeded content, fixed regressions, and wired features.
 
 ### Deliverables
-- ✅ Seeded Firestore production data via `scripts/seed-content.ts` (7 FAQs, 4 testimonials, 3 pricing tiers)
+- ✅ Seeded Firestore production data via `scripts/seed-content.ts` (7 FAQs, 4 testimonials, 3 pricing tiers — extended to 4 in Phase 9)
 - ✅ Fixed agent chat phase regression in `lib/agents/conversation.ts` (wider industry matching, safety valve at 8+ messages, expanded affirm patterns)
-- ✅ Wired BookingCTAButton (in-app BookingModal with date/time picker + Google Calendar integration) into nav header + hero
+- ✅ Wired BookingCTAButton (in-app BookingModal with date/time picker + booking flow) into nav header + hero
 - ✅ Wired visual effects: BrushRevealCanvas (lazy-loaded), FlowText (hero animation), WaveDividers (between sections)
 - ✅ FAQSection always renders `id="faq"` with fallback card when Firestore is empty
 - ✅ Fixed healthcare variant sections.hero placeholder content + meta_description
@@ -217,6 +217,29 @@
 - ✅ Admin can reorder, hide, and show individual homepage sections without redeploy
 - ✅ Admin can preview all draft content before publishing
 - ✅ Both features verified by regression tests and production-ready
+
+---
+
+## Phase 9 — Funnel Widening ✅ SHIPPED 2026-04-20
+**Outcome:** Free entry tier surfaced on the pricing card so price-sensitive prospects see a $0 path into the funnel; tier-level analytics added to measure cannibalization vs widening.
+
+### Deliverables
+- ✅ Free **Discovery Call** tier (`sort_order: 0`, `cta_action: "booking"`) seeded into Firestore — opens the existing BookingModal; copy emphasizes "30 minutes, no deliverable, no obligation" to keep premium positioning intact
+- ✅ `Offer.cta_action` discriminator (`"audit" | "contact" | "booking"`) in `types/offer.ts` + `lib/validation.ts` — replaces the legacy regex CTA sniff; admin offers form gains a "CTA Action" select with an "Auto" fallback
+- ✅ `PricingSection.tsx` grid responds to tier count (`md:grid-cols-2 lg:grid-cols-4` when ≥4 tiers, otherwise `md:grid-cols-3`); CTA renderer dispatches on `cta_action`
+- ✅ `BookingCTAButton.tsx` extended with optional `extraEventName` / `extraEventPayload` so the pricing-card render path fires `pricing_tier_click` alongside `booking_click`
+- ✅ `EVENTS.PRICING_TIER_CLICK` added to `lib/analytics.ts` with `{ tier_name, tier_price, tier_action }` payload — closes the gap previously called out in `docs/Analytics_Funnel.md`
+- ✅ Fixed legacy `highlighted_tier: "Growth"` mismatch in `lib/marketing/variant-content.ts` → `"Build & Launch"` (silently dead config since the tier was renamed); updated pricing eyebrow + description for the new tier breadth
+
+### Exit criteria
+- ✅ Pricing card renders 4 tiers in correct sort order (0, 1, 2, 3) with Discovery Call leftmost
+- ✅ Discovery Call CTA opens BookingModal (same UX as hero "Book a Scoping Call")
+- ✅ All 4 tier CTAs fire `pricing_tier_click` with the correct `tier_name` / `tier_price` / `tier_action`
+- ✅ Industry variant pages (`/healthcare`, `/construction`, etc.) highlight `Build & Launch` instead of falling through to the legacy `Growth` default
+
+### Post-launch monitoring
+- 30-day check on `pricing_tier_click` distribution: if Discovery Call clicks largely overlap with would-be hero CTA users (cannibalization, not widening), unify the labels
+- Watch BookingForm submission quality — pre-screen calendar invites against the message field; add a one-line qualifier if low-quality call volume hurts
 
 ---
 

@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { getPublishedOffers } from "@/lib/firestore/offers";
-import type { Offer } from "@/types/offer";
+import type { Offer, OfferCtaAction } from "@/types/offer";
+import { BookingCTAButton } from "./BookingCTAButton";
+import { TrackedLink } from "./TrackedLink";
+import { EVENTS } from "@/lib/analytics";
+
+function resolveCtaAction(tier: Offer): OfferCtaAction {
+  if (tier.cta_action) return tier.cta_action;
+  return /audit/i.test(tier.cta) ? "audit" : "contact";
+}
 
 export async function PricingSection({
   eyebrow = "Pricing",
-  title = "Simple, outcome-based\npricing",
-  description = "Every engagement starts with a scoping call. We confirm the workflow, define the deliverables, and align the implementation plan to your actual operating stack.",
+  title = "Simple, scoped\npricing",
+  description = "Every engagement starts with a scoping call and a clear operating plan.",
   highlightedTier,
   offersData,
 }: {
@@ -43,7 +51,7 @@ export async function PricingSection({
               Pricing is bespoke
             </p>
             <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-[#c6d0c3]">
-              Every engagement is scoped to your workflows, tools, and team size. Get in touch and we&apos;ll walk through what a project looks like for your business.
+              Every engagement is scoped to your workflows, tools, and team size.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
@@ -56,16 +64,28 @@ export async function PricingSection({
                 href="#see-it-work"
                 className="inline-flex rounded-full border border-[#cad0bb] bg-transparent px-7 py-3 text-sm font-medium text-[#f2eadb] transition-colors duration-300 hover:bg-white/8"
               >
-                See a Preview Plan First
+                See a Plan First
               </a>
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
+          <div
+            className={`grid gap-6 md:items-stretch ${
+              tiers.length >= 4
+                ? "md:grid-cols-2 lg:grid-cols-4"
+                : "md:grid-cols-3"
+            }`}
+          >
             {tiers.map((tier) => {
               const isHighlighted = highlightedTier
                 ? tier.name === highlightedTier
                 : tier.highlighted;
+              const action = resolveCtaAction(tier);
+              const tierEventPayload = {
+                tier_name: tier.name,
+                tier_price: tier.price,
+                tier_action: action,
+              };
 
               return (
               <div
@@ -129,16 +149,32 @@ export async function PricingSection({
                   ))}
                 </ul>
 
-                <Link
-                  href={/audit/i.test(tier.cta) ? "/audit" : "/contact"}
-                  className={`block text-center py-3 rounded-full font-medium text-sm transition-all ${
-                    isHighlighted
-                      ? "bg-[#f2eadb] text-[#132015] hover:bg-[#f8f4ea] hover:shadow-[0_8px_30px_rgba(242,234,219,0.2)]"
-                      : "bg-[#161b12] text-[#f5f0e5] hover:shadow-[0_8px_30px_rgba(22,27,18,0.2)]"
-                  }`}
-                >
-                  {tier.cta}
-                </Link>
+                {action === "booking" ? (
+                  <BookingCTAButton
+                    ctaText={tier.cta}
+                    source={`pricing_card_${tier.name.toLowerCase().replace(/\s+/g, "_")}`}
+                    extraEventName={EVENTS.PRICING_TIER_CLICK}
+                    extraEventPayload={tierEventPayload}
+                    className={`block w-full text-center py-3 rounded-full font-medium text-sm transition-all ${
+                      isHighlighted
+                        ? "bg-[#f2eadb] text-[#132015] hover:bg-[#f8f4ea] hover:shadow-[0_8px_30px_rgba(242,234,219,0.2)]"
+                        : "bg-[#161b12] text-[#f5f0e5] hover:shadow-[0_8px_30px_rgba(22,27,18,0.2)]"
+                    }`}
+                  />
+                ) : (
+                  <TrackedLink
+                    href={action === "audit" ? "/audit" : "/contact"}
+                    eventName={EVENTS.PRICING_TIER_CLICK}
+                    eventPayload={tierEventPayload}
+                    className={`block text-center py-3 rounded-full font-medium text-sm transition-all ${
+                      isHighlighted
+                        ? "bg-[#f2eadb] text-[#132015] hover:bg-[#f8f4ea] hover:shadow-[0_8px_30px_rgba(242,234,219,0.2)]"
+                        : "bg-[#161b12] text-[#f5f0e5] hover:shadow-[0_8px_30px_rgba(22,27,18,0.2)]"
+                    }`}
+                  >
+                    {tier.cta}
+                  </TrackedLink>
+                )}
               </div>
             )})}
           </div>

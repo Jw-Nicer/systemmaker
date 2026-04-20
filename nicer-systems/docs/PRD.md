@@ -1,239 +1,197 @@
 # Product Requirements Document (PRD)
-**Product:** Nicer Systems Website + Web App Admin + Visible Agent Demo  
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
-**Owner:** Nicer Systems (Product/Marketing)
+**Product:** Nicer Systems marketing site + admin web app + agentic preview-plan workflow
+**Doc Date:** 2026-02-27 | **Updated:** 2026-04-20
+**Owner:** Nicer Systems
 
-## 1. Problem
-Most agency sites are visually similar and fail to:
-- create immediate differentiation
-- prove real operational competence
-- update proof-of-work easily
-- measure funnel performance end-to-end
+## 1. Product Summary
+Nicer Systems is a conversion-first marketing site and authenticated admin app for selling and operating workflow-design engagements. The public site is built around two core promises:
 
-## 2. Goals
+- diagnose one operational bottleneck quickly
+- turn that bottleneck into a shareable operating plan
+
+The product now centers on three public entry points:
+
+- the homepage chat/demo surface
+- the guided audit flow at `/audit`
+- shared preview plans at `/plan/[id]`
+
+The admin app manages content, pricing, testimonials, FAQs, variants, experiments, homepage layout, preview mode, leads, and agent templates.
+
+## 2. Problem
+Most agency sites still fail in three ways:
+
+- they do not differentiate meaningfully
+- they do not let buyers experience the workflow thinking before booking
+- they do not give operators a clean system for updating proof, pricing, and experiments without engineering help
+
+## 3. Goals
 ### Business goals
-- Increase qualified bookings (scoping calls)
-- Increase lead capture for “Preview Plan”
-- Reduce time to publish proof-of-work updates to < 10 minutes per case study
-- Track funnel conversion rates by traffic source and landing variant
+- Increase qualified scoping-call bookings
+- Increase preview-plan generation and lead capture
+- Improve conversion by landing variant and experiment
+- Reduce admin time to publish or adjust homepage content
 
-### User goals (visitors)
-- Quickly understand what Nicer Systems does
-- See proof that it works (metrics, before/after, artifacts)
-- Experience “automation/agentic capability” directly (interactive demo)
-- Easily contact/book
+### Visitor goals
+- Understand the offer quickly
+- Experience the agentic workflow directly
+- See proof, pricing, and next steps without excess copy
+- Share or revisit the generated plan
 
-### Operator goals (admin)
-- Add/edit proof-of-work, testimonials, pricing, FAQs
-- Customize brand theme (colors + glow + motion level)
-- Access analytics dashboard
-- Export lead data
+### Operator goals
+- Update content and experiments without redeploys
+- Reorder and toggle homepage sections without code changes
+- Preview draft content before publishing
+- Track leads, follow-ups, and funnel activity in one place
 
-## 3. Success Metrics (KPIs)
-- Landing → CTA click rate
-- Landing → “Preview Plan” completion rate
-- Lead → Booking conversion rate
-- Time on page + engaged interactions (brush reveal start + agent demo start/completion)
-- Case study view-through rate
-- Admin publishing time per case study
+## 4. Personas
+### Ops Owner
+JTBD: "I need fewer fire drills and more visibility into work in progress."
 
-## 4. Personas & Jobs-To-Be-Done
-### Persona A: Ops Owner (buyer)
-JTBD: “I need fewer fire drills and visibility into work-in-progress.”  
-Proof needed: before/after metrics, examples of dashboards/alerts.
+### Founder / GM
+JTBD: "I want predictable operations without managing through status meetings."
 
-### Persona B: Founder/GM
-JTBD: “I want predictable operations and reporting without micromanaging.”  
-Proof needed: outcomes + case studies + process clarity.
+### Internal Operator
+JTBD: "I need to update the marketing surface and workflow content without waiting on engineering."
 
-### Persona C: Internal operator (admin user)
-JTBD: “I must update the site content without engineering support.”  
-Proof needed: easy admin UI + previews + version history.
+## 5. Current Product Scope
+### Public marketing surface
+- Homepage with admin-managed section ordering and visibility
+- Brush-reveal hero and live chat/demo section
+- Proof-of-work gallery and case-study pages
+- Guided audit at `/audit`
+- Industry variant pages at `/[industry]`
+- Contact page and booking modal / booking flow
+- Pricing section with four tiers — free Discovery Call entry, $2,500 Workflow Audit, $7,500 Build & Launch, $3,500/mo Managed Ops
+- Shareable plans at `/plan/[id]`
+- Privacy, terms, FAQ pages
 
-## 5. Core Product Concept
-A conversion-first marketing site with a **signature interaction** (Brush Reveal) and a **visible automation/agent demo**. A web app Admin allows updating proof-of-work and theme settings. Funnel is instrumented end-to-end.
+### Authenticated admin surface
+- Dashboard
+- Case studies, testimonials, FAQs, offers
+- Leads dashboard and lead detail
+- Agent templates
+- Industry variants
+- Experiments
+- Homepage layout admin
+- Settings / theme customization
+- Preview routes for site and variants
 
-## 6. Scope Summary
-### Must-have (MVP)
-- Marketing landing page (SEO optimized)
-- Brush Reveal hero interaction (with fallback)
-- Proof-of-work gallery + detail pages
-- Admin CMS for proof-of-work + testimonials + offers/pricing + FAQs
-- Theme customization in Admin (colors + glow + motion intensity)
-- Contact page + booking CTA (email + scheduler link)
-- Analytics events + UTM capture
+### Agent surface
+- Multi-phase chat intake
+- Guided audit intake
+- Preview-plan generation pipeline
+- Section-level refinement preview and apply flow
+- Share and email plan delivery
 
-### Should-have (MVP+)
-- Visitor “Mini Agent” demo producing a Preview Plan + email capture
-- Lead dashboard + exports
-
-### Built (Phase 3 — complete)
-- Multi-niche landing variants + A/B testing
-- Automated email sequences (5-email nurture via Resend)
-- Lead scoring (0–75 points) + activity timeline + follow-up reminders
-- Case study related recommendations
-- Custom error pages (404, error boundary)
-- CRM sync — deferred
-
-### Built (Phase 4 — complete)
-- SSE streaming agent chat (multi-phase conversation)
-- Shareable preview plans (public URLs at /plan/[id])
-- Plan section refinement with version history
-- Performance optimization pass
-
-### Deferred
-- Full client portal
-- CRM sync (ClickUp/HubSpot/Close)
-- Guided audit wizard
-- Proposal generator
+## 6. Success Metrics
+- Landing view to primary CTA click rate
+- Landing view to plan generation rate
+- Plan generation to booking rate
+- Booking rate by homepage experiment / landing variant
+- Lead follow-up completion rate
+- Admin time to publish content updates
 
 ## 7. Functional Requirements
-### 7.1 Marketing Landing (Public)
-- Sections: Hero, Interactive Differentiator, Proof, How it Works, Pricing, FAQ, CTA/Footer
-- SEO: metadata, schema markup for Organization/FAQ, open graph
-- Performance: lazy-load heavy effects, strong Core Web Vitals
+### 7.1 Homepage
+The homepage is not a fixed set of sections anymore. It renders a resolved Firestore-backed layout from `site_settings/homepage_layout`.
 
-### 7.2 Signature Interaction: Brush Reveal Hero
-- Two layered hero visuals (top overlay, bottom image/video)
-- Cursor becomes a brush; painting reveals the bottom layer
-- Touch: finger drag reveals
-- Fallback: static crossfade on scroll if canvas unsupported
-- Reduced motion: disable continuous animation, provide static hero
+Default visible sections:
+1. Hero
+2. Proof of work
+3. Testimonials
+4. Is this for you
+5. How it works
+6. See it work
+7. Why not DIY
+8. Features
+9. Pricing
+10. FAQ
+11. Final CTA
 
-### 7.3 Visible Automation / Mini Agent (Public)
-- A guided panel: user enters “bottleneck”, selects industry + tools
-- The system generates:
-  - workflow map draft
-  - KPI dashboard suggestions
-  - alert rules
-  - 30-day plan
-- Outputs presented as animated cards
-- Lead capture: user emails themselves the “Preview Plan”
-- Safety: no claims of accessing their systems, no credential asks in MVP
+Requirements:
+- Admin can reorder and hide sections
+- Structural trackers and JSON-LD remain code-owned, not layout-managed
+- Hero and final CTA support homepage experiments
 
-### 7.4 Proof of Work (CMS-managed)
-- Gallery view with filters (industry, workflow type, tool stack)
-- Case study page includes:
-  - problem summary
-  - solution
-  - artifacts (images/video)
-  - metrics (before/after)
-  - timeline
-  - CTA
+### 7.2 Hero / Differentiation
+- Brush-reveal hero with reduced-motion fallback
+- Primary CTA into booking
+- Secondary CTA into live demo section
+- Short, high-signal copy focused on workflow design and plan generation
 
-### 7.5 Admin Web App
-- Auth required
-- CRUD:
-  - Case studies
-  - Testimonials
-  - Offers/Pricing
-  - FAQs
-  - Landing variants (industry pages)
-  - A/B experiments
-- Theme:
-  - primary/secondary color
-  - background gradient preset
-  - glow intensity
-  - motion intensity (0–3)
-  - cursor brush style preset
-- Preview mode: view marketing pages with draft content before publish
+### 7.3 Live demo / chat intake
+- Multi-phase SSE chat at `/api/agent/chat`
+- Phases: gathering, confirming, building, complete, follow_up
+- Streams plan sections as they complete
+- Offers plan sharing and email capture after completion
+- Uses industry-aware probing and guardrails
 
-### 7.6 Contact / Booking
-- Contact page with:
-  - form (name, email, company, bottleneck, tools, urgency)
-  - scheduler link/embed
-- Admin notification email on new lead submission
-- 5-email nurture sequence (see 7.9)
+### 7.4 Guided audit
+- Public page at `/audit`
+- Structured intake for richer workflow information
+- Produces the same preview-plan shape as the chat flow
+- Suitable for visitors who want a more guided, form-like experience
 
-### 7.7 Analytics / Funnel
-- Capture UTMs on first visit and persist through lead capture
-- Track events:
-  - landing_view
-  - brush_reveal_start
-  - agent_demo_start
-  - agent_demo_complete
-  - case_study_view
-  - cta_click_book
-  - lead_submit
-  - booking_click
-- Admin analytics dashboard (Phase 2+)
-- Additional events (Phase 3-4):
-  - brush_reveal_complete
-  - agent_chat_start, agent_chat_plan_start, agent_chat_plan_complete
-  - proof_gallery_filter_used
-  - cta_click_preview_plan, preview_plan_email_capture
-  - plan_view_shared, plan_shared_copy_link, plan_shared_email, plan_shared_linkedin
-  - plan_refine_start, plan_refine_complete, plan_refine_view_diff
+### 7.5 Preview plan
+- Generated plans stored in Firestore
+- Public plans viewable at `/plan/[id]`
+- Share actions available from the plan view
+- Plan sections can be refined
+- Refinement uses a two-step flow:
+  - preview via `/api/agent/refine`
+  - persistence via `/api/agent/refine/apply`
 
-### 7.8 Lead Scoring & Activity Timeline (Phase 3)
-- Pure scoring function (0–75 points) based on form completeness, urgency, bottleneck detail, and tool stack
-- Score stored on lead document at creation
-- Activity timeline subcollection on each lead: status changes, notes, email logs
-- Follow-up reminders with date and note per lead
-- Admin dashboard widget for overdue/upcoming follow-ups
+### 7.6 Proof of work
+- CMS-managed case studies
+- Public list and detail routes
+- Filters and related recommendations
+- Draft and publish workflow in admin
 
-### 7.9 Email Nurture Sequences (Phase 3)
-- 5-email automated sequence triggered on lead creation via Resend scheduledAt
-- Emails spaced over time: welcome, workflow tip, automation nudge, case study, final nudge
-- Admin notification email on new lead submission
-- Nurture enrollment tracked on lead document
+### 7.7 Leads and booking
+- Public lead capture via `/api/leads`
+- Booking flow via `/api/booking`
+- Lead scoring, activity timeline, follow-up reminders
+- Admin notifications and nurture emails
 
-### 7.10 Industry Variant Landing Pages (Phase 3)
-- Admin CRUD for landing page variants keyed to industry slug
-- Dynamic route at /[industry] renders customized hero, demo, proof, features, pricing, and CTA sections
-- Variants can override headline, subheadline, CTA text, featured industries, and section content
-- A/B testing framework: experiments admin, useExperiment hook, cookie-based bucketing
-
-### 7.11 SSE Streaming Agent Chat (Phase 4)
-- Multi-phase conversation: gathering → confirming → building → complete → follow_up
-- SSE streaming delivers each plan section as it completes
-- Chat UI: message list, typing indicators, inline plan preview cards
-- Safety layer: prompt injection detection, credential request blocking, scope guardrails
-- Phase transitions managed server-side based on conversation state
-
-### 7.12 Shareable Preview Plans (Phase 4)
-- Plans stored in Firestore with public URLs at /plan/[id]
-- View count tracking on each plan visit
-- Social share buttons (copy link, email, LinkedIn)
-- Open Graph image generation per plan
-- PDF print support via browser print
-
-### 7.13 Plan Section Refinement & Version History (Phase 4)
-- Visitors can refine individual plan sections with free-text feedback
-- Refinement sent to Gemini with original plan context + feedback
-- Updated section replaces original; previous version stored in versions array
-- Side-by-side diff comparison between plan versions
+### 7.8 Admin
+- Authenticated access only
+- CRUD for core CMS collections
+- Homepage layout management
+- Preview mode for unpublished content
+- Experiment management
+- Agent template editing and test runs
 
 ## 8. Non-Functional Requirements
-- Accessibility: keyboard navigation, ARIA, reduced motion support
-- Performance: LCP < 2.5s mobile target, defer canvas
-- Security: Admin auth + Firestore security rules + Zod validation
-- Reliability: error logging, content versioning (optional), backups
-- Maintainability: clear modules, docs, agent templates in markdown
+- Accessibility: reduced motion, keyboard support, readable semantics
+- Performance: lazy-load heavy client effects and chat surfaces
+- Security: auth gating, Firestore rules, request validation, rate limiting
+- Maintainability: docs and code should describe the same product surface
 
-## 9. Risks & Mitigations
-- Motion effects reduce performance → lazy-load + progressive enhancement + fallback
-- Over-artistic reduces clarity → keep conversion copy visible and CTAs persistent
-- Agent demo overpromises → explicit “preview plan” language + constrained outputs
+## 9. Source Of Truth
+Use these docs for the current state:
 
-## 10. Acceptance Criteria (High Level)
-- Admin can publish a new case study without code changes
-- Brush reveal works on desktop and touch, degrades gracefully
-- Visitor can generate a Preview Plan and submit lead capture
-- UTMs persist and appear on the lead record
-- Site passes accessibility checks for core flows
+- `docs/Phased_Implementation_Plan.md` for shipped vs deferred status
+- `docs/Backlog.md` for open work
+- `docs/API_Spec.md` for route contracts
+- `docs/UI_UX_Spec.md` for the current page and admin surface
+- `docs/Chat_Agent_Architecture.md` for chat-agent internals and known weaknesses
+
+This PRD should describe the current product shape, not historical MVP intent.
+
+## 10. Genuine Open Work
+These are still unresolved product items, not documentation debt:
+
+- CRM sync
+- Proposal generator
+- Full client portal
+- Multi-tenant enterprise RBAC
+- Chat confirming-phase overload
+- Industry alias cleanup for non-healthcare sectors grouped into healthcare
 
 ## 11. Appendix
-See:
-- `docs/UI_UX_Spec.md`
 - `docs/Architecture.md`
-- `docs/Data_Model.md`
-- `docs/Analytics_Funnel.md`
-- `docs/Admin_Spec.md`
 - `docs/API_Spec.md`
-- `docs/Agents_Spec.md`
-- `docs/Phased_Implementation_Plan.md`
-- `docs/Security_Privacy_Performance.md`
-- `docs/Sitemap_Routes.md`
+- `docs/UI_UX_Spec.md`
 - `docs/User_Flows.md`
 - `docs/Backlog.md`
+- `docs/Phased_Implementation_Plan.md`

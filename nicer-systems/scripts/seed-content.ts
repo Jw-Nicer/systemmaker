@@ -123,6 +123,24 @@ const testimonials = [
 // ---------------------------------------------------------------------------
 const offers = [
   {
+    name: "Discovery Call",
+    price: "Free",
+    description:
+      "A 30-minute call to talk through your top bottleneck and whether a Workflow Audit is the right next step. No prep required.",
+    features: [
+      "30-minute call with John",
+      "Walk through your most painful workflow",
+      "Honest take on whether we can help",
+      "No deliverable, no obligation",
+      "Booked in under 60 seconds",
+    ],
+    cta: "Book a Discovery Call",
+    cta_action: "booking",
+    highlighted: false,
+    is_published: true,
+    sort_order: 0,
+  },
+  {
     name: "Workflow Audit",
     price: "$2,500",
     description:

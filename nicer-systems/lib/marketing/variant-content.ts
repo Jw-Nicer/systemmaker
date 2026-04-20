@@ -10,67 +10,67 @@ export const DEFAULT_HOW_IT_WORKS_STEPS: LandingHowItWorksStep[] = [
     id: "01",
     title: "Describe the bottleneck",
     description:
-      "Share the workflow that keeps breaking down. The agent gathers the industry, bottleneck, tool stack, urgency, and volume before it builds anything.",
+      "Share the workflow, stack, and friction point. The intake stays short.",
   },
   {
     id: "02",
-    title: "Generate the preview plan",
+    title: "Generate the plan",
     description:
-      "The backend runs the planning pipeline and streams each section back as it is completed, so you can review the plan while it is still being assembled.",
+      "The system maps the workflow, KPI layer, and automations around the bottleneck.",
   },
   {
     id: "03",
-    title: "Share, refine, and follow up",
+    title: "Refine and move",
     description:
-      "Once the plan is generated, you can share the public plan URL, print it to PDF, refine individual sections, or ask follow-up questions about the recommendation.",
+      "Share it, refine it, and use it to scope the next build.",
   },
 ];
 
 export const DEFAULT_FEATURE_ITEMS: LandingFeatureItem[] = [
   {
     id: "01",
-    title: "Workflow mapping built around your existing process",
+    title: "Workflow mapping for the process you already run",
     description:
-      "We start from the bottleneck you already have. No generic automation pitch — we map your actual workflow, identify the handoff gaps, and scope a concrete fix.",
-    visual: "Workflow map with stages, owners, and handoff points",
+      "We map the real handoffs, owners, and failure points.",
+    visual: "Stages, owners, and handoff points",
   },
   {
     id: "02",
-    title: "KPI and dashboard recommendations",
+    title: "KPI architecture",
     description:
-      "Each preview plan defines the KPIs and dashboard views that should exist for the workflow before implementation starts.",
-    visual: "Cycle time, stuck items, throughput, and SLA metrics",
+      "The plan defines the metrics and review views that matter.",
+    visual: "Cycle time, stuck work, throughput, SLA",
   },
   {
     id: "03",
-    title: "Alerts and next actions before problems escalate",
+    title: "Alert logic and next actions",
     description:
-      "The plan includes alert recommendations and ownership so the output ends with decisions and next steps, not just a diagram.",
-    visual: "Alert triggers, escalation owners, and next actions",
+      "Escalations, owners, and next moves are part of the system.",
+    visual: "Triggers, ownership, and next steps",
   },
   {
     id: "04",
-    title: "Shareable plan output",
+    title: "Shareable output",
     description:
-      "Completed preview plans can be shared by URL, printed to PDF, and refined section by section as the recommendation evolves.",
-    visual: "Shareable link with section-by-section refinement",
+      "Share it by link, export it, and refine section by section.",
+    visual: "Shareable link with fast refinement",
   },
 ];
 
 export const DEFAULT_VARIANT_SECTIONS: LandingVariantSections = {
   hero: {
-    headline: "Tell us the problem.\nWe'll build the system.",
+    headline: "Tell us the bottleneck.\nWe design the system.",
     subheadline:
-      "Turn a messy operational bottleneck into an actionable preview plan. We map the workflow, define the KPIs, outline the alerts, and show the next actions before implementation starts.",
+      "Turn one messy bottleneck into a clear agentic workflow, KPI layer, and next-step plan.",
     cta_text: "Book a Scoping Call",
     proof_line:
-      "Get a shareable preview plan with workflow, KPI, and alert recommendations.",
+      "Preview plan in minutes. Shareable by link.",
   },
   demo: {
     eyebrow: "Live Demo",
-    title: "Build a preview plan",
+    title: "See the agentic workflow",
     description:
-      "Tell the agent about your bottleneck. It asks a few intake questions, then streams a draft preview plan with workflow stages, KPIs, alerts, and recommended actions.",
+      "Describe the bottleneck. The system asks a few questions, then streams the plan.",
   },
   proof: {
     eyebrow: "Results",
@@ -79,21 +79,21 @@ export const DEFAULT_VARIANT_SECTIONS: LandingVariantSections = {
     featured_industries: [],
   },
   how_it_works: {
-    eyebrow: "How it works",
-    title: "From bottleneck\nto preview plan",
+    eyebrow: "Process",
+    title: "From bottleneck\nto agentic plan",
     steps: DEFAULT_HOW_IT_WORKS_STEPS,
   },
   features: {
-    eyebrow: "Deliverables",
-    title: "What you get",
+    eyebrow: "Outputs",
+    title: "What ships first",
     items: DEFAULT_FEATURE_ITEMS,
   },
   pricing: {
-    eyebrow: "Pricing",
-    title: "Simple, outcome-based\npricing",
+    eyebrow: "Pricing for every stage",
+    title: "Simple, scoped\npricing",
     description:
-      "Every engagement starts with a scoping call. We confirm the workflow, define the deliverables, and align the implementation plan to your actual operating stack.",
-    highlighted_tier: "Growth",
+      "Start with a free Discovery Call or scope a full engagement — every path begins with a clear operating plan.",
+    highlighted_tier: "Build & Launch",
   },
   faq: {
     eyebrow: "FAQ",
@@ -101,10 +101,10 @@ export const DEFAULT_VARIANT_SECTIONS: LandingVariantSections = {
     description: "",
   },
   final_cta: {
-    eyebrow: "Available now",
-    title: "Put the workflow\nin focus",
+    eyebrow: "Ready to scope",
+    title: "Design the next\nagentic workflow",
     description:
-      "Start with a scoping conversation, generate a preview plan, and use it to align the workflow, metrics, alerts, and implementation scope before any build work starts.",
+      "Start with one workflow. Leave with a plan your team can review and act on.",
     cta_text: "Book a Scoping Call",
   },
 };

@@ -1,5 +1,5 @@
 # Backlog (Prioritized)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-04-11
+**Doc Date:** 2026-02-27 | **Updated:** 2026-04-20
 
 ## P0 (Phase 1) ✅ COMPLETE
 - ✅ Brush reveal hero with fallback
@@ -38,9 +38,9 @@
 - ❌ Account-based follow-ups — **deferred**
 
 ## P4 (Phase 5 — QA Remediation) ✅ COMPLETE
-- ✅ Seeded production Firestore data (7 FAQs, 4 testimonials, 3 pricing tiers)
+- ✅ Seeded production Firestore data (7 FAQs, 4 testimonials, 3 pricing tiers — extended to 4 in P8)
 - ✅ Fixed agent chat regression (wider industry matching, safety valve, expanded affirm)
-- ✅ Wired BookingCTAButton into nav + hero (in-app BookingModal with Google Calendar)
+- ✅ Wired BookingCTAButton into nav + hero (in-app BookingModal with booking flow)
 - ✅ Wired visual effects (BrushRevealCanvas, FlowText, WaveDividers)
 - ✅ FAQSection always renders with fallback when empty
 - ✅ Fixed healthcare variant placeholder content
@@ -124,6 +124,20 @@
 ### Chat agent (architectural deferrals with rationale)
 - Chat agent G2 (server-side session pinning) — see P6 deferral rationale
 - Function-calling persona refactor (full H from P6) — breaks streaming UX, scoped to rules-as-data instead
+
+## P8 (Phase 9 — Funnel Widening) ✅ SHIPPED 2026-04-20
+**Outcome:** Pricing card now surfaces a $0 entry tier so price-sensitive prospects have a visible no-commitment path into the funnel, with the option to nurture into the $2,500 / $7,500 / $3,500-mo tiers.
+
+- ✅ Free Discovery Call tier (`sort_order: 0`, `cta_action: "booking"`) — opens existing BookingModal; copy emphasizes "30 minutes, no deliverable, no obligation" to avoid premium-positioning dilution
+- ✅ `Offer.cta_action` discriminator (`"audit" | "contact" | "booking"`) replaces the legacy regex CTA sniff in `PricingSection.tsx`; admin form gains a CTA Action select
+- ✅ Pricing grid responds to tier count (`md:grid-cols-2 lg:grid-cols-4` when ≥4 tiers, otherwise `md:grid-cols-3`)
+- ✅ `BookingCTAButton` extended with `extraEventName` / `extraEventPayload` so the pricing-card render path can fire `pricing_tier_click` alongside `booking_click`
+- ✅ `EVENTS.PRICING_TIER_CLICK` — new analytics event with `{ tier_name, tier_price, tier_action }` properties; closes the gap called out in `docs/Analytics_Funnel.md`
+- ✅ Fixed legacy `highlighted_tier: "Growth"` mismatch in `lib/marketing/variant-content.ts` → `"Build & Launch"`; updated pricing eyebrow + description for the new tier breadth
+
+### Risks tracked post-launch
+- **Hero-vs-pricing-card cannibalization** — kill-switch is `pricing_tier_click` distribution at 30 days; if Discovery Call clicks largely come from would-be hero CTA users, unify labels
+- **Time burn from low-quality 30-min calls** — pre-screen via existing BookingForm message field; add a one-line qualifier if volume requires
 
 ## Newly verified already-shipped (reconciled 2026-04-11 / 2026-04-12)
 

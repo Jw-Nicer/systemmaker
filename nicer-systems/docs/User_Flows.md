@@ -1,35 +1,35 @@
-# User Flows (Key Journeys)
-**Doc Date:** 2026-02-27 | **Updated:** 2026-03-05
+# User Flows (Current Key Journeys)
+**Doc Date:** 2026-02-27 | **Updated:** 2026-04-20
 
-## Visitor flow A: Book a call
-Landing → Proof of Work → CTA "Book" → Contact page → scheduler click → booked (external)
+## Visitor flow A: Book a scoping call
+Homepage or variant page → primary CTA (hero "Book a Scoping Call" or pricing-card free "Book a Discovery Call") → BookingModal date/time picker → lead created or updated with booked status → admin notified. The free Discovery Call (pricing card, `sort_order: 0`) and the hero Scoping Call share the same modal — labels are kept distinct on purpose so the funnel can measure cannibalization via `pricing_tier_click` distribution.
 
-## Visitor flow B: Preview Plan (form-based)
-Landing → "See it work" → agent demo form → email capture → plan generated → email delivered → follow-up nurture → booked
+## Visitor flow B: Generate a plan via chat
+Homepage → See it work → multi-phase chat intake → plan builds inline → share or email plan → book or continue follow-up chat
 
-## Visitor flow C: Preview Plan (chat-based)
-Landing → "See it work" → agent chat → multi-turn conversation → plan generated inline → share/refine plan → email capture → nurture → booked
+## Visitor flow C: Generate a plan via guided audit
+Homepage or variant page → guided audit CTA → `/audit` wizard → richer structured intake → preview plan generated → share, email, or book
 
-## Visitor flow D: Industry landing
-UTM/ad link → /[industry] variant page → tailored headline/CTA → agent demo or contact → lead captured
+## Visitor flow D: Visit an industry page
+Ad / referral / direct industry URL → `/[industry]` → tailored landing content → chat, audit, or booking CTA → lead capture / booking
 
-## Visitor flow E: Shared plan
-Shared link → /plan/[id] → view plan → CTA to book or get own plan → lead captured
+## Visitor flow E: Open a shared plan
+Shared link → `/plan/[id]` → read plan → share / refine / book → optional lead capture or booking
 
-## Admin flow: Publish proof
-Admin login → Case Studies → New → Upload media → Add challenge/solution/metrics → Preview → Publish → live on marketing site
+## Admin flow A: Update homepage layout
+Admin login → homepage layout page → reorder or hide sections → save → marketing homepage renders new layout
 
-## Admin flow: Manage leads
-Admin login → Leads dashboard → Filter by status → Click lead → View detail + timeline → Add note → Update status → Set follow-up reminder → Export CSV
+## Admin flow B: Preview unpublished content
+Admin login → preview site or preview variant → inspect draft content with preview banner → return to CMS and adjust as needed
 
-## Admin flow: Run A/B test
-Admin login → Experiments → Create experiment → Define variants → Start → Monitor → Declare winner → Stop
+## Admin flow C: Publish proof-of-work
+Admin login → case studies → create or edit → preview → publish → public case-study surfaces update
 
-## Admin flow: Manage industry variants
-Admin login → Variants → Create variant → Set slug/industry/headline/CTA → Publish → live at /[industry]
+## Admin flow D: Manage leads
+Admin login → leads dashboard → filter → open lead detail → add note / change status / set follow-up → continue pipeline management
 
-## Admin flow: Customize theme
-Admin → Settings → Theme → adjust colors/glow/motion → preview → save → live update site-wide
+## Admin flow E: Run an experiment
+Admin login → experiments → create or edit experiment → start → monitor → declare winner or stop
 
-## Admin flow: Edit agent templates
-Admin → Agent Templates → Select template → Edit markdown → Test run with sample input → Save → immediately used by agent chain
+## Admin flow F: Update agent behavior
+Admin login → agent templates → edit markdown template → test run → save → future runs use updated template

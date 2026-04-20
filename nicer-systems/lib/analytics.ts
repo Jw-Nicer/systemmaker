@@ -14,6 +14,7 @@ export const EVENTS = {
   CTA_CLICK_PREVIEW_PLAN: "cta_click_preview_plan",
   CTA_CLICK_DEMO: "cta_click_demo",
   CTA_CLICK_GUIDED_AUDIT: "cta_click_guided_audit",
+  PRICING_TIER_CLICK: "pricing_tier_click",
   LEAD_SUBMIT: "lead_submit",
   BOOKING_CLICK: "booking_click",
   BOOKING_SUBMIT: "booking_submit",
