@@ -12,9 +12,8 @@ vi.mock("resend", () => {
 });
 
 // Must import after mock setup
-const { sendAdminNotification } = await import(
-  "@/lib/email/admin-notification"
-);
+const { sendAdminNotification, renderAdminNotificationHTML, sanitizeHeader } =
+  await import("@/lib/email/admin-notification");
 
 const baseLead = {
   name: "Jane Doe",
@@ -113,5 +112,61 @@ describe("sendAdminNotification", () => {
     mockSend.mockRejectedValueOnce(new Error("API error"));
     await sendAdminNotification(baseLead);
     delete process.env.RESEND_API_KEY;
+  });
+});
+
+describe("renderAdminNotificationHTML XSS escaping", () => {
+  const base = {
+    email: "user@example.com",
+    score: 42,
+    source: "contact" as const,
+  };
+
+  test("escapes script tags in lead name", () => {
+    const html = renderAdminNotificationHTML({
+      ...base,
+      name: "<script>alert(1)</script>",
+    });
+    assert.ok(!html.includes("<script>alert(1)</script>"));
+    assert.ok(html.includes("&lt;script&gt;alert(1)&lt;/script&gt;"));
+  });
+
+  test("escapes injected HTML in company, industry, bottleneck", () => {
+    const html = renderAdminNotificationHTML({
+      ...base,
+      name: "Jane",
+      company: "<img src=x onerror=alert(1)>",
+      industry: "\"><script>x</script>",
+      bottleneck: "O'Reilly & Sons",
+    });
+    assert.ok(!html.includes("<img src=x onerror=alert(1)>"));
+    assert.ok(html.includes("&lt;img src=x onerror=alert(1)&gt;"));
+    assert.ok(!html.includes("\"><script>x</script>"));
+    assert.ok(html.includes("O&#39;Reilly &amp; Sons"));
+  });
+
+  test("escapes email in href and text", () => {
+    const html = renderAdminNotificationHTML({
+      ...base,
+      name: "Jane",
+      email: "evil\"><script>x</script>@example.com",
+    });
+    assert.ok(!html.includes("<script>x</script>@example.com"));
+    assert.ok(html.includes("&quot;&gt;&lt;script&gt;x&lt;/script&gt;"));
+  });
+
+  test("renders em-dash when optional fields are missing", () => {
+    const html = renderAdminNotificationHTML({ ...base, name: "Jane" });
+    assert.ok(html.includes(">\u2014<"));
+  });
+});
+
+describe("sanitizeHeader", () => {
+  test("strips CR/LF to prevent email header injection", () => {
+    assert.equal(
+      sanitizeHeader("New Lead: Jane\r\nBcc: attacker@example.com"),
+      "New Lead: Jane Bcc: attacker@example.com"
+    );
+    assert.equal(sanitizeHeader("  padded \n name  "), "padded   name");
   });
 });

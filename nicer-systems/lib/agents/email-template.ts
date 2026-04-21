@@ -1,15 +1,6 @@
 import type { PreviewPlan } from "@/types/preview-plan";
 import { buildUnsubscribeUrl } from "@/lib/email/unsubscribe-token";
-
-/** Escape HTML special characters to prevent XSS in email content. */
-function esc(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+import { escapeHtml as esc } from "@/lib/text/html-escape";
 
 export function renderPreviewPlanHTML(
   plan: PreviewPlan,

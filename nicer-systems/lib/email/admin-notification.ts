@@ -1,4 +1,9 @@
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/text/html-escape";
+
+export function sanitizeHeader(str: string): string {
+  return str.replace(/[\r\n]+/g, " ").trim();
+}
 
 interface AdminNotificationInput {
   name: string;
@@ -16,32 +21,34 @@ function getLeadSourceLabel(source: AdminNotificationInput["source"]): string {
   return "Contact Form";
 }
 
-function renderAdminNotificationHTML(lead: AdminNotificationInput): string {
+export function renderAdminNotificationHTML(lead: AdminNotificationInput): string {
   const scoreColor =
     lead.score >= 50 ? "#16a34a" : lead.score >= 25 ? "#ca8a04" : "#dc2626";
+
+  const safeEmailHref = encodeURI(`mailto:${lead.email}`);
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111827;line-height:1.6;">
-  <h2 style="color:#00d4ff;margin:0 0 16px;">New Lead: ${lead.name}</h2>
+  <h2 style="color:#00d4ff;margin:0 0 16px;">New Lead: ${escapeHtml(lead.name)}</h2>
 
   <table style="width:100%;font-size:14px;border-collapse:collapse;">
     <tr>
       <td style="padding:6px 0;color:#6b7280;width:120px;">Email</td>
-      <td style="padding:6px 0;"><a href="mailto:${lead.email}">${lead.email}</a></td>
+      <td style="padding:6px 0;"><a href="${escapeHtml(safeEmailHref)}">${escapeHtml(lead.email)}</a></td>
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Company</td>
-      <td style="padding:6px 0;">${lead.company || "—"}</td>
+      <td style="padding:6px 0;">${lead.company ? escapeHtml(lead.company) : "—"}</td>
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Industry</td>
-      <td style="padding:6px 0;">${lead.industry || "—"}</td>
+      <td style="padding:6px 0;">${lead.industry ? escapeHtml(lead.industry) : "—"}</td>
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Bottleneck</td>
-      <td style="padding:6px 0;">${lead.bottleneck || "—"}</td>
+      <td style="padding:6px 0;">${lead.bottleneck ? escapeHtml(lead.bottleneck) : "—"}</td>
     </tr>
     <tr>
       <td style="padding:6px 0;color:#6b7280;">Source</td>
@@ -83,7 +90,9 @@ export async function sendAdminNotification(
     await resend.emails.send({
       from: "Nicer Systems <onboarding@resend.dev>",
       to: adminEmail,
-      subject: `New ${getLeadSourceLabel(lead.source)} Lead: ${lead.name} (Score: ${lead.score})`,
+      subject: sanitizeHeader(
+        `New ${getLeadSourceLabel(lead.source)} Lead: ${lead.name} (Score: ${lead.score})`
+      ),
       html: renderAdminNotificationHTML(lead),
     });
   } catch (err) {
