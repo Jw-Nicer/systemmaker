@@ -1,6 +1,10 @@
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+
 export function escapeCsvCell(value: unknown): string {
   const normalized =
     value === null || value === undefined ? "" : String(value);
 
-  return `"${normalized.replace(/"/g, '""')}"`;
+  const safe = FORMULA_TRIGGER.test(normalized) ? `'${normalized}` : normalized;
+
+  return `"${safe.replace(/"/g, '""')}"`;
 }
