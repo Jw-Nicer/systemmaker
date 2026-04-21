@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionUser } from "@/lib/firebase/auth";
+import { requireAdmin } from "@/lib/firebase/auth";
 import SidebarNav from "./SidebarNav";
 import { Logo } from "@/components/ui/Logo";
 
@@ -8,7 +8,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
+  const user = await requireAdmin();
 
   if (!user) {
     redirect("/admin/login");

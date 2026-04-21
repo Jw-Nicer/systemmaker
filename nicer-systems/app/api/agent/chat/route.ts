@@ -6,7 +6,14 @@ import {
 import { agentChatSchema } from "@/lib/validation";
 import { orchestrateAgentPipelineStreaming, type AgentStep } from "@/lib/agents/runner";
 import { hashAgentInput } from "@/lib/agents/input-hash";
-import { findRecentPlanByHash } from "@/lib/firestore/plans";
+import {
+  findRecentPlanByHash,
+  issueEditTokenForPlan,
+} from "@/lib/firestore/plans";
+import {
+  generateEditToken,
+  hashEditToken,
+} from "@/lib/plans/edit-token";
 import { scorePlanQuality } from "@/lib/agents/plan-quality";
 import { PIPELINE_DAG } from "@/lib/agents/registry";
 import type { PreviewPlan } from "@/types/preview-plan";
@@ -357,8 +364,17 @@ export async function POST(request: Request) {
         // On cache hit we reuse the cached plan's ID instead of creating a
         // duplicate document — the lead still gets linked to it.
         let planId: string | undefined = cachedPlanId;
+        let editToken: string | undefined;
+        if (planId && db) {
+          try {
+            editToken = await issueEditTokenForPlan(planId);
+          } catch (err) {
+            console.error("Failed to mint edit token for cached plan:", err);
+          }
+        }
         if (!planId && db) {
           try {
+            const freshToken = generateEditToken();
             const planRef = await db.collection("plans").add({
               preview_plan: JSON.parse(JSON.stringify(plan)),
               input_summary: {
@@ -376,8 +392,10 @@ export async function POST(request: Request) {
               is_public: true,
               version: 1,
               versions: [],
+              edit_token_hashes: [hashEditToken(freshToken)],
             });
             planId = planRef.id;
+            editToken = freshToken;
           } catch (err) {
             console.error("Failed to save plan:", err);
           }
@@ -508,6 +526,7 @@ export async function POST(request: Request) {
         write("plan_complete", {
           plan_id: planId ?? "",
           lead_id: leadId ?? "",
+          edit_token: editToken ?? "",
           share_url: planId ? buildPublicPlanUrl(request, planId) : "",
           email_auto_sent: emailAutoSent,
         });

@@ -2,7 +2,11 @@
   "name": "nicer-systems",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "nicer": "./cli/nicer.mjs"
+  },
   "scripts": {
+    "cli": "tsx cli/index.ts",
     "dev": "next dev",
     "build": "next build && node scripts/fix-turbopack-externals.js",
     "start": "next start",
@@ -20,7 +24,8 @@
     "seed:templates": "npx tsx scripts/seed-agent-templates.ts",
     "seed:industry-probing": "npx tsx scripts/seed-industry-probing.ts",
     "seed:e2e-plan": "npx tsx scripts/seed-e2e-plan.ts",
-    "eval:chat": "npx tsx scripts/run-chat-evals.ts"
+    "eval:chat": "npx tsx scripts/run-chat-evals.ts",
+    "set:admin-claim": "npx tsx scripts/set-admin-claim.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

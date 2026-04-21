@@ -31,6 +31,29 @@ export async function getSessionUser() {
   }
 }
 
+/**
+ * Require an admin session. An admin is a user whose Firebase custom claim
+ * `admin` is `true`. As a transition fallback — until `scripts/set-admin-claim.ts`
+ * has been run against every existing admin — we also accept sessions whose
+ * email matches `ADMIN_EMAIL` (defaults to the project owner). Once all admin
+ * accounts carry the claim, the fallback branch can be removed.
+ */
+export async function requireAdmin() {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  if (user.admin === true) return user;
+
+  const fallbackEmail = (
+    process.env.ADMIN_EMAIL || "johnwilnicer@gmail.com"
+  ).toLowerCase();
+  if (typeof user.email === "string" && user.email.toLowerCase() === fallbackEmail) {
+    return user;
+  }
+
+  return null;
+}
+
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);

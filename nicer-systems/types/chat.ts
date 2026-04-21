@@ -102,6 +102,7 @@ export interface SSEPlanSectionData {
 export interface SSEPlanCompleteData {
   plan_id: string;
   lead_id?: string;
+  edit_token?: string;
   share_url: string;
   email_auto_sent?: boolean;
 }

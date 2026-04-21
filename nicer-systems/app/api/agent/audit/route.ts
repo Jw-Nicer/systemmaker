@@ -18,7 +18,14 @@ import {
 } from "@/lib/guided-audit";
 import { buildPublicPlanUrl } from "@/lib/urls";
 import { hashAgentInput } from "@/lib/agents/input-hash";
-import { findRecentPlanByHash } from "@/lib/firestore/plans";
+import {
+  findRecentPlanByHash,
+  issueEditTokenForPlan,
+} from "@/lib/firestore/plans";
+import {
+  generateEditToken,
+  hashEditToken,
+} from "@/lib/plans/edit-token";
 import { scorePlanQuality } from "@/lib/agents/plan-quality";
 import { createSSEStream, SSE_HEADERS } from "@/lib/sse/create-stream";
 import { PIPELINE_DAG } from "@/lib/agents/registry";
@@ -155,10 +162,13 @@ export async function POST(request: Request) {
 
         // Save plan
         let planId: string;
+        let editToken: string;
         if (cached) {
           planId = cached.id;
           db.collection("plans").doc(cached.id).update({ lead_id: leadRef.id }).catch(() => {});
+          editToken = await issueEditTokenForPlan(cached.id);
         } else {
+          editToken = generateEditToken();
           const planRef = await db.collection("plans").add({
             preview_plan: JSON.parse(JSON.stringify(plan)),
             input_summary: {
@@ -176,6 +186,7 @@ export async function POST(request: Request) {
             is_public: true,
             version: 1,
             versions: [],
+            edit_token_hashes: [hashEditToken(editToken)],
           });
           planId = planRef.id;
         }
@@ -188,6 +199,7 @@ export async function POST(request: Request) {
         write("plan_complete", {
           plan_id: planId,
           lead_id: leadRef.id,
+          edit_token: editToken,
           share_url: buildPublicPlanUrl(request, planId),
           audit_summary: buildAuditLeadSummary(input),
         });
@@ -201,6 +213,7 @@ export async function POST(request: Request) {
     // ─── JSON fallback (original behavior) ────────────────────────
     let plan;
     let planRef;
+    let editToken: string;
 
     if (cached) {
       plan = cached.plan;
@@ -211,9 +224,11 @@ export async function POST(request: Request) {
         payload: { input_hash: inputHash, cached_plan_id: cached.id, source: "guided_audit" },
         created_at: new Date(),
       }).catch(() => {});
+      editToken = await issueEditTokenForPlan(cached.id);
     } else {
       const result = await orchestrateAgentPipeline(agentInput);
       plan = result.plan;
+      editToken = generateEditToken();
       planRef = await db.collection("plans").add({
         preview_plan: JSON.parse(JSON.stringify(plan)),
         input_summary: {
@@ -231,6 +246,7 @@ export async function POST(request: Request) {
         is_public: true,
         version: 1,
         versions: [],
+        edit_token_hashes: [hashEditToken(editToken)],
       });
     }
 
@@ -245,6 +261,7 @@ export async function POST(request: Request) {
         preview_plan: plan,
         lead_id: leadRef.id,
         plan_id: planRef.id,
+        edit_token: editToken,
         share_url: shareUrl,
         audit_summary: buildAuditLeadSummary(input),
       },

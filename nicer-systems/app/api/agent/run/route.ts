@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     );
 
     // Store plan in Firestore for shareable URL
-    const planId = await savePlan({
+    const { id: planId, edit_token: editToken } = await savePlan({
       preview_plan: plan,
       input_summary: {
         industry: industry ?? "",
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
         preview_plan: plan,
         lead_id: leadRef.id,
         plan_id: planId,
+        edit_token: editToken,
         share_url: shareUrl,
         steps_completed: completedSteps,
       },

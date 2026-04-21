@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { track, EVENTS } from "@/lib/analytics";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
+import { saveEditToken } from "@/lib/plans/edit-token-storage";
 import type {
   ChatMessage,
   ConversationPhase,
@@ -516,6 +517,9 @@ export function useSSEChat() {
 
                 case "plan_complete": {
                   const completeData = sseEvent.data as SSEPlanCompleteData;
+                  if (completeData.plan_id && completeData.edit_token) {
+                    saveEditToken(completeData.plan_id, completeData.edit_token);
+                  }
                   dispatch({
                     type: "PLAN_COMPLETE",
                     plan_id: completeData.plan_id,

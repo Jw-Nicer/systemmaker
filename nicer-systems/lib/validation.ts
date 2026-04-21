@@ -271,6 +271,7 @@ export const planRefinementPreviewSchema = z.object({
   plan_id: z.string().min(1, "Plan ID is required").max(100),
   section: planRefinementSectionSchema,
   feedback: z.string().min(1, "Feedback is required").max(2000),
+  edit_token: z.string().min(1).max(200).optional(),
 });
 
 export type PlanRefinementPreviewInput = z.infer<typeof planRefinementPreviewSchema>;
@@ -280,6 +281,7 @@ export const planRefinementApplySchema = z.object({
   section: planRefinementSectionSchema,
   refined_content: z.unknown(),
   feedback: z.string().max(2000).optional(),
+  edit_token: z.string().min(1).max(200).optional(),
 });
 
 export type PlanRefinementApplyInput = z.infer<typeof planRefinementApplySchema>;

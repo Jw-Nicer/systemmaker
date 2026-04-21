@@ -4,6 +4,11 @@ import type { PlanSectionType } from "@/types/chat";
 import type { PreviewPlan } from "@/types/preview-plan";
 import { applyRefinedSection } from "@/lib/plans/refinement";
 import { scorePlanQuality } from "@/lib/agents/plan-quality";
+import {
+  generateEditToken,
+  hashEditToken,
+  mintEditTokenForPlan,
+} from "@/lib/plans/edit-token";
 
 /**
  * Plans are considered cache-eligible for this many milliseconds after
@@ -42,12 +47,13 @@ export async function savePlan(params: {
   lead_id?: string | null;
   /** SHA-256 of the normalized AgentRunInput. Empty string skips dedup. */
   input_hash?: string;
-}): Promise<string> {
+}): Promise<{ id: string; edit_token: string }> {
   try {
     const db = getAdminDb();
     // JSON round-trip strips undefined values (Firestore rejects them)
     const cleanPlan = JSON.parse(JSON.stringify(params.preview_plan));
     const { score: heuristicScore } = scorePlanQuality(params.preview_plan);
+    const editToken = generateEditToken();
     const docRef = await db.collection("plans").add({
       preview_plan: cleanPlan,
       input_summary: params.input_summary,
@@ -59,12 +65,22 @@ export async function savePlan(params: {
       is_public: true,
       version: 1,
       versions: [],
+      edit_token_hashes: [hashEditToken(editToken)],
     });
-    return docRef.id;
+    return { id: docRef.id, edit_token: editToken };
   } catch (error) {
     console.error("Failed to save plan:", error);
     throw new Error("Failed to save plan");
   }
+}
+
+/**
+ * Issue a fresh edit token for an existing plan (e.g. a cache hit in
+ * `findRecentPlanByHash`) so the new requester can refine without
+ * invalidating tokens already issued to prior requesters.
+ */
+export async function issueEditTokenForPlan(planId: string): Promise<string> {
+  return mintEditTokenForPlan(planId);
 }
 
 /**

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { track, EVENTS } from "@/lib/analytics";
 import type { SSEEvent, SSEMessageData, SSEErrorData } from "@/types/chat";
 import type { RefineSectionKey } from "@/lib/plans/refinement";
+import { readEditToken } from "@/lib/plans/edit-token-storage";
 
 interface RefinementState {
   isRefining: boolean;
@@ -58,6 +59,7 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
       abortRef.current = controller;
 
       try {
+        const editToken = readEditToken(planId);
         const res = await fetch("/api/agent/refine", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -65,6 +67,7 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
             plan_id: planId,
             section,
             feedback: feedback.trim(),
+            ...(editToken ? { edit_token: editToken } : {}),
           }),
           signal: controller.signal,
         });
@@ -209,6 +212,7 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
     }));
 
     try {
+      const editToken = readEditToken(planId);
       const res = await fetch("/api/agent/refine/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,6 +220,7 @@ export function useRefineSection(planId: string, section: RefineSectionKey) {
           plan_id: planId,
           section,
           refined_content: JSON.parse(state.refinedContent),
+          ...(editToken ? { edit_token: editToken } : {}),
         }),
       });
 

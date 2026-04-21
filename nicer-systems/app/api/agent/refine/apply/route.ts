@@ -4,13 +4,15 @@ import {
   hasFilledHoneypot,
 } from "@/lib/security/request-guards";
 import { planRefinementApplySchema } from "@/lib/validation";
-import { savePlanRefinement } from "@/lib/firestore/plans";
+import { getPlanById, savePlanRefinement } from "@/lib/firestore/plans";
 import type { PlanSectionType } from "@/types/chat";
 import {
   mapRefineSectionKeyToPlanSection,
   type RefineSectionKey,
 } from "@/lib/plans/refinement";
 import { templateOutputSchemas } from "@/lib/agents/schemas";
+import { verifyEditToken } from "@/lib/plans/edit-token";
+import { requireAdmin } from "@/lib/firebase/auth";
 
 const SECTION_TO_TEMPLATE_KEY: Record<PlanSectionType, string> = {
   intake: "intake_agent",
@@ -44,7 +46,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { plan_id, section, refined_content, feedback } = parsed.data;
+    const { plan_id, section, refined_content, feedback, edit_token } =
+      parsed.data;
 
     let planSection: PlanSectionType;
     try {
@@ -63,6 +66,28 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: "Invalid refined content" },
           { status: 400 }
+        );
+      }
+    }
+
+    // Authorize: admin session OR valid per-plan edit token.
+    const admin = await requireAdmin();
+    const isAdmin = Boolean(admin);
+    if (!isAdmin) {
+      const storedPlan = await getPlanById(plan_id);
+      if (!storedPlan) {
+        return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      }
+      const tokenOk =
+        !!edit_token &&
+        verifyEditToken(
+          edit_token,
+          (storedPlan as { edit_token_hashes?: unknown }).edit_token_hashes
+        );
+      if (!tokenOk) {
+        return NextResponse.json(
+          { error: "Not authorized to refine this plan" },
+          { status: 401 }
         );
       }
     }

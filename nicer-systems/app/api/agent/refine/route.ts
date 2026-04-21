@@ -12,6 +12,8 @@ import {
   mapRefineSectionKeyToPlanSection,
   type RefineSectionKey,
 } from "@/lib/plans/refinement";
+import { verifyEditToken } from "@/lib/plans/edit-token";
+import { requireAdmin } from "@/lib/firebase/auth";
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { plan_id, section, feedback } = parsed.data;
+    const { plan_id, section, feedback, edit_token } = parsed.data;
 
     let planSection: PlanSectionType;
     try {
@@ -51,6 +53,22 @@ export async function POST(request: Request) {
     const storedPlan = await getPlanById(plan_id);
     if (!storedPlan) {
       return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+    }
+
+    // Authorize: admin session OR valid per-plan edit token.
+    const admin = await requireAdmin();
+    const isAdmin = Boolean(admin);
+    const tokenOk =
+      !!edit_token &&
+      verifyEditToken(
+        edit_token,
+        (storedPlan as { edit_token_hashes?: unknown }).edit_token_hashes
+      );
+    if (!isAdmin && !tokenOk) {
+      return NextResponse.json(
+        { error: "Not authorized to refine this plan" },
+        { status: 401 }
+      );
     }
 
     const fullPlan: PreviewPlan = storedPlan.preview_plan;

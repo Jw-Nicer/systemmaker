@@ -7,6 +7,7 @@ import { PlanBuildProgress } from "@/components/marketing/PlanBuildProgress";
 import { track, EVENTS } from "@/lib/analytics";
 import { guidedAuditSchema, type GuidedAuditInput } from "@/lib/validation";
 import { getCurrentExperimentAssignments } from "@/lib/experiments/assignments";
+import { saveEditToken } from "@/lib/plans/edit-token-storage";
 import type { PreviewPlan } from "@/types/preview-plan";
 import {
   AUDIT_INDUSTRIES,
@@ -183,7 +184,12 @@ export function GuidedAuditWizard() {
         let currentEvent = "";
         let buffer = "";
         let planData: Record<string, unknown> = {};
-        let planCompleteData: { lead_id?: string; plan_id?: string; share_url?: string } = {};
+        let planCompleteData: {
+          lead_id?: string;
+          plan_id?: string;
+          edit_token?: string;
+          share_url?: string;
+        } = {};
 
         while (true) {
           const { done, value } = await reader.read();
@@ -217,6 +223,9 @@ export function GuidedAuditWizard() {
         }
 
         if (planCompleteData.plan_id) {
+          if (planCompleteData.edit_token) {
+            saveEditToken(planCompleteData.plan_id, planCompleteData.edit_token);
+          }
           setResult({
             plan: planData as unknown as PreviewPlan,
             leadId: planCompleteData.lead_id ?? "",
@@ -236,6 +245,9 @@ export function GuidedAuditWizard() {
         const body = await response.json().catch(() => null);
         if (!response.ok || !body?.preview_plan) {
           throw new Error(body?.error || "Failed to generate audit");
+        }
+        if (body.plan_id && body.edit_token) {
+          saveEditToken(body.plan_id, body.edit_token);
         }
         setResult({
           plan: body.preview_plan,
