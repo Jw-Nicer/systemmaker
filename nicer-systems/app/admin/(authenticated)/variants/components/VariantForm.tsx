@@ -84,7 +84,7 @@ export default function VariantForm({
     const nextId = String(steps.length + 1).padStart(2, "0");
     onUpdateSection("how_it_works", {
       ...form.sections.how_it_works,
-      steps: [...steps, { id: nextId, title: "", description: "" }],
+      steps: [...steps, { id: nextId, title: "", description: "", imageUrl: "", imageAlt: "" }],
     });
   }
 
@@ -416,34 +416,50 @@ export default function VariantForm({
               {form.sections.how_it_works.steps.map((step, index) => (
                 <div
                   key={step.id}
-                  className="grid gap-3 rounded-[18px] border border-[#ddd5c7] bg-white/65 p-4 md:grid-cols-[100px_1fr_1fr_auto]"
+                  className="space-y-3 rounded-[18px] border border-[#ddd5c7] bg-white/65 p-4"
                 >
-                  <input
-                    value={step.id}
-                    readOnly
-                    className={`${cls} bg-[#f1eadf] text-[#6c7467]`}
-                  />
-                  <input
-                    value={step.title}
-                    onChange={(e) => updateHowStep(index, "title", e.target.value)}
-                    className={cls}
-                    placeholder="Step title"
-                  />
-                  <textarea
-                    value={step.description}
-                    onChange={(e) => updateHowStep(index, "description", e.target.value)}
-                    rows={2}
-                    className={`${cls} resize-y`}
-                    placeholder="Step description"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeHowStep(index)}
-                    disabled={form.sections.how_it_works.steps.length <= 1}
-                    className="self-start rounded-full border border-red-200 bg-[#fff4f2] px-3 py-2 text-xs text-[#9d3f3f] transition-colors hover:bg-red-100 disabled:opacity-30"
-                  >
-                    Remove
-                  </button>
+                  <div className="grid gap-3 md:grid-cols-[100px_1fr_1fr_auto]">
+                    <input
+                      value={step.id}
+                      readOnly
+                      className={`${cls} bg-[#f1eadf] text-[#6c7467]`}
+                    />
+                    <input
+                      value={step.title}
+                      onChange={(e) => updateHowStep(index, "title", e.target.value)}
+                      className={cls}
+                      placeholder="Step title"
+                    />
+                    <textarea
+                      value={step.description}
+                      onChange={(e) => updateHowStep(index, "description", e.target.value)}
+                      rows={2}
+                      className={`${cls} resize-y`}
+                      placeholder="Step description"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeHowStep(index)}
+                      disabled={form.sections.how_it_works.steps.length <= 1}
+                      className="self-start rounded-full border border-red-200 bg-[#fff4f2] px-3 py-2 text-xs text-[#9d3f3f] transition-colors hover:bg-red-100 disabled:opacity-30"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
+                    <input
+                      value={step.imageUrl ?? ""}
+                      onChange={(e) => updateHowStep(index, "imageUrl", e.target.value)}
+                      className={cls}
+                      placeholder="Step image URL (optional — leave blank for default visual)"
+                    />
+                    <input
+                      value={step.imageAlt ?? ""}
+                      onChange={(e) => updateHowStep(index, "imageAlt", e.target.value)}
+                      className={cls}
+                      placeholder="Image alt text"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

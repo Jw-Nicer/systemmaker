@@ -331,6 +331,8 @@ const landingHowItWorksStepSchema = z.object({
   id: z.string().max(50),
   title: z.string().max(300),
   description: z.string().max(2000),
+  imageUrl: z.string().max(2000).optional(),
+  imageAlt: z.string().max(300).optional(),
 });
 
 const landingFeatureItemSchema = z.object({

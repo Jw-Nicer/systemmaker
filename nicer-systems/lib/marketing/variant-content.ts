@@ -148,6 +148,8 @@ export function normalizeVariantSections(
               id: step.id || DEFAULT_HOW_IT_WORKS_STEPS[index]?.id || String(index + 1).padStart(2, "0"),
               title: step.title,
               description: step.description,
+              ...(step.imageUrl ? { imageUrl: step.imageUrl } : {}),
+              ...(step.imageAlt ? { imageAlt: step.imageAlt } : {}),
             }))
           : DEFAULT_VARIANT_SECTIONS.how_it_works.steps,
     },

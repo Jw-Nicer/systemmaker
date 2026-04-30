@@ -4,21 +4,21 @@ import type { LandingHowItWorksStep } from "@/types/variant";
 const defaultSteps: LandingHowItWorksStep[] = [
   {
     id: "01",
-    title: "Tell us the problem",
+    title: "Describe the bottleneck",
     description:
-      "Describe the workflow that causes delays, errors, or extra hours. We ask a few short questions to understand the context \u2014 your industry, the process, and the tools you already use.",
+      "Share the workflow, stack, and friction point. The intake stays short.",
   },
   {
     id: "02",
-    title: "Get your preview plan",
+    title: "Generate the plan",
     description:
-      "We map the workflow end to end, define the metrics that matter, and outline the alerts and automations that fix the bottleneck. The full plan is ready in under a minute.",
+      "We map the workflow, KPI layer, and automations around the real bottleneck.",
   },
   {
     id: "03",
-    title: "Decide with clarity",
+    title: "Refine and move",
     description:
-      "Share the plan with your team, refine any section with feedback, and use it to align everyone on the fix \u2014 before any build work starts.",
+      "Share it, refine it, and use it to scope the next build.",
   },
 ];
 
@@ -28,16 +28,15 @@ const defaultPanels: ReactNode[] = [
       <div className="rounded-[24px] border border-white/10 bg-black/15 p-4">
         <div className="flex items-center justify-between rounded-full border border-white/10 bg-black/18 px-4 py-3 text-sm text-[#dde6d8]">
           <span>
-            Our dispatch workflow stalls between assignment, pickup, and
-            delivery confirmation.
+            Our dispatch workflow stalls between assignment and confirmation.
           </span>
           <span className="text-lg">+</span>
         </div>
       </div>
       {[
-        ["Captured", "Your industry and workflow"],
-        ["Captured", "Tools you already use"],
-        ["Captured", "Timeline and scale"],
+        ["Captured", "Workflow context"],
+        ["Captured", "Current stack"],
+        ["Captured", "Volume and urgency"],
       ].map(([status, task]) => (
         <div
           key={task}
@@ -55,20 +54,20 @@ const defaultPanels: ReactNode[] = [
     <div className="space-y-4" key="step-panel-02">
       <div className="rounded-[24px] border border-white/8 bg-black/18 p-4 text-sm text-[#dce4d8]">
         <p className="text-[11px] uppercase tracking-[0.14em] text-[#92a792]">
-          Your plan includes
+          Plan includes
         </p>
         <ul className="mt-3 space-y-2">
-          <li>• Workflow map — 5 stages with owners and handoffs</li>
-          <li>• Dashboard KPIs — 6 metrics with targets</li>
-          <li>• Smart alerts — 4 triggers with escalation rules</li>
-          <li>• Next actions — prioritised recommendations</li>
+          <li>• Workflow map with owners</li>
+          <li>• KPI dashboard structure</li>
+          <li>• Alert logic and escalation rules</li>
+          <li>• Prioritized next actions</li>
         </ul>
       </div>
       <div className="rounded-[24px] border border-white/8 bg-white/[0.04] p-4">
         <div className="flex flex-col gap-3 text-sm text-[#eef2ea] sm:flex-row sm:items-center sm:justify-between">
-          <span>Build preview plan for dispatch workflow</span>
+          <span>Build plan for dispatch workflow</span>
           <span className="rounded-full border border-[#6e866f]/30 bg-[#203026] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#aec2ad]">
-            Ready in under a minute
+            Ready fast
           </span>
         </div>
       </div>
@@ -90,11 +89,11 @@ const defaultPanels: ReactNode[] = [
         </thead>
         <tbody>
           {[
-            ["Suggested scope", "Clarified problem and assumptions", "Yes"],
-            ["Workflow map", "5 stages with owners and handoffs", "Yes"],
-            ["Dashboard KPIs", "6 metrics with targets", "Yes"],
-            ["Smart alerts", "4 triggers with escalation rules", "Yes"],
-            ["Next actions", "Prioritised recommendations", "Yes"],
+            ["Suggested scope", "Clarified bottleneck and assumptions", "Yes"],
+            ["Workflow map", "Stages, owners, handoffs", "Yes"],
+            ["Dashboard KPIs", "Metric set and targets", "Yes"],
+            ["Alert logic", "Triggers and escalations", "Yes"],
+            ["Next actions", "Prioritized recommendations", "Yes"],
           ].map(([name, details, included]) => (
             <tr key={name} className="border-b border-white/6 last:border-b-0">
               <td className="px-4 py-3">{name}</td>
@@ -106,16 +105,15 @@ const defaultPanels: ReactNode[] = [
         </table>
       </div>
       <p className="px-4 py-3 text-xs text-[#8fa08f]">
-        Share with your team via link or PDF. Refine any section and get an
-        updated plan instantly.
+        Share by link or PDF. Refine any section.
       </p>
     </div>
   ),
 ];
 
 export function HowItWorks({
-  eyebrow = "How it works",
-  title = "From bottleneck\nto action plan",
+  eyebrow = "Process",
+  title = "From bottleneck\nto agentic plan",
   steps = defaultSteps,
 }: {
   eyebrow?: string;
@@ -162,7 +160,16 @@ export function HowItWorks({
               </div>
 
               <div className="rounded-[var(--radius-card-lg)] border border-[#2f4c37]/20 bg-[linear-gradient(180deg,rgba(28,54,42,0.98),rgba(20,36,27,0.96))] p-4 text-[#edf2e8] shadow-[var(--shadow-elevated)] sm:rounded-[var(--radius-card-lg)] sm:p-5">
-                {defaultPanels[index] ?? defaultPanels[defaultPanels.length - 1]}
+                {step.imageUrl ? (
+                  <img
+                    src={step.imageUrl}
+                    alt={step.imageAlt || step.title}
+                    loading="lazy"
+                    className="h-full w-full rounded-[var(--radius-card)] object-cover"
+                  />
+                ) : (
+                  defaultPanels[index] ?? defaultPanels[defaultPanels.length - 1]
+                )}
               </div>
             </div>
           ))}

@@ -84,3 +84,46 @@ test("normalizeVariantSections maps custom steps and features while keeping ids 
   assert.equal(sections.features.items[0]?.id, DEFAULT_FEATURE_ITEMS[0]?.id);
   assert.equal(sections.features.items[0]?.visual, "handoff diagram");
 });
+
+test("normalizeVariantSections passes through step image fields and omits empties", () => {
+  const sections = normalizeVariantSections({
+    id: "variant-3",
+    slug: "with-images",
+    industry: "Imaged",
+    headline: "h",
+    subheadline: "s",
+    cta_text: "c",
+    meta_title: "m",
+    meta_description: "d",
+    featured_industries: [],
+    is_published: false,
+    sort_order: 0,
+    sections: {
+      how_it_works: {
+        eyebrow: "Process",
+        title: "Steps",
+        steps: [
+          {
+            id: "01",
+            title: "With image",
+            description: "has visual",
+            imageUrl: "https://example.com/a.png",
+            imageAlt: "alt text",
+          },
+          {
+            id: "02",
+            title: "Without image",
+            description: "uses fallback",
+            imageUrl: "",
+            imageAlt: "",
+          },
+        ],
+      },
+    },
+  });
+
+  assert.equal(sections.how_it_works.steps[0]?.imageUrl, "https://example.com/a.png");
+  assert.equal(sections.how_it_works.steps[0]?.imageAlt, "alt text");
+  assert.equal(sections.how_it_works.steps[1]?.imageUrl, undefined);
+  assert.equal(sections.how_it_works.steps[1]?.imageAlt, undefined);
+});
